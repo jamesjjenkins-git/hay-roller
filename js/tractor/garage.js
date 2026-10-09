@@ -1,5 +1,6 @@
 // Tractor Rally — garage: upgrades, paint, track progress. Persisted locally.
 (function (root) {
+  const Badges = root.TractorBadges || require('./badges.js');
   const KEY = 'farmCasino.tractor.v1';
   const MAX_LEVEL = 5;
 
@@ -59,6 +60,7 @@
       vehicle: 'tractor', // the series you're racing in
       // Upgrades for the other vehicles (the tractor's are `upgrades`).
       series: { quad: { upgrades: { ...ZERO } }, motorbike: { upgrades: { ...ZERO } } },
+      badges: Badges.defaults(),
     };
   }
 
@@ -105,7 +107,7 @@
           for (const k of Object.keys(series)) {
             series[k] = { upgrades: { ...ZERO, ...((p.series && p.series[k] && p.series[k].upgrades) || {}) } };
           }
-          return { ...d, ...p, upgrades, series, best: p.best || {}, awards: p.awards || {}, ownedPaints: p.ownedPaints || [] };
+          return { ...d, ...p, upgrades, series, best: p.best || {}, awards: p.awards || {}, ownedPaints: p.ownedPaints || [], badges: Badges.normalise(p.badges) };
         }
       } catch (e) {
         // Corrupt save: fall back to a fresh garage.
@@ -264,6 +266,16 @@
         if (isBest) best[trackId] = popped;
         save();
         return isBest;
+      },
+      // Counts a finished race or Frenzy round towards the badges (see
+      // badges.js) and returns the tiers newly reached, each with its Hay.
+      recordBadges(ev) {
+        const earned = Badges.update(state.badges, { day: Badges.today(), ...ev });
+        save();
+        return earned;
+      },
+      badgeSummary() {
+        return Badges.summary(state.badges);
       },
       frenzyBest(id) {
         return (state.frenzyBest && state.frenzyBest[key(id)]) || 0;

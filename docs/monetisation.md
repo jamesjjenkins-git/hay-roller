@@ -79,6 +79,10 @@ provider shows labelled placeholders; in the iPhone app
 
 - 500 welcome gift, 200 daily bonus (resets at local midnight), reward ads
   as above, and winnings.
+- Badges: each new badge tier pays 100 (bronze), 250 (silver) or 600 (gold)
+  Hay, once. 17 badges × 3 tiers is about 16,000 Hay over a player's whole
+  progress, a steady trickle for playing well and coming back. Badge Hay is
+  not doubled by the reward ad.
 - Hay is never zero for long: the daily bonus and reward ads mean a player who
   loses everything can always get back into a race.
 

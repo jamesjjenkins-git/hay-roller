@@ -58,6 +58,16 @@ bumps.
   the 🏆 counter in the garage to open the **Trophy Cabinet**: totals plus, for every track, your
   best finish, trophy counts, fastest-lap awards and best lap.
 
+- **Badges:** 17 challenges, each with 🥉 bronze, 🥈 silver and 🥇 gold tiers (100, 250 and
+  600 Hay when reached): On a Roll (wins in a row), Didn't Touch the Sides (no wall hits),
+  Clean Driver (no mud or water), Animal Lover (no animals hit), Money Bags (cash bags in a
+  race), Speedy (nitros in a race), Lights to Flag (lead every lap and win), Comeback Kid (win
+  from last), Drift King (drift kicks in a race), Frequent Flyer (jumps in a race), Lap Record,
+  Pest Control and Quick Pop (Farmyard Frenzy), Farm Champion and Ironman (wins on different
+  tracks), All-Rounder (wins in each vehicle) and Regular (days raced). New tiers show on the
+  results screen; the Trophy Cabinet shows every badge with progress to its next tier. Targets
+  are in `js/tractor/badges.js`.
+
 ### Install on an iPhone
 Open the page in Safari, tap **Share → Add to Home Screen**. It then launches full screen in
 landscape like an app, with its own icon. (A native App Store build would mean wrapping this web

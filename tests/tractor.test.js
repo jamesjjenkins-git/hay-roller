@@ -671,3 +671,58 @@ test('bridges lift one road over the other, and the two levels never collide', (
     assert.ok(Math.hypot(a.x - c.x, a.y - c.y) < Sim.RADIUS, `${id}: the two levels pushed each other apart`);
   }
 });
+
+test('badges: clean races, streaks and bests reach bronze, silver and gold and pay Hay', () => {
+  const Badges = require('../js/tractor/badges.js');
+  const b = Badges.defaults();
+  const clean = { walls: 0, mud: 0, water: 0, animals: 0, bags: 3, nitros: 1, driftKicks: 0, jumps: 2, ledLaps: 3, wasLast: false };
+  const race = (over = {}) => Badges.update(b, { place: 1, trackId: 'meadow', pack: 'farm', vehicle: 'tractor', laps: 3, day: '2026-10-09', tally: clean, ...over });
+  const first = race();
+  const ids = first.map((e) => `${e.badge.id}:${e.tier.id}`);
+  for (const want of ['sides:bronze', 'clean:bronze', 'animals:bronze', 'bags:bronze', 'flag:bronze', 'vehicles:bronze']) assert.ok(ids.includes(want), want);
+  assert.ok(!ids.includes('streak:bronze'));
+  race();
+  assert.ok(race().some((e) => e.badge.id === 'streak' && e.tier.id === 'bronze'), 'three wins in a row');
+  // A loss resets the streak, and nothing is awarded twice.
+  race({ place: 2, tally: { ...clean, walls: 2 } });
+  assert.strictEqual(b.streak, 0);
+  assert.ok(!race().some((e) => e.badge.id === 'sides' && e.tier.id === 'bronze'));
+  // Best-in-one-race badges can jump straight past several tiers.
+  const big = race({ tally: { ...clean, nitros: 9 } });
+  assert.deepStrictEqual(big.filter((e) => e.badge.id === 'nitro').map((e) => e.tier.id), ['bronze', 'silver', 'gold']);
+  assert.ok(big.every((e) => e.hay === Badges.TIERS.find((t) => t.id === e.tier.id).hay));
+  // Days raced, and Frenzy rounds.
+  Badges.update(b, { frenzy: true, popped: 100, total: 100, in30: 62, day: '2026-10-10' });
+  Badges.update(b, { frenzy: true, popped: 10, total: 100, in30: 5, day: '2026-10-11' });
+  const sum = Object.fromEntries(Badges.summary(b).map((x) => [x.badge.id, x]));
+  assert.strictEqual(sum.regular.level, 1);
+  assert.strictEqual(sum.sweep.level, 1);
+  assert.strictEqual(sum.quickpop.level, 2);
+});
+
+test('the race tally counts wall hits, splashes, nitros and cash bags for the player', () => {
+  const track = Tracks.buildTrack(Tracks.TRACKS[0]);
+  const s = Sim.createRace(track, { seed: 2 });
+  let n = 0;
+  while (!s.done && n < 60 * 120) {
+    const me = s.racers[0];
+    const tg = track.samples[(me.idx + 10) % track.count];
+    const w = Sim.angleDiff(Math.atan2(tg.y - me.y, tg.x - me.x), me.heading) * 2.5;
+    Sim.step(s, { 0: { steer: Math.max(-0.55, Math.min(0.55, w)), throttle: 1, brake: 0, nitro: n++ % 400 === 200 } });
+    s.events.length = 0;
+  }
+  assert.ok(s.tally.nitros >= 1);
+  assert.ok(s.tally.mud + s.tally.water >= 1, 'drove the centre line through a hazard');
+  assert.ok(s.tally.ledLaps <= s.laps);
+});
+
+test('the garage saves badge progress and reports new tiers once', () => {
+  const store = (() => { const m = {}; return { getItem: (k) => m[k] ?? null, setItem: (k, v) => { m[k] = String(v); } }; })();
+  const g = Garage.createGarage(store);
+  const tally = { walls: 0, mud: 1, water: 0, animals: 2, bags: 0, nitros: 0, driftKicks: 0, jumps: 0, ledLaps: 0, wasLast: false };
+  const won = g.recordBadges({ place: 2, trackId: 'meadow', pack: 'farm', vehicle: 'tractor', laps: 3, tally });
+  assert.deepStrictEqual(won.map((e) => e.badge.id), ['sides']);
+  const again = Garage.createGarage(store);
+  assert.strictEqual(again.badgeSummary().find((x) => x.badge.id === 'sides').level, 1);
+  assert.strictEqual(again.recordBadges({ place: 2, trackId: 'meadow', pack: 'farm', vehicle: 'tractor', laps: 3, tally }).length, 0);
+});

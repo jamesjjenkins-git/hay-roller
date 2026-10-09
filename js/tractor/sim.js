@@ -119,7 +119,8 @@
     const base = Math.floor(popped / FRENZY.per) * rate;
     const sweep = popped >= s.frenzy.total;
     const bonus = sweep ? Math.round((s.frenzy.total / FRENZY.per) * rate * FRENZY.sweepBonus) : 0;
-    return { popped, total: s.frenzy.total, rate, per: FRENZY.per, base, sweep, bonus, hay: base + bonus, timeLeft: Math.max(0, s.frenzy.timeLeft) };
+    const in30 = s.frenzy.at30 == null ? popped : s.frenzy.at30;
+    return { popped, in30, total: s.frenzy.total, rate, per: FRENZY.per, base, sweep, bonus, hay: base + bonus, timeLeft: Math.max(0, s.frenzy.timeLeft) };
   }
 
   function createRace(trackDef, { seed = 1, playerUpgrades = {}, playerColor, playerLevel = 0, laps, frenzy = false, vehicle = 'tractor' } = {}) {
@@ -212,7 +213,35 @@
       finishOrder: [],
       events: [],
       done: false,
+      // What the player did this race, for the badges.
+      tally: { walls: 0, mud: 0, water: 0, animals: 0, bags: 0, nitros: 0, driftKicks: 0, jumps: 0, ledLaps: 0, wasLast: false },
     };
+  }
+
+  // Keep the player's tally up to date from this step's events.
+  function tallyPlayer(s, from) {
+    const t = s.tally;
+    const me = s.racers[0];
+    if (!t || me.finished) return;
+    for (let i = from; i < s.events.length; i++) {
+      const e = s.events[i];
+      if (e.id !== 0) continue;
+      if (e.type === 'wall') t.walls++;
+      else if (e.type === 'animal') t.animals++;
+      else if (e.type === 'pickup' && e.kind === 'cash') t.bags++;
+      else if (e.type === 'nitro') t.nitros++;
+      else if (e.type === 'driftKick') t.driftKicks++;
+      else if (e.type === 'jump') t.jumps++;
+      else if (e.type === 'lap' && standings(s)[0] === 0) t.ledLaps++;
+    }
+    // Driving into mud or water (each splash counts once).
+    if (me.surface !== t.surface && (me.surface === 'mud' || me.surface === 'water')) t[me.surface]++;
+    t.surface = me.surface;
+    // Last, once the field has had time to spread out from the grid.
+    if (s.t > 10 && Math.round(s.t / DT) % 30 === 0) {
+      const order = standings(s);
+      if (order[order.length - 1] === 0) t.wasLast = true;
+    }
   }
 
   function colorDistance(a, b) {
@@ -898,6 +927,7 @@
 
   // inputs: { [racerId]: {steer, throttle, brake, nitro} } — missing ids use the AI.
   function step(s, inputs = {}) {
+    const from = s.events.length;
     s.t += DT;
     updatePickups(s);
     updateAnimals(s);
@@ -910,11 +940,13 @@
       updateProgress(s, r, prev);
     }
     collideRacers(s);
+    tallyPlayer(s, from);
 
     const player = s.racers[0];
     if (s.frenzy) {
       // The bonus round ends when the minute is up or every animal is popped.
       s.frenzy.timeLeft -= DT;
+      if (s.frenzy.at30 == null && s.frenzy.timeLeft <= FRENZY.time - 30) s.frenzy.at30 = s.frenzy.popped;
       s.animals = s.animals.filter((a) => !a.popped);
       if (!s.done && (s.frenzy.timeLeft <= 0 || !s.animals.length)) {
         player.finished = true;

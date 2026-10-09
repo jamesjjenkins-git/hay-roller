@@ -3,6 +3,7 @@
   const Sim = root.TractorSim;
   const { TRACKS, WORLD, buildTrack } = root.TractorTracks;
   const { UPGRADES, PAINTS, TROPHIES, SERIES, MAX_LEVEL, createGarage } = root.TractorGarage;
+  const Badges = root.TractorBadges;
   const TROPHY_ICON = { gold: '🥇', silver: '🥈', bronze: '🥉' };
   const SELECTED_KEY = 'farmCasino.tractor.track';
   const VIEW_KEY = 'farmCasino.tractor.view';
@@ -348,7 +349,7 @@
     function renderGarage() {
       const st = garage.state;
       const tot = garage.awardTotals();
-      $('#garage-record').innerHTML = `🏆 <span>🥇${tot.gold} 🥈${tot.silver} 🥉${tot.bronze} ⏱️${tot.fastest}</span>`;
+      $('#garage-record').innerHTML = `🏆 <span>🥇${tot.gold} 🥈${tot.silver} 🥉${tot.bronze} ⏱️${tot.fastest} 🎖️${badgeCount()}</span>`;
 
       $('#paints').innerHTML = PAINTS.map((p) =>
         `<button class="paint ${st.paint === p.id ? 'active' : ''} ${garage.paintOwned(p.id) ? '' : 'locked'}" data-paint="${p.id}" style="--paint:${p.hex}"
@@ -778,6 +779,16 @@
       const seriesBefore = SERIES.filter((sr) => garage.seriesUnlocked(sr.id)).length;
       const award = garage.recordResult(selected.id, e.place, me.finishTime, { fastestLap: e.fastestLap, bestLap: e.bestLap });
       const newSeries = SERIES.filter((sr) => garage.seriesUnlocked(sr.id)).slice(seriesBefore);
+      const badges = garage.recordBadges({
+        place: e.place,
+        trackId: selected.id,
+        pack: selected.pack || 'farm',
+        vehicle: garage.vehicle,
+        laps: sim.laps,
+        tally: sim.tally,
+        lapRecord: award.lapRecord,
+      });
+      payBadges(badges);
       const extras = [e.cash ? `+${e.cash} cash bags` : '', e.fastestLap ? `+${e.lapBonus} fastest lap` : ''].filter(Boolean).join(', ');
       if (e.total > 0) wallet.credit(e.total, `Farmyard Rally — ${ordinal(e.place)} at ${selected.name}${extras ? ` (${extras})` : ''}`);
       if (e.place === 1) sound.fanfare();
@@ -806,6 +817,7 @@
             </div>
             ${awardsHtml(e, award, newlyUnlocked)}
             ${newSeries.map((sr) => `<div class="awards"><div class="award unlocked"><span class="a-icon">${sr.icon}</span><span><b>${sr.name} unlocked!</b><small>Pick it in the garage to race the ${sr.vehicle}</small></span></div></div>`).join('')}
+            ${badgesHtml(badges)}
             <div class="r-actions three">
               <button class="btn btn-ghost" data-act="garage">Garage</button>
               <button class="btn btn-ghost" data-act="again">Race again</button>
@@ -823,6 +835,8 @@
       const e = Sim.frenzyEarnings(sim);
       lastEarnings = { total: e.hay };
       const best = garage.recordFrenzy(selected.id, e.popped);
+      const badges = garage.recordBadges({ frenzy: true, popped: e.popped, total: e.total, in30: e.in30 });
+      payBadges(badges);
       if (e.hay > 0) wallet.credit(e.hay, `Farmyard Frenzy — ${e.popped} animals popped at ${selected.name}`);
       if (e.sweep) sound.fanfare();
       else sound.coins();
@@ -840,6 +854,7 @@
                 ? `<button class="btn btn-ad" data-act="double">📺 Watch an ad to double it (+${fmt(e.hay)})</button>`
                 : ''}
             </div>
+            ${badgesHtml(badges)}
             ${best ? `<div class="awards"><div class="award record"><span class="a-icon">📈</span><span><b>New best</b><small>Most animals popped on ${selected.name}</small></span></div></div>` : `<p class="small">Your best here: ${garage.frenzyBest(selected.id)} popped</p>`}
             <div class="r-actions">
               <button class="btn btn-ghost" data-act="garage">Garage</button>
@@ -848,6 +863,15 @@
           </div>`;
         modal.classList.remove('hidden');
       }, 1200);
+    }
+
+    // New badge tiers pay Hay straight away (not doubled by the ad).
+    function payBadges(earned) {
+      for (const b of earned) wallet.credit(b.hay, `Badge: ${b.badge.name} (${b.tier.name})`);
+    }
+    function badgesHtml(earned) {
+      if (!earned.length) return '';
+      return `<div class="awards">${earned.map((b) => `<div class="award badge-won ${b.tier.id}"><span class="a-icon">${b.badge.icon}</span><span><b>${b.tier.icon} ${b.badge.name}</b><small>${b.tier.name} badge · +🌾${fmt(b.hay)}</small></span></div>`).join('')}</div>`;
     }
 
     function awardsHtml(e, award, unlocked = []) {
@@ -873,13 +897,14 @@
     // ---------- Trophy cabinet ----------
 
     const cabinet = $('#cabinet');
+    const badgeCount = () => garage.badgeSummary().reduce((n, b) => n + b.level, 0);
     function openCabinet() {
       const st = garage.state;
       const tot = garage.awardTotals();
       cabinet.innerHTML = `
         <div class="cabinet-card" role="dialog" aria-label="Trophy cabinet">
           <button class="modal-close" data-close aria-label="Close">✕</button>
-          <h2>🏆 Trophy Cabinet <small>${garage.series.name}</small></h2>
+          <h2>🏆 Trophy Cabinet</h2>
           <div class="cab-totals">
             <div><span>🥇</span><b>${tot.gold}</b><small>Gold</small></div>
             <div><span>🥈</span><b>${tot.silver}</b><small>Silver</small></div>
@@ -887,6 +912,16 @@
             <div><span>⏱️</span><b>${tot.fastest}</b><small>Fastest laps</small></div>
           </div>
           <p class="cab-sub">${st.races} race${st.races === 1 ? '' : 's'} · ${st.wins} win${st.wins === 1 ? '' : 's'}</p>
+          <h3 class="cab-h">🎖️ Badges <small>${badgeCount()} of ${Badges.BADGES.length * 3}</small></h3>
+          <div class="badge-grid">
+            ${garage.badgeSummary().map((b) => `<div class="badge-tile ${b.tier ? b.tier.id : 'none'}" title="${b.badge.name}">
+              <span class="b-icon">${b.badge.icon}</span>
+              <span class="b-text"><b>${b.badge.name}</b><small>${b.next == null ? '✓ All tiers done' : b.desc}</small></span>
+              <span class="b-tiers">${Badges.TIERS.map((t, i) => `<i class="${i < b.level ? 'on' : ''}">${t.icon}</i>`).join('')}</span>
+              ${b.next == null ? '' : `<span class="b-bar"><i style="width:${Math.min(100, Math.round((b.progress / b.next) * 100))}%"></i><em>${b.progress}/${b.next}</em></span>`}
+            </div>`).join('')}
+          </div>
+          <h3 class="cab-h">🏆 Trophies <small>${garage.series.name}</small></h3>
           <div class="cab-rows">
             <div class="cab-row head"><span>Track</span><span>Best</span><span>🥇</span><span>🥈</span><span>🥉</span><span>⏱️</span><span>Best lap</span></div>
             ${TRACKS.map((t, i) => {
