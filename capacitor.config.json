@@ -1,0 +1,11 @@
+{
+  "appId": "com.jamesjenkins.farmyardrally",
+  "appName": "Farmyard Rally",
+  "webDir": "www",
+  "backgroundColor": "#5aa83f",
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": false,
+    "backgroundColor": "#5aa83f"
+  }
+}
