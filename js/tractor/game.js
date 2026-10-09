@@ -781,6 +781,7 @@
       const newSeries = SERIES.filter((sr) => garage.seriesUnlocked(sr.id)).slice(seriesBefore);
       const badges = garage.recordBadges({
         place: e.place,
+        finished: me.finishTime != null,
         trackId: selected.id,
         pack: selected.pack || 'farm',
         vehicle: garage.vehicle,

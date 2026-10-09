@@ -687,6 +687,11 @@ test('badges: clean races, streaks and bests reach bronze, silver and gold and p
   race({ place: 2, tally: { ...clean, walls: 2 } });
   assert.strictEqual(b.streak, 0);
   assert.ok(!race().some((e) => e.badge.id === 'sides' && e.tier.id === 'bronze'));
+  // Sitting out a race until the clock runs down doesn't count as clean.
+  const sides = () => b.progress.sides;
+  const before = sides();
+  race({ finished: false, place: 4 });
+  assert.strictEqual(sides(), before);
   // Best-in-one-race badges can jump straight past several tiers.
   const big = race({ tally: { ...clean, nitros: 9 } });
   assert.deepStrictEqual(big.filter((e) => e.badge.id === 'nitro').map((e) => e.tier.id), ['bronze', 'silver', 'gold']);

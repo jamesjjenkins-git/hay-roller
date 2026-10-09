@@ -56,7 +56,7 @@
   }
 
   // What this race or Frenzy round counts for, per badge.
-  //   race:   { place, trackId, pack, vehicle, laps, tally, lapRecord, day }
+  //   race:   { place, finished, trackId, pack, vehicle, laps, tally, lapRecord, day }
   //   frenzy: { frenzy: true, popped, total, in30, day }
   function valuesFor(b, ev) {
     const v = {};
@@ -74,9 +74,12 @@
     const won = ev.place === 1;
     b.streak = won ? b.streak + 1 : 0;
     v.streak = b.streak;
-    v.sides = t.walls === 0 ? 1 : 0;
-    v.clean = t.mud === 0 && t.water === 0 ? 1 : 0;
-    v.animals = t.animals === 0 ? 1 : 0;
+    // The no-bumps badges count only a race driven to the line (not one
+    // sat out until the clock ran down).
+    const drove = ev.finished !== false;
+    v.sides = drove && t.walls === 0 ? 1 : 0;
+    v.clean = drove && t.mud === 0 && t.water === 0 ? 1 : 0;
+    v.animals = drove && t.animals === 0 ? 1 : 0;
     v.bags = t.bags || 0;
     v.nitro = t.nitros || 0;
     v.drift = t.driftKicks || 0;
