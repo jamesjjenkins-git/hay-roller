@@ -106,11 +106,12 @@ The decisions behind this (and what we chose not to do) are in [docs/monetisatio
   garage or a race — and opt-in reward videos that pay only if watched to the end.
 
 Everything runs behind adapters so going live doesn't touch game code:
-- `js/monetize/ads.js` — `FarmAds.setProvider({ showBanner, hideBanner, showRewarded })`. The
-  built-in provider shows labelled placeholders (a house-ad banner and a 5-second "ad" with a
-  Close-without-reward button). For the App Store build, wrap the app with Capacitor and back
-  this with AdMob (`@capacitor-community/admob`), including Apple's App Tracking Transparency
-  prompt before personalised ads.
+- `js/monetize/ads.js` — `FarmAds.setProvider({ showBanner, hideBanner, showRewarded })`. In a
+  browser the built-in provider shows labelled placeholders (a house-ad banner and a 5-second
+  "ad" with a Close-without-reward button). In the iPhone app `js/monetize/admob.js` swaps in
+  Google AdMob (`@capacitor-community/admob`): consent form, App Tracking Transparency prompt,
+  a native home banner and rewarded videos. It serves Google **test ads** until
+  `js/monetize/ad-config.js` is switched live (see *Real ads* below).
 - `js/monetize/store.js` — purchases go through a `billing` adapter. The default is **test
   mode**: it asks for confirmation and grants the item without taking money (clearly labelled
   in the wallet). Replace it with Apple in-app purchases (e.g. RevenueCat or
@@ -170,6 +171,23 @@ npm run ios:open # opens Xcode
   bundle id if `com.jamesjenkins.farmyardrally` is taken, bump the build number, then
   Product → Archive → Distribute App → TestFlight.
 
+### Real ads (AdMob)
+The app already shows Google's test ads (banner on the home page, rewarded videos in the wallet
+and after races). To earn from real ones:
+
+1. Sign up at [admob.google.com](https://admob.google.com) (free) and add your payment details.
+2. Apps → Add app → iOS → "not listed on a store yet". Note the **app id**
+   (`ca-app-pub-…~…`) and create two ad units: **Banner** and **Rewarded**.
+3. Put the app id in `ios/App/App/Info.plist` (`GADApplicationIdentifier`), the two ad unit ids
+   in `js/monetize/ad-config.js`, and set `live: true`. Then `npm run ios`.
+4. Privacy & messaging in AdMob: create a **GDPR message** (UK/EEA consent form) and an **IDFA
+   explainer**; the app shows them through Google's consent SDK.
+5. Never tap your own live ads. Run the app once, copy the test device id that Xcode's console
+   prints, and add it to `testDevices` in `ad-config.js`.
+6. Once the app is on the App Store, link it in AdMob and publish an `app-ads.txt` on the
+   developer website in its listing. Until then AdMob serves only limited ads, so real revenue
+   starts with the App Store release (which needs the paid Apple Developer Program).
+
 ## Tests
 ```sh
 npm run shots    # screenshot every track into screenshots/ (first time: npm run shots:setup)
@@ -189,6 +207,7 @@ npm test         # Node 20+; covers the wallet, rewards, store, all three credit
 | `js/monetize/rewards.js` | Welcome gift, daily bonus, reward-ad payouts and daily cap |
 | `js/monetize/store.js` | Gold packs and Remove ads; billing adapter (test mode by default) |
 | `js/monetize/ads.js` | Home banner and reward-video adapter with placeholder provider |
+| `js/monetize/admob.js`, `js/monetize/ad-config.js` | AdMob provider for the iPhone app; ad ids and the live switch |
 | `js/pending.js` | Saves mini-game payouts until they're credited (crash-safe) |
 | `js/slots/slots-logic.js`, `js/slots/slots.js` | Piggy Bank Slots: reels, paytable, RTP maths; UI |
 | `js/eggs/egg-logic.js`, `js/eggs/egg-roulette.js` | Egg Roulette: bets and payouts; hen animation and board |

@@ -32,14 +32,24 @@ don't get re-argued (or quietly undone).
   auto-playing video.
 - **Remove ads** is a one-off purchase that hides the home banner. Reward
   videos stay available because they're opt-in and pay the player.
-- **Privacy:** for the App Store build, personalised ads need Apple's App
-  Tracking Transparency prompt; the plan is to ask once, and fall back to
-  non-personalised ads if declined.
+- **Privacy:** in the iPhone app, Google's consent form is shown on first
+  launch where the law needs it (UK/EEA), then Apple's App Tracking
+  Transparency prompt, once. Declining tracking still shows ads, just
+  non-personalised ones; without consent no ads are requested at all. Where
+  consent rules require it, "Ad privacy choices" on the home page lets the
+  player change their mind.
+- **Network:** Google AdMob, through `@capacitor-community/admob`, chosen
+  because it fits the Capacitor app and covers both banner and rewarded
+  video with Google's own consent form. Ads are capped at the
+  ParentalGuidance content rating: it's a cartoon farm game.
+- **Test ads until switched live.** `js/monetize/ad-config.js` has a `live`
+  switch; until it's on, every request is a Google test ad, so developing
+  and testing never risks invalid-traffic flags on the AdMob account.
 
 Implementation: `js/monetize/ads.js` is an adapter
-(`showBanner` / `hideBanner` / `showRewarded`). The built-in provider shows
-labelled placeholders; a real network (e.g. AdMob via Capacitor) plugs in
-there.
+(`showBanner` / `hideBanner` / `showRewarded`). In a browser the built-in
+provider shows labelled placeholders; in the iPhone app
+`js/monetize/admob.js` swaps in AdMob.
 
 ## Purchases
 

@@ -17,6 +17,7 @@
     "playwright": "1.56.1"
   },
   "dependencies": {
+    "@capacitor-community/admob": "8.1.0",
     "@capacitor/core": "^8.5.3",
     "@capacitor/ios": "^8.5.3"
   }
