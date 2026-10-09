@@ -447,7 +447,7 @@
       aiSkill: 0.3,
       reward: [1200, 640, 320, 120],
       unlock: { track: 'iron-sidewinder', place: 3 },
-      crossings: [{ x: 623, y: 308, r: 200 }],
+      crossings: [{ x: 623, y: 308, r: 200, bridge: true }],
       // Ground shapes read off the NES map's shading (see terrainHeight).
       terrain: [
         { type: 'plateau', poly: [[40, 50], [1160, 50], [1160, 130], [40, 130]], h: 28, fall: 100 },
@@ -490,7 +490,7 @@
       aiSkill: 0.43,
       reward: [1250, 660, 340, 130],
       unlock: { track: 'iron-wipeout', place: 3 },
-      crossings: [{ x: 516, y: 440, r: 183 }],
+      crossings: [{ x: 516, y: 440, r: 183, bridge: true }],
       // Ground shapes read off the NES map's shading (see terrainHeight).
       terrain: [
         { type: 'plateau', poly: [[430, 380], [600, 380], [600, 500], [430, 500]], h: -26, fall: 90 },
@@ -534,7 +534,7 @@
       aiSkill: 0.42,
       reward: [1300, 690, 350, 130],
       unlock: { track: 'iron-bigdukes', place: 3 },
-      crossings: [{ x: 643, y: 420, r: 177 }, { x: 741, y: 280, r: 177 }],
+      crossings: [{ x: 643, y: 420, r: 177, bridge: true, over: 1 }, { x: 741, y: 280, r: 177, bridge: true }],
       // Ground shapes read off the NES map's shading (see terrainHeight).
       terrain: [
         { type: 'ridge', a: [560, 540], b: [830, 150], w: 34, h: 30, fall: 60 },
@@ -866,6 +866,7 @@
       features,
       startIdx: 0,
     };
+    track.bridges = findBridges(track);
     track.elev = buildElevation(track);
     return track;
   }
@@ -951,6 +952,47 @@
     return up + down;
   }
 
+  // ---------- Bridges ----------
+  // A crossing marked `bridge: true` becomes an overpass: one pass through
+  // it (`over`: 0 = the first in lap order, 1 = the second) climbs a ramp
+  // onto a deck BRIDGE.height above the road underneath, and back down.
+  const BRIDGE = { height: 30, deck: 70, ramp: 190 };
+
+  function findBridges(track) {
+    const out = [];
+    const S = track.samples;
+    const n = track.count;
+    for (const c of track.crossings || []) {
+      if (!c.bridge) continue;
+      // The two passes: the closest sample to the centre on each.
+      const near = [];
+      for (let i = 0; i < n; i++) {
+        const d = Math.hypot(S[i].x - c.x, S[i].y - c.y);
+        const dp = Math.hypot(S[(i - 1 + n) % n].x - c.x, S[(i - 1 + n) % n].y - c.y);
+        const dn = Math.hypot(S[(i + 1) % n].x - c.x, S[(i + 1) % n].y - c.y);
+        if (d <= dp && d <= dn && d < track.halfWidth) near.push({ i, d });
+      }
+      near.sort((a, b) => a.i - b.i);
+      if (near.length < 2) continue;
+      const upper = near[c.over || 0].i;
+      const lower = near[c.over ? 0 : 1].i;
+      out.push({ x: c.x, y: c.y, upper, lower, r: c.r });
+    }
+    return out;
+  }
+
+  // How far up the bridge ramps sample `i` is (0..1).
+  function bridgeProfile(track, b, i) {
+    const n = track.count;
+    let d = i - b.upper;
+    if (d > n / 2) d -= n;
+    if (d < -n / 2) d += n;
+    const along = Math.abs(d * SAMPLE_STEP);
+    if (along <= BRIDGE.deck / 2) return 1;
+    const t = (along - BRIDGE.deck / 2) / BRIDGE.ramp;
+    return t >= 1 ? 0 : 0.5 + 0.5 * Math.cos(Math.PI * t);
+  }
+
   function buildElevation(track) {
     const n = track.count;
     const raw = track.samples.map((s, i) => {
@@ -965,6 +1007,15 @@
       }
       return h;
     });
+    // Bridges lift the upper pass above the road underneath.
+    for (const b of track.bridges || []) {
+      b.low = raw[b.lower];
+      b.top = b.low + BRIDGE.height;
+      for (let i = 0; i < n; i++) {
+        const k = bridgeProfile(track, b, i);
+        if (k > 0) raw[i] = Math.max(raw[i], raw[i] + (b.top - raw[i]) * k);
+      }
+    }
     // A light smoothing along the road takes out any kinks.
     const out = raw.map((_, i) => {
       let sum = 0;
@@ -1001,7 +1052,7 @@
     return Math.abs(along) <= f.len / 2 && Math.abs(across) <= f.halfWidth;
   }
 
-  const api = { WORLD, TRACKS, SAMPLE_STEP, HILL, buildTrack, nearest, nearestGlobal, inFeature, elevationAt, terrainHeight };
+  const api = { WORLD, TRACKS, SAMPLE_STEP, HILL, BRIDGE, bridgeProfile, buildTrack, nearest, nearestGlobal, inFeature, elevationAt, terrainHeight };
   root.TractorTracks = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

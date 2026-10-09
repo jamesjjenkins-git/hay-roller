@@ -532,7 +532,8 @@
       for (let j = i + 1; j < rs.length; j++) {
         const a = rs[i];
         const b = rs[j];
-        if (Math.abs(a.z - b.z) > 14) continue;
+        // On a bridge, the deck and the road underneath don't touch.
+        if (Math.abs(a.z + a.elev - b.z - b.elev) > 14) continue;
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         const d = Math.hypot(dx, dy);
@@ -778,7 +779,7 @@
 
       if (a.hitCooldown > 0 || a.z > 12) continue;
       for (const r of s.racers) {
-        if (r.z > 10) continue;
+        if (r.z > 10 || Math.abs(r.elev - (a.elev || 0)) > 14) continue;
         const dx = a.x - r.x;
         const dy = a.y - r.y;
         const d = Math.hypot(dx, dy);
@@ -840,7 +841,7 @@
     s.pickups = s.pickups.filter((p) => {
       if (s.t - p.born > 14) return false;
       for (const r of s.racers) {
-        if (r.airborne || r.finished) continue;
+        if (r.airborne || r.finished || Math.abs(r.elev - (p.elev || 0)) > 14) continue;
         if (Math.hypot(r.x - p.x, r.y - p.y) < RADIUS + 12) {
           if (p.type === 'cash') r.cash += p.value;
           else r.nitros = Math.min(9, r.nitros + 1);
