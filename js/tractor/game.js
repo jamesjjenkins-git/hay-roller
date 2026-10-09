@@ -46,7 +46,7 @@
 
     // ---------- Input ----------
 
-    const input = { slide: 0, brake: false, nitro: false, keys: new Set() };
+    const input = { slide: 0, brake: false, nitro: false, drift: false, keys: new Set() };
 
     function playerInput() {
       const me = sim.racers[0];
@@ -57,11 +57,12 @@
       // Touch slider: left/right steers directly, like the arrow keys but analogue.
       if (steer === 0) steer = steerMode === 'buttons' ? buttonSteer(performance.now()) : input.slide;
       const brake = input.brake || k.has('ArrowDown') || k.has('s') ? 1 : 0;
-      const nitro = input.nitro || k.has(' ') || k.has('Shift');
+      const nitro = input.nitro || k.has(' ');
+      const drift = input.drift || k.has('Shift') || k.has('x');
       input.nitro = false;
       // While the thumb is sliding, the angle you've turned to is held exactly;
       // the straight-line assist only helps once you've let go or gone still.
-      return { steer, throttle: brake ? 0 : 1, brake, nitro, assist: steerMode === 'buttons' ? padDir === 0 : stickTouch == null || thumbResting };
+      return { steer, throttle: brake ? 0 : 1, brake, nitro, drift, assist: steerMode === 'buttons' ? padDir === 0 : stickTouch == null || thumbResting };
     }
 
     const stickZone = $('#stick-zone');
@@ -270,6 +271,7 @@
 
     holdButton($('#btn-brake'), () => (input.brake = true), () => (input.brake = false));
     holdButton($('#btn-nitro'), () => (input.nitro = true));
+    holdButton($('#btn-drift'), () => (input.drift = true), () => (input.drift = false));
 
     root.addEventListener('keydown', (e) => {
       if (!mounted || phase === 'garage') return;
@@ -551,6 +553,7 @@
       renderer.clearSkids();
       stickEnd();
       input.brake = false;
+      input.drift = false;
       input.keys.clear();
       sound.beep(false);
       sound.engineStart();
@@ -591,6 +594,7 @@
           ['👆', 'Steer', STEER_TEXT],
           ['🚜', 'Gas', 'Automatic — you’re always on the throttle.'],
           ['🔥', 'Nitro', 'Tap <b>NITRO</b> for a burst of speed. Counter at the top right.'],
+          ['🌀', 'Drift', 'Hold <b>DRIFT</b> to throw the tractor sideways. You turn tighter and keep your speed through corners (but top out a little lower), and steering the other way swings you into the opposite slide. You can drift a whole lap.'],
           ['🛑', 'Brake', 'Hold <b>BRAKE</b> to slow down. Keep holding when stopped to reverse out of trouble.'],
           ['⏸️', 'Pause', 'Tap the pause button at the top right.'],
           ['📷', 'Camera', 'Tap the 📷 button at the top of the screen to switch between the close-up camera and the whole track.'],
@@ -602,7 +606,8 @@
         rows: [
           ['<kbd>←</kbd> <kbd>→</kbd>', 'Steer', 'Turn left and right (or <kbd>A</kbd> <kbd>D</kbd>).'],
           ['🚜', 'Gas', 'Automatic — you’re always on the throttle.'],
-          ['<kbd>Space</kbd>', 'Nitro', 'Burst of speed (or <kbd>Shift</kbd>). Counter at the top right.'],
+          ['<kbd>Space</kbd>', 'Nitro', 'Burst of speed. Counter at the top right.'],
+          ['<kbd>Shift</kbd>', 'Drift', 'Hold to slide sideways (or <kbd>X</kbd>): tighter turns that keep your speed.'],
           ['<kbd>↓</kbd>', 'Brake', 'Slow down (or <kbd>S</kbd>). Keep holding when stopped to reverse.'],
           ['<kbd>Esc</kbd>', 'Pause', 'Pause and resume (or <kbd>P</kbd>).'],
           ['<kbd>V</kbd>', 'Camera', 'Switch between the close-up camera and the whole track.'],
@@ -651,6 +656,7 @@
         sound.engineStop();
         stickEnd();
         input.brake = false;
+        input.drift = false;
         input.keys.clear();
         showPauseMenu();
         modal.classList.remove('hidden');

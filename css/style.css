@@ -963,7 +963,8 @@ body.in-race .topbar { display: none; }
 .rbtn.pressed { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); opacity: 1; }
 .rbtn-nitro { width: 84px; height: 84px; font-size: 17px; background: radial-gradient(circle at 35% 30%, #ffb36b, #f05a1b); margin-bottom: 40px; }
 .rbtn-nitro.empty { filter: grayscale(1); opacity: 0.5; }
-.rbtn-brake { width: 70px; height: 70px; font-size: 15px; background: radial-gradient(circle at 35% 30%, #8a8a8a, #4a4a4a); }
+.rbtn-brake { width: 70px; height: 70px; font-size: 15px; background: radial-gradient(circle at 35% 30%, #8a8a8a, #4a4a4a); margin-bottom: 70px; }
+.rbtn-drift { width: 92px; height: 92px; font-size: 18px; background: radial-gradient(circle at 35% 30%, #c79bff, #7a3fd0); }
 
 .rotate-hint {
   display: none;
@@ -1080,7 +1081,8 @@ kbd {
   .hud-pause { width: 34px; height: 34px; }
   .hud-view { height: 34px; font-size: 14px; padding: 0 10px 0 8px; }
   .rbtn-nitro { width: 70px; height: 70px; font-size: 14px; margin-bottom: 30px; }
-  .rbtn-brake { width: 58px; height: 58px; font-size: 12px; }
+  .rbtn-brake { width: 58px; height: 58px; font-size: 12px; margin-bottom: 56px; }
+  .rbtn-drift { width: 78px; height: 78px; font-size: 15px; }
   .sbtn { width: 70px; height: 70px; font-size: 26px; }
   .results .place { font-size: 34px; }
   .r-order { font-size: 13px; }

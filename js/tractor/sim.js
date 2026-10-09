@@ -136,6 +136,8 @@
         heading: start.angle,
         steer: 0,
         drift: 0,
+        drifting: false,
+        driftSide: 1,
         idx: Tracks.nearestGlobal(track, x, y),
         progress: 0,
         lap: 0,
@@ -287,6 +289,7 @@
       r.bump = Math.max(r.bump, 0.25 + 0.5 * turning);
     }
     r.catchUp = catchUpBoost(s, r);
+    if (r.drifting) topMul *= DRIFT.topMul;
     const top = st.topSpeed * topMul * (boosting ? 1.45 : 1) * (1 + r.catchUp);
     const accel = st.accel * (boosting ? 2 : 1) * (1 + r.catchUp);
 
@@ -308,8 +311,22 @@
       if (vf > 0 && r.surface === 'dirt') {
         vf = Math.min(Math.max(vf, top), Math.sqrt(vf * vf + vlBefore * vlBefore - vl * vl));
       }
-      // Turning scrubs off a little speed, which tightens the line through corners.
-      vf -= vf * Math.abs(r.steer) * 0.8 * DT;
+      // Drift button: throw the tractor sideways. Pick the slide's side from
+      // the steering (or the way it's already sliding); steer the other way
+      // to swing smoothly into the opposite slide.
+      const wasDrifting = r.drifting;
+      r.drifting = !!input.drift && vf > DRIFT.minSpeed && r.surface !== 'water' && r.surface !== 'mud';
+      if (r.drifting) {
+        if (!wasDrifting) {
+          r.driftSide = Math.sign(input.steer) || Math.sign(r.steer) || Math.sign(r.drift) || 1;
+          s.events.push({ type: 'drift', id: r.id });
+        } else if (Math.abs(input.steer) > 0.15 && Math.sign(input.steer) !== r.driftSide) {
+          r.driftSide = Math.sign(input.steer);
+        }
+      }
+      // Turning scrubs off a little speed, which tightens the line through
+      // corners; a drift carries its speed round instead.
+      vf -= vf * Math.abs(r.steer) * 0.8 * DT * (r.drifting ? DRIFT.scrub : 1);
 
       // Turning: tractors can pivot slowly even when stopped.
       const turnFactor = Math.min(1, 0.4 + speed / (st.topSpeed * 0.5));
@@ -318,22 +335,26 @@
       // but unwind a little quicker than it winds on to avoid overshoot.
       const easing = Math.abs(input.steer) < Math.abs(r.steer) ? 20 : 15;
       r.steer += (input.steer - r.steer) * Math.min(1, easing * DT);
-      const turn = r.steer * st.turnRate * turnFactor * dir * DT;
+      const turn = r.steer * st.turnRate * turnFactor * dir * DT * (r.drifting ? DRIFT.turnBoost : 1);
       r.heading += turn;
       // Drift: the travel direction lags a touch behind the nose, and the
       // back end swings out (r.drift, drawn only) in proportion to how hard
       // you're turning at speed, easing back as you straighten up.
       vl -= vf * Math.sin(turn) * DRIFT.carry;
       vf -= vf * (1 - Math.cos(turn)) * DRIFT.carry;
-      const wantDrift = r.surface === 'water' || r.surface === 'mud'
+      let wantDrift = r.surface === 'water' || r.surface === 'mud'
         ? 0
         : r.steer * DRIFT.swing * Math.min(1, Math.max(0, vf) / st.topSpeed) * (1.4 - 0.4 * gripMul);
-      r.drift += (wantDrift - r.drift) * Math.min(1, DRIFT.ease * DT);
+      if (r.drifting) {
+        // Properly sideways: the tail out, a little more the harder you turn.
+        wantDrift = r.driftSide * (DRIFT.kick + DRIFT.kickSteer * Math.abs(r.steer)) * Math.min(1, vf / 120);
+      }
+      r.drift += (wantDrift - r.drift) * Math.min(1, (r.drifting || wasDrifting ? DRIFT.slideEase : DRIFT.ease) * DT);
 
       // Straight-line assist (player option): with no steering input, nudge
       // the nose toward the direction of the road right here — only when
       // already within ~11 degrees, so it never fights a turn or drives for you.
-      if (input.assist && Math.abs(input.steer) < 0.05 && speed > 30 && dir > 0) {
+      if (input.assist && !r.drifting && Math.abs(input.steer) < 0.05 && speed > 30 && dir > 0) {
         const here = s.track.samples[r.idx];
         const err = angleDiff(here.angle, r.heading);
         if (Math.abs(err) < ASSIST.maxAngle) {
@@ -458,7 +479,14 @@
   // Drift: `carry` is how much of each turn the travel direction lags behind
   // the nose (0 = on rails, 1 = ice); grip then pulls the slide back in line.
   // `swing` is how far (radians, at full turn and speed) the tail swings out.
-  const DRIFT = { carry: 0.08, swing: 0.4, ease: 6 };
+  // The drift button: `kick` is the slide angle it throws you into (plus
+  // `kickSteer` × steering), `turnBoost` how much tighter you turn, `scrub`
+  // how much of the usual cornering speed loss remains, `topMul` the small
+  // top-speed cost, all eased in and out at `slideEase` so it stays smooth.
+  const DRIFT = {
+    carry: 0.08, swing: 0.4, ease: 6,
+    kick: 0.5, kickSteer: 0.25, turnBoost: 1.3, scrub: 0.4, topMul: 0.92, minSpeed: 50, slideEase: 4,
+  };
 
   // Rumble strips only cost you if you're turning while on them.
   const BUMPS = { loss: 0.35, fullAt: 0.35 };
