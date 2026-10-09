@@ -631,9 +631,17 @@
     // inside of bends; where the edge curves tightly, round oil barrels
     // replace the long bales.
     const walls = [];
+    // Placed on the road's on-screen shape (lifted by hills), so pieces
+    // follow a slope instead of skewing, and no piece is placed on top of
+    // another (where two stretches of wall meet at corners and crossings).
+    const SIZE = { bale: 13, tyre: 9, barrel: 10 };
+    const clashes = (x, y, r) => walls.some((w) => Math.hypot(w.x - x, w.y - y) < r + SIZE[w.kind] - 2);
     for (const side of [-1, 1]) {
       const off = side * (t.halfWidth + 7);
-      const pts = t.samples.map((s) => ({ x: s.x + s.nx * off, y: s.y + s.ny * off, angle: s.angle }));
+      const pts = t.samples.map((s, i) => {
+        const lift = liftAt(t, i);
+        return { x: s.x + s.nx * off, gy: s.y + s.ny * off, y: s.y + s.ny * off - lift, angle: s.angle };
+      });
       let travelled = 0;
       let nextAt = 0;
       let placed = 0;
@@ -642,29 +650,29 @@
         const prev = pts[(i - 1 + t.count) % t.count];
         if (i > 0) travelled += Math.hypot(p.x - prev.x, p.y - prev.y);
         if (travelled < nextAt) continue;
-        if (p.x < -10 || p.x > W + 10 || p.y < -10 || p.y > H + 10) continue;
+        if (p.x < -10 || p.x > W + 10 || p.gy < -10 || p.gy > H + 10) continue;
         // On the inside of tight bends the offset edge folds back over the
         // road; don't draw anything where there's driving surface.
-        if (onSurface(t, p.x, p.y, t.halfWidth + 3)) continue;
+        if (onSurface(t, p.x, p.gy, t.halfWidth + 3)) continue;
         // Local radius of this edge, from how fast it turns.
         const a0 = pts[(i - 3 + t.count) % t.count];
         const a1 = pts[(i + 3) % t.count];
         let turn = a1.angle - a0.angle;
         while (turn > Math.PI) turn -= Math.PI * 2;
         while (turn < -Math.PI) turn += Math.PI * 2;
-        const edgeLen = Math.hypot(a1.x - a0.x, a1.y - a0.y);
+        const edgeLen = Math.hypot(a1.x - a0.x, a1.gy - a0.gy);
         const tight = edgeLen / Math.max(0.001, Math.abs(turn)) < BARREL_RADIUS;
-        const py = p.y - liftAt(t, i);
-        if (placed % 9 === 0) {
-          walls.push({ kind: 'tyre', x: p.x, y: py, gy: p.y, n: Math.floor(placed / 9) });
-          nextAt = travelled + 20;
-        } else if (tight) {
-          walls.push({ kind: 'barrel', x: p.x, y: py, gy: p.y, n: placed });
-          nextAt = travelled + 18;
-        } else {
-          walls.push({ kind: 'bale', x: p.x, y: py, gy: p.y, n: placed, angle: p.angle });
-          nextAt = travelled + 25;
+        const kind = placed % 9 === 0 ? 'tyre' : tight ? 'barrel' : 'bale';
+        if (clashes(p.x, p.y, SIZE[kind])) {
+          nextAt = travelled + 6;
+          continue;
         }
+        // The bale lies along the edge as it appears on screen.
+        const ahead = pts[(i + 2) % t.count];
+        const behind = pts[(i - 2 + t.count) % t.count];
+        const angle = Math.atan2(ahead.y - behind.y, ahead.x - behind.x);
+        walls.push({ kind, x: p.x, y: p.y, gy: p.gy, n: kind === 'tyre' ? Math.floor(placed / 9) : placed, angle });
+        nextAt = travelled + (kind === 'tyre' ? 20 : kind === 'barrel' ? 18 : 25);
         placed++;
       }
     }
@@ -965,7 +973,11 @@
       quad(i, outer, lift[i], lift[(i + 1) % n]);
       c.fill();
       const h1 = root.TractorTracks.elevationAt(t, (i + 1) % n).h;
-      if (Math.floor(h / 4) !== Math.floor(h1 / 4)) {
+      // Contour line (left off on tight curves, where they'd fan out).
+      let bend = t.samples[(i + 1) % n].angle - t.samples[i].angle;
+      while (bend > Math.PI) bend -= Math.PI * 2;
+      while (bend < -Math.PI) bend += Math.PI * 2;
+      if (Math.abs(bend) < 0.05 && Math.floor(h / 4) !== Math.floor(h1 / 4)) {
         const a = t.samples[i];
         c.strokeStyle = 'rgba(90, 55, 20, 0.35)';
         c.lineWidth = 1.5;

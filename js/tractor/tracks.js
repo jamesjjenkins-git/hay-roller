@@ -269,14 +269,14 @@
       ],
       scenery: [
         { kind: 'tree', x: 250, y: 360, scale: 1.4 },
-        { kind: 'tree', x: 620, y: 200, scale: 0.55 },
-        { kind: 'tree', x: 760, y: 200, scale: 0.55 },
-        { kind: 'tree', x: 900, y: 200, scale: 0.55 },
-        { kind: 'tree', x: 620, y: 370, scale: 0.55 },
-        { kind: 'tree', x: 760, y: 370, scale: 0.55 },
-        { kind: 'tree', x: 950, y: 370, scale: 0.55 },
-        { kind: 'tree', x: 568, y: 541, scale: 0.55 },
-        { kind: 'tree', x: 705, y: 537, scale: 0.55 },
+        { kind: 'tree', x: 635, y: 203, scale: 0.55 },
+        { kind: 'tree', x: 762, y: 205, scale: 0.55 },
+        { kind: 'tree', x: 1095, y: 364, scale: 0.55 },
+        { kind: 'tree', x: 428, y: 209, scale: 0.55 },
+        { kind: 'tree', x: 1145, y: 370, scale: 0.55 },
+        { kind: 'tree', x: 1157, y: 445, scale: 0.55 },
+        { kind: 'tree', x: 388, y: 541, scale: 0.55 },
+        { kind: 'tree', x: 340, y: 537, scale: 0.55 },
         { kind: 'tree', x: 840, y: 535, scale: 0.55 },
       ],
     },
@@ -427,9 +427,9 @@
         { type: 'bumps', at: 0.933 },
       ],
       scenery: [
-        { kind: 'windmill', x: 310, y: 340 },
-        { kind: 'tree', x: 867, y: 513, scale: 0.6 },
-        { kind: 'hay', x: 290, y: 503, scale: 0.6 },
+        { kind: 'windmill', x: 332, y: 353 },
+        { kind: 'tree', x: 1118, y: 368, scale: 0.6 },
+        { kind: 'hay', x: 285, y: 502, scale: 0.6 },
       ],
     },
     {
@@ -470,8 +470,8 @@
         { type: 'jump', at: 0.92 },
       ],
       scenery: [
-        { kind: 'barn', x: 610, y: 461 },
-        { kind: 'tree', x: 327, y: 323, scale: 0.6 },
+        { kind: 'tree', x: 610, y: 461, scale: 0.6 },
+        { kind: 'tree', x: 334, y: 342, scale: 0.6 },
         { kind: 'hay', x: 218, y: 378, scale: 0.6 },
       ],
     },
@@ -513,9 +513,9 @@
       ],
       scenery: [
         { kind: 'silo', x: 300, y: 280 },
-        { kind: 'tree', x: 887, y: 333, scale: 0.6 },
-        { kind: 'hay', x: 770, y: 348, scale: 0.6 },
-        { kind: 'tree', x: 548, y: 261, scale: 0.6 },
+        { kind: 'tree', x: 894, y: 352, scale: 0.6 },
+        { kind: 'hay', x: 562, y: 228, scale: 0.6 },
+        { kind: 'tree', x: 533, y: 287, scale: 0.6 },
       ],
     },
     {
@@ -553,10 +553,10 @@
         { type: 'bumps', at: 0.869 },
       ],
       scenery: [
-        { kind: 'tree', x: 792, y: 514, scale: 0.6 },
-        { kind: 'hay', x: 300, y: 520, scale: 0.6 },
-        { kind: 'tree', x: 925, y: 199, scale: 0.6 },
-        { kind: 'pond', x: 393, y: 151 },
+        { kind: 'tree', x: 462, y: 572, scale: 0.6 },
+        { kind: 'hay', x: 300, y: 530, scale: 0.6 },
+        { kind: 'tree', x: 718, y: 124, scale: 0.6 },
+        { kind: 'pond', x: 388, y: 149 },
       ],
     },
     {
@@ -593,9 +593,9 @@
         { type: 'bumps', at: 0.92 },
       ],
       scenery: [
-        { kind: 'silo', x: 860, y: 330 },
-        { kind: 'tree', x: 392, y: 514, scale: 0.6 },
-        { kind: 'windmill', x: 900, y: 215 },
+        { kind: 'silo', x: 856, y: 333 },
+        { kind: 'tree', x: 362, y: 347, scale: 0.6 },
+        { kind: 'windmill', x: 783, y: 258 },
       ],
     },
     {
@@ -634,7 +634,7 @@
       ],
       scenery: [
         { kind: 'tree', x: 200, y: 450, scale: 0.6 },
-        { kind: 'hay', x: 238, y: 322, scale: 0.6 },
+        { kind: 'hay', x: 236, y: 327, scale: 0.6 },
       ],
     },
     {
@@ -674,10 +674,10 @@
         { type: 'water', at: 0.933, off: 0 },
       ],
       scenery: [
-        { kind: 'barn', x: 812, y: 237 },
-        { kind: 'silo', x: 905, y: 300 },
-        { kind: 'tree', x: 387, y: 420, scale: 0.6 },
-        { kind: 'windmill', x: 235, y: 297 },
+        { kind: 'barn', x: 850, y: 269 },
+        { kind: 'silo', x: 954, y: 309 },
+        { kind: 'tree', x: 334, y: 566, scale: 0.6 },
+        { kind: 'windmill', x: 231, y: 300 },
       ],
     },
   ];
