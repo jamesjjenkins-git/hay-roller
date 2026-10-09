@@ -220,10 +220,12 @@
     ctx.closePath();
   }
 
+  // Outlines are drawn at this fraction of their nominal width: thin and crisp.
+  const LINE = 0.6;
   function fillStroke(ctx, fill, lw = 2.5, stroke = OUTLINE) {
     ctx.fillStyle = fill;
     ctx.fill();
-    ctx.lineWidth = lw;
+    ctx.lineWidth = lw * LINE;
     ctx.strokeStyle = stroke;
     ctx.stroke();
   }

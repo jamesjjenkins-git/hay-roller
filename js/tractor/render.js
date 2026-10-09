@@ -384,7 +384,7 @@
         ctx.closePath();
         ctx.fillStyle = r.color;
         ctx.fill();
-        ctx.lineWidth = size * 0.25;
+        ctx.lineWidth = size * 0.25 * LINE;
         ctx.strokeStyle = OUTLINE;
         ctx.stroke();
         ctx.restore();
@@ -458,10 +458,12 @@
     ctx.closePath();
   }
 
+  // Outlines are drawn at this fraction of their nominal width: thin and crisp.
+  const LINE = 0.6;
   function fillStroke(ctx, fill, lw = 2.5, stroke = OUTLINE) {
     ctx.fillStyle = fill;
     ctx.fill();
-    ctx.lineWidth = lw;
+    ctx.lineWidth = lw * LINE;
     ctx.strokeStyle = stroke;
     ctx.stroke();
   }
@@ -676,7 +678,7 @@
     c.fillStyle = '#9b6633';
     c.fillRect(300, y, 600, 46);
     c.strokeStyle = OUTLINE;
-    c.lineWidth = 3;
+    c.lineWidth = 3 * LINE;
     c.strokeRect(300, y - 3, 600, 49);
     const shirts = ['#e2412f', '#2f7de2', '#f4c20d', '#2fae4a', '#8e44c9', '#fff', '#f07c1b'];
     for (let row = 0; row < 3; row++) {
@@ -745,7 +747,7 @@
       roundRect(c, -L / 2, -hw, L, hw * 2, 4);
       c.fillStyle = g;
       c.fill();
-      c.lineWidth = 2.5;
+      c.lineWidth = 2.5 * LINE;
       c.strokeStyle = OUTLINE;
       c.stroke();
       c.strokeStyle = 'rgba(80,45,15,0.5)';
