@@ -113,10 +113,17 @@
             <a class="earn-link" href="#/">Need more Hay? Play a mini game or grab free Hay in your wallet →</a>
           </div>
           <div class="g-card g-tracks">
-            <h2>Pick a track</h2>
+            <h2>Pick a track <small class="swipe-hint">swipe for more →</small></h2>
             <div id="track-list"></div>
             <button class="btn btn-primary btn-big race-btn" id="race-btn">Race! 🏁</button>
           </div>
+        </div>
+        <!-- Phones: always-visible race bar so you never have to hunt for the button. -->
+        <div class="race-dock" id="race-dock">
+          <button class="dock-track" id="dock-track" aria-label="Change track">
+            <small>Track</small><b id="dock-track-name">Muddy Meadow</b><span class="dock-change">Change ▸</span>
+          </button>
+          <button class="btn btn-primary btn-big" id="dock-race">Race! 🏁</button>
         </div>
       </div>
 

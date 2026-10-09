@@ -258,7 +258,7 @@
         const need = t.unlock && TRACKS.find((x) => x.id === t.unlock.track);
         const badge = best && best.place <= 3 ? `<span class="t-trophy" title="Best finish: ${ordinal(best.place)}">${TROPHY_ICON[TROPHIES[best.place - 1].id]}</span>` : '';
         return `<button class="track ${selected.id === t.id ? 'active' : ''} ${unlocked ? '' : 'locked'}" data-track="${t.id}" ${unlocked ? '' : 'disabled'}>
-          <canvas class="track-thumb" data-thumb="${t.id}" width="120" height="68"></canvas>
+          <canvas class="track-thumb" data-thumb="${t.id}" width="240" height="136"></canvas>
           <span class="t-info">
             <b>${unlocked ? '' : '🔒 '}${t.name}</b>
             <small>${unlocked ? t.blurb : `Finish ${ordinal(t.unlock.place)} or better on ${need.name} to unlock`}</small>
@@ -268,9 +268,15 @@
         </button>`;
       }).join('');
       el.querySelectorAll('[data-thumb]').forEach((c) => drawThumb(c, getTrack(TRACKS.find((t) => t.id === c.dataset.thumb))));
+      // Keep the selected track in view, whether the list scrolls down or sideways.
       const active = $('#track-list .track.active');
       const list = $('#track-list');
-      if (active && list.scrollTop === 0) list.scrollTop = Math.max(0, active.offsetTop - list.offsetTop - 8);
+      if (active && list.scrollWidth > list.clientWidth + 4) {
+        if (list.scrollLeft === 0) list.scrollLeft = Math.max(0, active.offsetLeft - list.offsetLeft - 12);
+      } else if (active && list.scrollTop === 0) {
+        list.scrollTop = Math.max(0, active.offsetTop - list.offsetTop - 8);
+      }
+      $('#dock-track-name').textContent = selected.name;
 
       drawPreview();
     }
@@ -363,6 +369,16 @@
     $('#race-btn').addEventListener('click', () => {
       sound.click();
       startRace();
+    });
+    $('#dock-race').addEventListener('click', () => {
+      sound.click();
+      startRace();
+    });
+    $('#dock-track').addEventListener('click', () => {
+      sound.click();
+      const bar = document.querySelector('.topbar');
+      const top = $('.g-tracks').getBoundingClientRect().top + root.scrollY - (bar ? bar.offsetHeight : 0) - 10;
+      root.scrollTo({ top, behavior: 'smooth' });
     });
 
     // ---------- Race ----------

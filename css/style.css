@@ -1048,9 +1048,78 @@ kbd {
   .c-tip { padding: 5px 8px; font-size: 12px; }
 }
 
+.swipe-hint, .race-dock { display: none; }
+
 @media (max-width: 1000px) {
   .garage-grid { grid-template-columns: 1fr 1fr; }
   .g-tracks { grid-column: 1 / -1; }
+
+  /* Grid columns must be allowed to shrink, or the track row widens the page. */
+  .garage-grid > * { min-width: 0; }
+  /* Tracks become a sideways swipe row, so they never fight page scrolling. */
+  #track-list {
+    display: flex;
+    gap: 12px;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    padding: 12px 4px 10px;
+    margin: 0 -4px 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .track {
+    flex: 0 0 min(64vw, 260px);
+    grid-template-columns: 1fr;
+    align-content: start;
+    scroll-snap-align: start;
+  }
+  .track-thumb { width: 100%; height: auto; aspect-ratio: 240 / 136; }
+  .swipe-hint { display: inline; font-family: var(--font-body); font-size: 13px; font-weight: 800; opacity: 0.6; margin-left: 6px; }
+  .race-btn { display: none; }
+
+  /* Race bar pinned to the bottom of the garage. */
+  .garage { padding-bottom: 96px; }
+  .race-dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 15;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: var(--cream);
+    border-top: 4px solid var(--ink);
+    box-shadow: 0 -4px 0 rgba(0,0,0,0.12);
+  }
+  .garage.hidden .race-dock { display: none; }
+  .dock-track {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    text-align: left;
+    padding: 6px 10px;
+    border-radius: 12px;
+    border: 2px dashed var(--ink);
+    background: #fff;
+  }
+  .dock-track small { font-size: 11px; font-weight: 800; opacity: 0.6; text-transform: uppercase; }
+  .dock-track b { font-family: var(--font-display); font-weight: 400; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dock-change { font-size: 12px; font-weight: 800; color: var(--barn-dark); }
+  .race-dock .btn-big { flex: 0 0 auto; font-size: 22px; padding: 12px 22px; }
+}
+/* Landscape phones: keep the race bar to one slim line. */
+@media (max-width: 1000px) and (max-height: 500px) {
+  .garage { padding-bottom: 64px; }
+  .race-dock { padding: 6px 16px calc(6px + env(safe-area-inset-bottom)); }
+  .dock-track { display: flex; align-items: baseline; gap: 8px; padding: 4px 10px; }
+  .dock-track b { font-size: 16px; }
+  .race-dock .btn-big { font-size: 18px; padding: 6px 18px; }
+  .track { flex-basis: 200px; }
+  .t-info small:not(.t-meta) { display: none; }
 }
 
 /* ---------- Piggy Bank Slots ---------- */
@@ -1486,8 +1555,6 @@ body.has-banner main { padding-bottom: 96px; }
   .bet-controls { padding: 12px; gap: 10px; }
   .garage-grid { grid-template-columns: 1fr; }
   .feature-body h2 { font-size: 30px; }
-  .track { grid-template-columns: 96px 1fr; }
-  .track-thumb { width: 96px; height: 54px; }
   /* Results get the whole screen rather than the small canvas. */
   .race-overlay { position: fixed; z-index: 50; }
 }
