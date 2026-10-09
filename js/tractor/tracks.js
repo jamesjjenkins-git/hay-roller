@@ -428,7 +428,7 @@
         { type: 'jump', at: 0.292 },
         { type: 'mud', at: 0.414, off: 0 },
         { type: 'water', at: 0.6, off: 0 },
-        { type: 'jump', at: 0.767 },
+        { type: 'jump', at: 0.712 },
         { type: 'bumps', at: 0.933 },
       ],
       scenery: [
