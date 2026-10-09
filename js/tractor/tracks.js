@@ -328,10 +328,12 @@
         [1031, 275], [1038, 404], [1010, 521], [948, 587],
       ],
       features: [
-        { type: 'jump', at: 0.18 },
+        // Ramps just before each pass through the crossroads: at racing
+        // speed you land right in the middle of it.
+        { type: 'jump', at: 0.085 },
         { type: 'mud', at: 0.36, off: 0, len: 80 },
-        { type: 'bumps', at: 0.5, len: 60 },
-        { type: 'jump', at: 0.68 },
+        { type: 'bumps', at: 0.47, len: 60 },
+        { type: 'jump', at: 0.583 },
         { type: 'water', at: 0.86, off: 0, len: 80 },
       ],
       scenery: [
@@ -366,11 +368,13 @@
         [970, 478], [1070, 490], [1105, 545], [1060, 598], [950, 618], [780, 620],
       ],
       features: [
-        { type: 'jump', at: 0.07 },
-        { type: 'mud', at: 0.22, off: 0, len: 80 },
-        { type: 'bumps', at: 0.42, len: 60 },
+        // Ramps just before each pass through the X: land in the middle of it.
+        { type: 'bumps', at: 0.08, len: 60 },
+        { type: 'jump', at: 0.224 },
+        { type: 'mud', at: 0.4, off: 0, len: 80 },
         { type: 'water', at: 0.58, off: 0, len: 80 },
-        { type: 'jump', at: 0.78 },
+        { type: 'jump', at: 0.723 },
+        { type: 'mud', at: 0.9, off: 0, len: 80 },
       ],
       scenery: [
         { kind: 'hay', x: 235, y: 359 },
@@ -601,9 +605,11 @@
         { type: 'bumps', at: 0.08, len: 60 },
         { type: 'jump', at: 0.2 },
         { type: 'mud', at: 0.33, off: 0, len: 80 },
-        { type: 'water', at: 0.52, off: 0, len: 70 },
-        { type: 'jump', at: 0.66 },
-        { type: 'water', at: 0.83, off: 0, len: 70 },
+        { type: 'water', at: 0.48, off: 0, len: 70 },
+        // Ramps just before each pass over the crossing: land in the middle of it.
+        { type: 'jump', at: 0.627 },
+        { type: 'water', at: 0.8, off: 0, len: 70 },
+        { type: 'jump', at: 0.912 },
       ],
       scenery: [
         { kind: 'barn', x: 250, y: 255 },
