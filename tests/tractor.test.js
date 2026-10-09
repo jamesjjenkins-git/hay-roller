@@ -650,3 +650,24 @@ test('sliding into the outside wall mid-drift costs less than a normal knock', (
   assert.ok(outside < normal * 0.7, `outside ${outside.toFixed(3)} vs normal ${normal.toFixed(3)}`);
   assert.ok(inside > outside, 'the inside wall still bites');
 });
+
+test('bridges lift one road over the other, and the two levels never collide', () => {
+  for (const id of ['iron-wipeout', 'iron-bigdukes', 'iron-blaster']) {
+    const track = Tracks.buildTrack(Tracks.TRACKS.find((d) => d.id === id));
+    assert.ok(track.bridges.length >= 1, id);
+    for (const b of track.bridges) {
+      assert.ok(track.elev[b.upper] - track.elev[b.lower] >= Tracks.BRIDGE.height - 1, `${id} deck height`);
+    }
+    // One racer on the deck, one directly underneath: no bump.
+    const s = Sim.createRace(track, { seed: 1 });
+    const b = track.bridges[0];
+    const [a, c] = s.racers;
+    for (const [r, i] of [[a, b.upper], [c, b.lower]]) {
+      const sm = track.samples[i];
+      Object.assign(r, { x: b.x, y: b.y, vx: Math.cos(sm.angle) * 100, vy: Math.sin(sm.angle) * 100, heading: sm.angle, idx: i });
+    }
+    for (const r of s.racers.slice(2)) Object.assign(r, { x: -500, y: -500 });
+    Sim.step(s, {});
+    assert.ok(Math.hypot(a.x - c.x, a.y - c.y) < Sim.RADIUS, `${id}: the two levels pushed each other apart`);
+  }
+});

@@ -64,6 +64,7 @@
       drawBackground(b, track);
       buildWallSprites();
       buildSignSprite();
+      buildDeckSprites();
       skid.getContext('2d').setTransform(layerScale, 0, 0, layerScale, 0, 0);
       lastSkid = new Map();
     }
@@ -90,6 +91,20 @@
         const bucket = w.kind === 'bale' ? (Number(key.split(':')[1]) * Math.PI) / 48 : 0;
         drawWallSolid(cc, { ...w, x: SPR.ox, y: SPR.oy, angle: bucket });
         wallSprites.set(key, cv);
+      }
+    }
+
+    // Bridge decks, pre-drawn once and drawn each frame in depth order.
+    function buildDeckSprites() {
+      for (const dk of track.decks || []) {
+        const { x, y, w, h } = dk.box;
+        const cv = document.createElement('canvas');
+        cv.width = Math.ceil(w * layerScale);
+        cv.height = Math.ceil(h * layerScale);
+        const cc = cv.getContext('2d');
+        cc.setTransform(layerScale, 0, 0, layerScale, -x * layerScale, -y * layerScale);
+        drawRaisedRoad(cc, track, root.FarmRng.mulberry32(dk.idx[0] + 1), { only: dk.idx, slab: dk.slab });
+        dk.sprite = cv;
       }
     }
 
@@ -364,21 +379,31 @@
       drawParticles('under');
 
       // Everything that stands up, back to front: walls, animals, vehicles.
-      for (const r of sim.racers) drawShadow(ctx, r);
+      // Up on a bridge, things are drawn after its deck (shadows too).
+      const upOn = (it, i) => {
+        const dk = deckOf(track, i);
+        if (dk) {
+          it.up = true;
+          it.y = Math.max(it.y, dk.key) + 0.001 * (it.y / H);
+        }
+        return it;
+      };
+      for (const r of sim.racers) if (!deckOf(track, r.idx)) drawShadow(ctx, r);
       const items = [];
+      for (const dk of track.decks || []) items.push({ y: dk.key, dk });
       const x0 = v.rx - 30;
       const x1 = v.rx + v.rw + 30;
       const y0 = v.ry - 30;
       const y1 = v.ry + v.rh + 60;
       for (const w of track.wallItems || []) {
         if (w.x < x0 || w.x > x1 || w.y < y0 || w.y > y1) continue;
-        items.push({ y: w.gy, w });
+        items.push(upOn({ y: w.gy, w }, w.si));
       }
-      for (const a of sim.animals || []) items.push({ y: a.y, a });
-      for (const p of sim.pickups) items.push({ y: p.y, p });
+      for (const a of sim.animals || []) items.push(upOn({ y: a.y, a }, a.idx));
+      for (const p of sim.pickups) items.push(upOn({ y: p.y, p }, p.idx));
       // Ramps sort a little behind their centre so anything on them is drawn on top.
       for (const f of track.features) if (f.type === 'jump') items.push({ y: f.y - 24, f });
-      for (const r of sim.racers) items.push({ y: r.y + (r.airborne ? 40 : 0), r });
+      for (const r of sim.racers) items.push(upOn({ y: r.y + (r.airborne ? 40 : 0), r }, r.idx));
       items.push({ y: flagmanSpot(track).y, flag: true });
       items.sort((a, b) => a.y - b.y);
       for (const it of items) {
@@ -387,7 +412,11 @@
         else if (it.p) drawPickup(ctx, it.p, now);
         else if (it.f) drawRamp(ctx, track, it.f);
         else if (it.flag) drawFlagman(ctx, sim, view, now);
-        else drawTractor(ctx, it.r, now);
+        else if (it.dk) ctx.drawImage(it.dk.sprite, it.dk.box.x, it.dk.box.y, it.dk.sprite.width / layerScale, it.dk.sprite.height / layerScale);
+        else {
+          if (it.up) drawShadow(ctx, it.r);
+          drawTractor(ctx, it.r, now);
+        }
       }
       drawParticles('over');
       const sg = track.sign;
@@ -645,7 +674,10 @@
     }
 
     // Hills: lit on the climb, shaded on the way down, with contour lines.
-    if (t.elev && t.elev.some((h) => Math.abs(h) > 0.3)) drawRaisedRoad(c, t, rng);
+    t.decks = bridgeDecks(t);
+    const onDeck = new Set();
+    for (const dk of t.decks) dk.idx.forEach((i) => onDeck.add(i));
+    if (t.elev && t.elev.some((h) => Math.abs(h) > 0.3)) drawRaisedRoad(c, t, rng, { skip: onDeck });
 
     // Features.
     // Mud, water and rumble strips are trimmed to the road (lifted up any
@@ -1575,9 +1607,11 @@
         const ci = Math.max(0, Math.min(cols - 1, Math.round((x - ox) / cs)));
         const cj = Math.max(0, Math.min(rows - 1, Math.round((gy - oy) / cs)));
         const si = NI[cj * cols + ci];
-        // On shaped ground, sit at the height of the ground drawn there.
-        const lift = t.terrain ? root.TractorTracks.terrainHeight(t.terrain, x, gy) * RAISE : liftAt(t, si);
-        return { x, gy, y: gy - lift };
+        // On shaped ground, sit at the height of the ground drawn there;
+        // beside a bridge ramp, at the height of the ramp.
+        const ramp = (t.bridges || []).some((b) => root.TractorTracks.bridgeProfile(t, b, si) > 0);
+        const lift = t.terrain && !ramp ? root.TractorTracks.terrainHeight(t.terrain, x, gy) * RAISE : liftAt(t, si);
+        return { x, gy, y: gy - lift, si };
       });
       let travelled = 0;
       let nextAt = 0;
@@ -1597,11 +1631,14 @@
         const span = Math.hypot(a1.x - a0.x, a1.gy - a0.gy);
         const tight = span / Math.max(0.001, Math.abs(turn)) < BARREL_RADIUS * 0.6;
         const kind = placed % 9 === 0 ? 'tyre' : tight ? 'barrel' : 'bale';
+        // A bridge deck has railings instead.
+        const dk = deckOf(t, p.si);
+        if (dk && dk.slab(p.si)) continue;
         if (clashes(p.x, p.y, SIZE[kind])) {
           nextAt = travelled + 4;
           continue;
         }
-        walls.push({ kind, x: p.x, y: p.y, gy: p.gy, n: kind === 'tyre' ? Math.floor(placed / 9) : placed, angle });
+        walls.push({ kind, x: p.x, y: p.y, gy: p.gy, si: p.si, n: kind === 'tyre' ? Math.floor(placed / 9) : placed, angle });
         nextAt = travelled + (kind === 'tyre' ? 20 : kind === 'barrel' ? 18 : 25);
         placed++;
       }
@@ -1708,8 +1745,9 @@
   // bank of earth filling the gap down to the ground, then the raised
   // surface on top — lit on the climb, shaded on the way down, with
   // contour lines.
-  function drawRaisedRoad(c, t, rng) {
+  function drawRaisedRoad(c, t, rng, opts = {}) {
     const n = t.count;
+    const slab = opts.slab || (() => false);
     const lift = t.samples.map((_, i) => liftAt(t, i));
     const outer = t.halfWidth + 13;
     const quad = (i, w, la, lb) => {
@@ -1722,15 +1760,27 @@
       c.lineTo(a.x - a.nx * w, a.y - a.ny * w - la);
       c.closePath();
     };
-    const raised = [];
+    let raised = [];
     for (let i = 0; i < n; i++) if (Math.abs(lift[i]) > 0.3 || Math.abs(lift[(i + 1) % n]) > 0.3) raised.push(i);
+    if (opts.only) raised = opts.only;
+    else if (opts.skip) raised = raised.filter((i) => !opts.skip.has(i));
     // Bank: stack the road's footprint from the ground to the surface — up
     // for raised ground, down into a pit (where the far bank shows above it).
     for (const i of raised) {
       const la = lift[i];
       const lb = lift[(i + 1) % n];
-      const lo = Math.min(0, la, lb);
       const hi = Math.max(0, la, lb);
+      if (slab(i)) {
+        // A bridge deck: a timber slab with the road running underneath.
+        for (let z = Math.min(la, lb) - BRIDGE_SLAB; z < Math.min(la, lb); z += 1) {
+          const k = (z - (Math.min(la, lb) - BRIDGE_SLAB)) / BRIDGE_SLAB;
+          c.fillStyle = Math.floor(k * BRIDGE_SLAB) % 4 === 3 ? '#5a3a1c' : shade('#8a5a30', k * 0.12);
+          quad(i, outer, z, z);
+          c.fill();
+        }
+        continue;
+      }
+      const lo = Math.min(0, la, lb);
       for (let z = lo; z < hi; z += 1) {
         const k = (z - lo) / Math.max(1, hi - lo);
         // Layers of soil every few px of height, darker in a pit.
@@ -1796,6 +1846,122 @@
       }
     }
     c.stroke();
+    // Bridge railings along both edges of a deck: posts and a top rail.
+    const deck = raised.filter((i) => slab(i));
+    if (!deck.length) return;
+    const RAIL = 7 * RAISE;
+    for (const side of [-1, 1]) {
+      const edge = deck.map((i) => {
+        const a = t.samples[i];
+        return [a.x + a.nx * side * (outer - 2), a.y + a.ny * side * (outer - 2) - lift[i]];
+      });
+      c.lineCap = 'round';
+      c.strokeStyle = OUTLINE;
+      c.lineWidth = 3.4 * LINE + 2;
+      for (let k = 0; k < edge.length; k += 2) {
+        c.beginPath();
+        c.moveTo(edge[k][0], edge[k][1]);
+        c.lineTo(edge[k][0], edge[k][1] - RAIL);
+        c.stroke();
+      }
+      c.strokeStyle = '#a8743f';
+      c.lineWidth = 2.4;
+      for (let k = 0; k < edge.length; k += 2) {
+        c.beginPath();
+        c.moveTo(edge[k][0], edge[k][1]);
+        c.lineTo(edge[k][0], edge[k][1] - RAIL);
+        c.stroke();
+      }
+      for (const [w, col] of [[3.4 * LINE + 3, OUTLINE], [3, '#c99258']]) {
+        c.strokeStyle = col;
+        c.lineWidth = w;
+        c.beginPath();
+        edge.forEach(([x, y], k) => (k ? c.lineTo(x, y - RAIL) : c.moveTo(x, y - RAIL)));
+        c.stroke();
+      }
+    }
+  }
+
+  // Bridges: the stretch of the upper road that stands over the road
+  // underneath (its deck and the ends of its ramps) is drawn each frame in
+  // depth order, so vehicles below go under the deck. A deck's `key` is the
+  // near (bottom) edge of its slab on the ground: things on the road below
+  // and nearer than that are drawn over it, the rest under it.
+  const BRIDGE_SLAB = 9;
+  function bridgeDecks(t) {
+    const TT = root.TractorTracks;
+    const n = t.count;
+    const outer = t.halfWidth + 13;
+    const decks = [];
+    for (const b of t.bridges || []) {
+      const reach = Math.ceil((b.deck / 2 + TT.BRIDGE.ramp) / TT.SAMPLE_STEP);
+      const below = [];
+      for (let k = -40; k <= 40; k++) {
+        const j = (((b.lower + k) % n) + n) % n;
+        below.push([t.samples[j].x, t.samples[j].y - liftAt(t, j)]);
+      }
+      // The upper road's column, ground to surface, over the road below?
+      const over = (i) => {
+        const s = t.samples[i];
+        const L = liftAt(t, i);
+        for (let z = Math.min(0, L); z <= Math.max(0, L) + 6; z += 6) {
+          for (const [x, y] of below) if (Math.hypot(s.x - x, s.y - Math.min(z, Math.max(0, L)) - y) < outer * 2) return true;
+        }
+        return false;
+      };
+      let lo = 0;
+      let hi = 0;
+      for (let d = -reach; d <= reach; d++) {
+        if (!over((((b.upper + d) % n) + n) % n)) continue;
+        lo = Math.min(lo, d);
+        hi = Math.max(hi, d);
+      }
+      const idx = [];
+      for (let d = lo - 1; d <= hi + 1; d++) idx.push((((b.upper + d) % n) + n) % n);
+      let key = -Infinity;
+      for (const i of idx) {
+        if (TT.bridgeProfile(t, b, i) < 0.999) continue;
+        const s = t.samples[i];
+        key = Math.max(key, s.y + Math.abs(s.ny) * outer);
+      }
+      // Two bridges whose stretches meet are one structure.
+      const joined = decks.find((dk) => idx.some((i) => dk.set.has(i)));
+      if (joined) {
+        for (const i of idx) if (!joined.set.has(i)) joined.idx.push(i);
+        idx.forEach((i) => joined.set.add(i));
+        joined.key = Math.max(joined.key, key);
+        joined.bridges.push(b);
+      } else decks.push({ idx, set: new Set(idx), key, bridges: [b] });
+    }
+    for (const dk of decks) {
+      // In order along the road.
+      const base = dk.bridges[0].upper;
+      const rel = (i) => ((((i - base) % n) + n + Math.floor(n / 2)) % n) - Math.floor(n / 2);
+      dk.idx.sort((p, q) => rel(p) - rel(q));
+      const isSlab = (i) => dk.bridges.some((b) => TT.bridgeProfile(t, b, i) >= 0.999);
+      dk.slab = isSlab;
+      let x0 = Infinity;
+      let y0 = Infinity;
+      let x1 = -Infinity;
+      let y1 = -Infinity;
+      for (const i of dk.idx) {
+        const s = t.samples[i];
+        const L = liftAt(t, i);
+        x0 = Math.min(x0, s.x - outer);
+        x1 = Math.max(x1, s.x + outer);
+        y0 = Math.min(y0, s.y - outer - Math.max(0, L) - 12);
+        y1 = Math.max(y1, s.y + outer - Math.min(0, L) + 4);
+      }
+      dk.box = { x: Math.floor(x0), y: Math.floor(y0), w: Math.ceil(x1 - x0) + 2, h: Math.ceil(y1 - y0) + 2 };
+    }
+    return decks;
+  }
+
+  // Which bridge deck (if any) the thing at sample `i` is up on.
+  function deckOf(t, i) {
+    if (i === undefined) return null;
+    for (const dk of t.decks || []) if (dk.set.has(i)) return dk;
+    return null;
   }
 
   // Jump ramp: a wooden wedge rising towards its lip, with the lip face and

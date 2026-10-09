@@ -976,7 +976,11 @@
       if (near.length < 2) continue;
       const upper = near[c.over || 0].i;
       const lower = near[c.over ? 0 : 1].i;
-      out.push({ x: c.x, y: c.y, upper, lower, r: c.r });
+      // The deck spans the whole road underneath, berms and all, however
+      // slanted the crossing.
+      const cross = Math.abs(Math.sin(S[upper].angle - S[lower].angle));
+      const deck = (2 * (track.halfWidth + 13)) / Math.max(0.5, cross) + 16;
+      out.push({ x: c.x, y: c.y, upper, lower, r: c.r, deck });
     }
     return out;
   }
@@ -988,8 +992,9 @@
     if (d > n / 2) d -= n;
     if (d < -n / 2) d += n;
     const along = Math.abs(d * SAMPLE_STEP);
-    if (along <= BRIDGE.deck / 2) return 1;
-    const t = (along - BRIDGE.deck / 2) / BRIDGE.ramp;
+    const deck = b.deck || BRIDGE.deck;
+    if (along <= deck / 2) return 1;
+    const t = (along - deck / 2) / BRIDGE.ramp;
     return t >= 1 ? 0 : 0.5 + 0.5 * Math.cos(Math.PI * t);
   }
 

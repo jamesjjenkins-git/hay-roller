@@ -829,6 +829,7 @@
       const off = (rng() - 0.5) * track.halfWidth * 1.1;
       s.pickups.push({
         id: s.pickupId++,
+        idx,
         elev: Tracks.elevationAt(track, idx).h,
         type: rng() < 0.55 ? 'cash' : 'nitro',
         value: 25 + Math.floor(rng() * 4) * 25,
