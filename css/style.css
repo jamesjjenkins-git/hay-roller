@@ -51,7 +51,8 @@ button:disabled { cursor: not-allowed; }
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 20px;
+  /* Clear of the notch / Dynamic Island when the page runs full screen. */
+  padding: max(10px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 10px max(20px, env(safe-area-inset-left));
   background: var(--barn);
   border-bottom: 2.5px solid var(--ink);
   box-shadow: 0 4px 0 rgba(0,0,0,0.15);
@@ -1061,7 +1062,7 @@ kbd {
 /* Short landscape phones: shrink the chrome so the track gets the space. */
 @media (max-height: 500px) {
   #track-list { max-height: 260px; }
-  .topbar { padding: 6px 14px; }
+  .topbar { padding: max(6px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 6px max(14px, env(safe-area-inset-left)); }
   .hero { margin: 0 0 14px; }
   .hero h1 { font-size: 30px; }
   .hero p { margin-top: 6px; padding: 4px 12px; }
@@ -1586,7 +1587,7 @@ body.has-banner main { padding-bottom: 96px; }
 
 @media (max-width: 560px) {
   main { padding: 14px 12px 40px; }
-  .topbar { padding: 8px 12px; }
+  .topbar { padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left)); }
   .logo-text { font-size: 20px; }
   .logo-icon { font-size: 26px; }
   .wallet-pill { font-size: 18px; }
