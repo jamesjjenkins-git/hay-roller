@@ -645,7 +645,28 @@
     if (t.elev && t.elev.some((h) => Math.abs(h) > 0.3)) drawRaisedRoad(c, t, rng);
 
     // Features.
-    for (const f of t.features) drawFeature(c, f, rng, liftAt(t, f.idx), t);
+    // Mud, water and rumble strips are trimmed to the road (lifted up any
+    // hill), so they never spill over the berm and under the walls.
+    const patches = document.createElement('canvas');
+    patches.width = c.canvas.width;
+    patches.height = c.canvas.height;
+    const pc = patches.getContext('2d');
+    pc.setTransform(c.getTransform());
+    for (const f of t.features) if (f.type !== 'jump') drawFeature(pc, f, rng, liftAt(t, f.idx), t);
+    pc.globalCompositeOperation = 'destination-in';
+    pc.lineJoin = 'round';
+    pc.lineCap = 'round';
+    pc.lineWidth = t.width + 4;
+    pc.strokeStyle = '#000';
+    pc.beginPath();
+    t.samples.forEach((sm, i) => (i ? pc.lineTo(sm.x, sm.y - liftAt(t, i)) : pc.moveTo(sm.x, sm.y - liftAt(t, i))));
+    pc.closePath();
+    pc.stroke();
+    c.save();
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.drawImage(patches, 0, 0);
+    c.restore();
+    for (const f of t.features) if (f.type === 'jump') drawFeature(c, f, rng, liftAt(t, f.idx), t);
 
     // Start/finish chequers, on the road surface (which may be up a hill).
     const s0 = t.samples[0];
