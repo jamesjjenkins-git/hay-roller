@@ -568,3 +568,30 @@ test('drifting into an animal costs less speed than hitting it normally', () => 
   assert.ok(normal != null && drifting != null);
   assert.ok(drifting < normal * 0.75, `drift loss ${drifting.toFixed(2)} vs normal ${normal.toFixed(2)}`);
 });
+
+test('the drift kick only comes from letting go, not from hitting water mid-drift', () => {
+  const def = Tracks.TRACKS.find((d) => d.features.some((f) => f.type === 'water'));
+  const s = Sim.createRace(def, { seed: 1 });
+  s.animals = [];
+  const me = s.racers[0];
+  const w = s.track.features.find((f) => f.type === 'water');
+  // Drifting straight into the middle of the pond.
+  const c = s.track.samples[w.idx];
+  me.x = w.x - c.tx * (w.len / 2 + 130);
+  me.y = w.y - c.ty * (w.len / 2 + 130);
+  me.heading = c.angle;
+  me.vx = c.tx * 150;
+  me.vy = c.ty * 150;
+  me.idx = Tracks.nearestGlobal(s.track, me.x, me.y);
+  const kicks = [];
+  let wet = false;
+  for (let t = 0; t < 90; t++) {
+    const aim = Math.max(-1, Math.min(1, Sim.angleDiff(Math.atan2(w.y - me.y, w.x - me.x), me.heading) * 2));
+    Sim.step(s, { 0: { steer: aim, throttle: 1, brake: 0, nitro: false, drift: true } });
+    wet = wet || me.surface === 'water';
+    kicks.push(...s.events.filter((e) => e.type === 'driftKick'));
+    s.events.length = 0;
+  }
+  assert.ok(wet, 'reached the pond');
+  assert.equal(kicks.length, 0, 'no kick from the pond ending the drift');
+});

@@ -353,10 +353,11 @@
         }
         r.driftTime = (r.driftTime || 0) + DT;
       } else if (wasDrifting) {
-        r.driftExit = DRIFT.exitTime;
-        // A little kick out of the slide: the longer the drift, the bigger
-        // (up to a point). It can briefly take you past top speed.
-        if (r.driftTime > DRIFT.kickMinTime) {
+        // A kick out of the slide, but only when you let go of DRIFT — not
+        // when mud, water, a jump or a crash cuts the drift short.
+        const released = !input.drift;
+        if (released) r.driftExit = DRIFT.exitTime;
+        if (released && r.driftTime > DRIFT.kickMinTime) {
           const kick = Math.min(DRIFT.kickMax, r.driftTime * DRIFT.kickPerSec);
           // Delivered as a surge over `kickTime` rather than all at once.
           r.kickT = DRIFT.kickTime;
