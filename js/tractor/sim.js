@@ -282,9 +282,9 @@
       // Turning: tractors can pivot slowly even when stopped.
       const turnFactor = Math.min(1, 0.4 + speed / (st.topSpeed * 0.5));
       const dir = vf < -5 ? -1 : 1;
-      // Ease into a turn, but stop turning straight away when the input
-      // returns to centre, so there's no carry-over that causes overshoot.
-      const easing = Math.abs(input.steer) < Math.abs(r.steer) ? 45 : 32;
+      // Ease in and out of turns over a few frames so steering feels smooth,
+      // but unwind a little quicker than it winds on to avoid overshoot.
+      const easing = Math.abs(input.steer) < Math.abs(r.steer) ? 20 : 15;
       r.steer += (input.steer - r.steer) * Math.min(1, easing * DT);
       r.heading += r.steer * st.turnRate * turnFactor * dir * DT;
 

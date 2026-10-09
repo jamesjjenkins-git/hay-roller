@@ -399,10 +399,12 @@
 
     // Mud and water sit against one side of the road, leaving a clear lane
     // (about two tractors wide) on the other: drive accurately and you never
-    // touch them. On a bend they go on the inside, so cutting the corner
-    // costs you; on straights they alternate sides. Jumps and bump strips
+    // touch them. On bends they alternate between the inside (take the wide
+    // line) and the outside (cut the corner tight to keep your speed); on
+    // straights they alternate sides. Jumps and bump strips
     // still span the full width.
     let hazardSide = 1;
+    let bendSide = -1;
     const features = def.features.map((f, i) => {
       const idx = Math.floor(f.at * count) % count;
       const s = samples[idx];
@@ -418,7 +420,7 @@
         while (bend > Math.PI) bend -= Math.PI * 2;
         while (bend < -Math.PI) bend += Math.PI * 2;
         let side;
-        if (Math.abs(bend) > 0.15) side = Math.sign(bend); // inside of the bend
+        if (Math.abs(bend) > 0.15) side = Math.sign(bend) * (bendSide = -bendSide); // inside, then outside
         else if (f.off) side = Math.sign(f.off);
         else side = (hazardSide = -hazardSide);
         off = side * (def.width / 2 - halfWidth - 2);

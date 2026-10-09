@@ -78,13 +78,19 @@
     let thumbX = 0;
     let stillSince = 0;
 
+    // Rather than snapping, the centre glides to the thumb over ~0.1s, so the
+    // turn fades out smoothly instead of stopping with a notch.
+    const RECENTER_GLIDE = 12; // per second
+    let lastGlide = 0;
     function recentreIfStill(now) {
+      const dt = Math.min(0.05, (now - lastGlide) / 1000);
+      lastGlide = now;
       if (stickTouch == null || input.slide === 0) return;
       if (now - stillSince < RECENTER_MS) return;
-      stickOrigin.x = thumbX;
-      stickBase.style.left = `${thumbX}px`;
-      stickKnob.style.transform = '';
-      input.slide = 0;
+      const gap = thumbX - stickOrigin.x;
+      stickOrigin.x = Math.abs(gap) < 0.5 ? thumbX : stickOrigin.x + gap * Math.min(1, RECENTER_GLIDE * dt);
+      stickBase.style.left = `${stickOrigin.x}px`;
+      applySlide(thumbX);
     }
 
     function stickStart(id, x, y) {
@@ -110,10 +116,16 @@
         thumbX = x;
         stillSince = performance.now();
       }
+      applySlide(x);
+    }
+    function applySlide(x) {
       const dx = Math.max(-SLIDE_MAX, Math.min(SLIDE_MAX, x - stickOrigin.x));
       stickKnob.style.transform = `translateX(${dx}px)`;
-      const ramp = Math.min(1, Math.max(0, Math.abs(dx) - SLIDE_DEAD) / SLIDE_RAMP);
-      input.slide = Math.sign(dx) * SLIDER_STEER * ramp;
+      // Smoothstep out of the dead zone: no kink where the turn begins or
+      // where it reaches full rate.
+      const t = Math.min(1, Math.max(0, Math.abs(dx) - SLIDE_DEAD) / SLIDE_RAMP);
+      const ramp = t * t * (3 - 2 * t);
+      input.slide = ramp < 0.01 ? 0 : Math.sign(dx) * SLIDER_STEER * ramp;
     }
     function stickEnd() {
       stickTouch = null;
