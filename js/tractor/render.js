@@ -384,7 +384,7 @@
         if (it.w) ctx.drawImage(wallSprites.get(wallKey(it.w)), it.w.x - SPR.ox, it.w.y - SPR.oy, SPR.w, SPR.h);
         else if (it.a) drawFarmAnimal(ctx, it.a, now);
         else if (it.p) drawPickup(ctx, it.p, now);
-        else if (it.f) drawRamp(ctx, it.f, liftAt(track, it.f.idx));
+        else if (it.f) drawRamp(ctx, track, it.f);
         else if (it.flag) drawFlagman(ctx, sim, view, now);
         else drawTractor(ctx, it.r, now);
       }
@@ -645,7 +645,7 @@
     if (t.elev && t.elev.some((h) => Math.abs(h) > 0.3)) drawRaisedRoad(c, t, rng);
 
     // Features.
-    for (const f of t.features) drawFeature(c, f, rng, liftAt(t, f.idx));
+    for (const f of t.features) drawFeature(c, f, rng, liftAt(t, f.idx), t);
 
     // Start/finish chequers, on the road surface (which may be up a hill).
     const s0 = t.samples[0];
@@ -1737,19 +1737,45 @@
   // Jump ramp: a wooden wedge rising towards its lip, with the lip face and
   // the side facing the camera showing.
   const RAMP_H = 8;
+  // A point on a ramp: `a` along the road from its centre, `w` across, `h`
+  // up. The ramp follows the road's centre line, so on a bend it bends with
+  // the road and stays between the walls.
+  function rampPoint(t, f) {
+    const n = t.count;
+    const step = root.TractorTracks.SAMPLE_STEP;
+    return (a, w, h = 0) => {
+      const u = f.idx + a / step;
+      const i0 = Math.floor(u);
+      const k = u - i0;
+      const s0 = t.samples[((i0 % n) + n) % n];
+      const s1 = t.samples[(((i0 + 1) % n) + n) % n];
+      const mix = (p, q) => p + (q - p) * k;
+      const lift = mix(liftAt(t, ((i0 % n) + n) % n), liftAt(t, (((i0 + 1) % n) + n) % n));
+      return [mix(s0.x, s1.x) + mix(s0.nx, s1.nx) * w, mix(s0.y, s1.y) + mix(s0.ny, s1.ny) * w - lift - h * RAISE];
+    };
+  }
+  const RAMP_STEPS = 8;
+  // Points along one edge of a ramp from the back to the lip, rising.
+  function rampEdge(P, L, w, rise) {
+    const pts = [];
+    for (let k = 0; k <= RAMP_STEPS; k++) {
+      const a = -L / 2 + (L * k) / RAMP_STEPS;
+      pts.push(P(a, w, rise ? (RAMP_H * k) / RAMP_STEPS : 0));
+    }
+    return pts;
+  }
+
   // The ramp's shadow on the road: its footprint plus the lip's shadow,
   // cast the same way as everything else's.
-  function drawRampShadow(c, f, lift) {
+  function drawRampShadow(c, t, f) {
     const L = f.len;
     const hw = f.halfWidth - 2;
-    const ux = Math.cos(f.angle);
-    const uy = Math.sin(f.angle);
-    const at = (a, w) => [f.x + ux * a - uy * w, f.y + uy * a + ux * w - lift];
-    const sh = RAMP_H * RAISE;
-    const pts = [at(-L / 2, -hw), at(-L / 2, hw), at(L / 2, hw), at(L / 2, -hw)];
+    const P = rampPoint(t, f);
+    const sh = RAMP_H * RAISE * 1.6;
+    const pts = [...rampEdge(P, L, -hw, false), ...rampEdge(P, L, hw, false)];
     for (const w of [-hw, hw]) {
-      const [x, y] = at(L / 2, w);
-      pts.push([x + sh * SHADOW.x * 1.6, y + sh * SHADOW.y * 1.6]);
+      const [x, y] = P(L / 2, w);
+      pts.push([x + sh * SHADOW.x, y + sh * SHADOW.y]);
     }
     c.fillStyle = 'rgba(0,0,0,0.22)';
     c.beginPath();
@@ -1772,15 +1798,10 @@
     return half(p).concat(half(p.slice().reverse()));
   }
 
-  function drawRamp(c, f, lift) {
+  function drawRamp(c, t, f) {
     const L = f.len;
     const hw = f.halfWidth - 2;
-    const ux = Math.cos(f.angle);
-    const uy = Math.sin(f.angle);
-    const nx = -uy;
-    const ny = ux;
-    // Point on the ramp: `a` along (−L/2..L/2), `w` across, `h` up.
-    const P = (a, w, h) => [f.x + ux * a + nx * w, f.y + uy * a + ny * w - lift - h * RAISE];
+    const P = rampPoint(t, f);
     const poly = (pts, fill) => {
       c.beginPath();
       pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
@@ -1792,9 +1813,9 @@
       c.stroke();
     };
     // Sides (the near one shows), then the lip face, then the top.
-    for (const w of [-hw, hw]) poly([P(-L / 2, w, 0), P(L / 2, w, 0), P(L / 2, w, RAMP_H)], '#7a4f25');
+    for (const w of [-hw, hw]) poly([...rampEdge(P, L, w, false), ...rampEdge(P, L, w, true).reverse()], '#7a4f25');
     poly([P(L / 2, -hw, 0), P(L / 2, hw, 0), P(L / 2, hw, RAMP_H), P(L / 2, -hw, RAMP_H)], '#8a5a2b');
-    poly([P(-L / 2, -hw, 0), P(-L / 2, hw, 0), P(L / 2, hw, RAMP_H), P(L / 2, -hw, RAMP_H)], '#d79e5c');
+    poly([...rampEdge(P, L, -hw, true), ...rampEdge(P, L, hw, true).reverse()], '#d79e5c');
     // Planks across, and two arrows up the middle.
     c.strokeStyle = 'rgba(80,45,15,0.5)';
     c.lineWidth = 1.5;
@@ -1817,10 +1838,10 @@
     }
   }
 
-  function drawFeature(c, f, rng, lift = 0) {
+  function drawFeature(c, f, rng, lift, t) {
     if (f.type === 'jump') {
       // The ramp itself is drawn each frame, depth-sorted; its shadow is here.
-      drawRampShadow(c, f, lift);
+      drawRampShadow(c, t, f);
       return;
     }
     c.save();
