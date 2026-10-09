@@ -574,14 +574,16 @@
 
     c.fillStyle = '#6fbf4f';
     c.fillRect(0, 0, W, H);
-    // Mown stripes and tufts.
+    // Raised and sunken ground (Ironman pack), drawn before anything sits on it.
+    const groundAt = t.terrain ? (x, y) => root.TractorTracks.terrainHeight(t.terrain, x, y) : () => 0;
+    if (t.terrain) drawTerrain(c, t);
+    // Mown stripes over the ground, hills included (under the hills they
+    // stopped dead along the edge of the raised ground, in 2px steps).
     for (let x = 0; x < W; x += 80) {
       c.fillStyle = (x / 80) % 2 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
       c.fillRect(x, 0, 80, H);
     }
-    // Raised and sunken ground (Ironman pack), drawn before anything sits on it.
-    const groundAt = t.terrain ? (x, y) => root.TractorTracks.terrainHeight(t.terrain, x, y) : () => 0;
-    if (t.terrain) drawTerrain(c, t);
+    // Tufts.
     c.strokeStyle = 'rgba(30, 100, 30, 0.35)';
     c.lineWidth = 1.5;
     for (let i = 0; i < 700; i++) {
@@ -810,7 +812,7 @@
         // Skip flat ground unless it's next to a dip (it has to cover the
         // near edge of the pit).
         const behind = j > 0 ? grid[j - 1][i] : 0;
-        if (Math.abs(h) < 0.4 && behind > -0.4) continue;
+        if (Math.abs(h) < 0.05 && behind > -0.4) continue;
         const x = i * cw;
         const y = j * ch;
         const lift = h * RAISE;
@@ -818,7 +820,10 @@
         // slopes facing away a little lighter.
         const dx = ((grid[j][i + 1] || 0) - (grid[j][Math.max(0, i - 1)] || 0)) / (2 * cw);
         const dy = (((grid[j + 1] && grid[j + 1][i]) || 0) - behind) / (2 * ch);
-        const light = Math.max(-0.14, Math.min(0.14, -(dx * 0.6 + dy) * 0.9));
+        // Faded out at the foot of a slope, so where the drawn ground stops
+        // it matches the flat grass around it (else its edge shows in steps).
+        const foot = Math.min(1, Math.abs(h) / 0.8);
+        const light = Math.max(-0.14, Math.min(0.14, -(dx * 0.6 + dy) * 0.9)) * foot;
         const top = shade('#6fbf4f', light);
         // Bank below (raised ground) or the far wall of a dip. Where the
         // ground only slopes gently towards the camera, the gap down to the
@@ -826,7 +831,9 @@
         // out striped).
         const drop = (h - ((grid[j + 1] && grid[j + 1][i]) || 0)) * RAISE;
         if (h > 0) {
-          c.fillStyle = drop < 2.5 ? top : shade('#6fbf4f', light - 0.14);
+          // Darker the steeper the drop, blended in (a hard switch drew the
+          // crease along a bank's corners as 2px stairs).
+          c.fillStyle = shade('#6fbf4f', light - 0.14 * Math.max(0, Math.min(1, (drop - 1) / 5)));
           c.fillRect(x, y - lift, cw + 0.5, ch + lift + 0.5);
         } else if (h < 0) {
           c.fillStyle = '#7a5a32';
