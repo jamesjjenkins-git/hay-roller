@@ -124,7 +124,8 @@
     }
     const watched = await ads.showRewarded();
     if (!watched) {
-      toast('Ad closed early — no reward this time.', 'info');
+      if (ads.lastResult === 'unavailable') toast('No ad to show right now — try again in a minute.', 'info');
+      else toast('Ad closed early — no reward this time.', 'info');
       return 0;
     }
     const got = rewards.grantAdReward(placement, amount);
@@ -205,6 +206,15 @@
     else ads.hideBanner(banner);
   }
   store.subscribe(() => updateBanner(!current));
+
+  // Where consent rules need it, a way to change your ad privacy choices.
+  const privacyBtn = $('#ad-privacy');
+  function renderAdPrivacy() {
+    privacyBtn.classList.toggle('hidden', !ads.privacyOptionsRequired);
+  }
+  privacyBtn.addEventListener('click', () => ads.showPrivacyOptions());
+  ads.onChange(renderAdPrivacy);
+  renderAdPrivacy();
 
   // ---------- Sound toggle ----------
 

@@ -5,7 +5,12 @@
 // Provider interface:
 //   showBanner(el)       render a banner into `el`
 //   hideBanner(el)       remove it
-//   showRewarded()       Promise<boolean> — true only if the ad was watched to the end
+//   showRewarded()       Promise<boolean | 'unavailable'> — true only if the ad
+//                        was watched to the end; 'unavailable' if there was none
+// and optionally:
+//   privacyOptionsRequired, showPrivacyOptions()   the "ad privacy choices"
+//                        entry point consent rules require (UK/EEA)
+//   onChange(fn)         called when the above may have changed
 (function (root) {
   const PLACEHOLDER_SECONDS = 5;
 
@@ -79,6 +84,7 @@
 
   let provider = placeholderProvider;
   let busy = false;
+  const changeListeners = new Set();
 
   root.FarmAds = {
     get provider() {
@@ -86,6 +92,19 @@
     },
     setProvider(p) {
       provider = p;
+      if (p.onChange) p.onChange(() => changeListeners.forEach((f) => f()));
+      changeListeners.forEach((f) => f());
+    },
+    onChange(f) {
+      changeListeners.add(f);
+    },
+    // How the last reward ad went: 'watched', 'closed' or 'unavailable'.
+    lastResult: null,
+    get privacyOptionsRequired() {
+      return !!provider.privacyOptionsRequired;
+    },
+    showPrivacyOptions() {
+      return provider.showPrivacyOptions ? provider.showPrivacyOptions() : Promise.resolve();
     },
     showBanner(el) {
       provider.showBanner(el);
@@ -97,13 +116,16 @@
     async showRewarded() {
       if (busy) return false;
       busy = true;
+      let r;
       try {
-        return await provider.showRewarded();
+        r = await provider.showRewarded();
       } catch (e) {
-        return false;
+        r = 'unavailable';
       } finally {
         busy = false;
       }
+      this.lastResult = r === true ? 'watched' : r === 'unavailable' ? 'unavailable' : 'closed';
+      return r === true;
     },
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

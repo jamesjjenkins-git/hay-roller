@@ -1503,6 +1503,9 @@ kbd {
   background: rgba(59, 42, 20, 0.92);
 }
 .ad-banner.hidden { display: none; }
+/* In the app the real banner is a native view laid over this strip, which
+   just keeps its space (the height is set to the ad's). */
+.ad-banner.ad-native { padding: 0; min-height: 50px; box-sizing: content-box; padding-bottom: env(safe-area-inset-bottom); }
 body.has-banner main { padding-bottom: 96px; }
 .ad-label {
   align-self: flex-start;
