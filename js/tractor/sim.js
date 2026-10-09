@@ -161,6 +161,8 @@
         vy: 0,
         heading: start.angle,
         steer: 0,
+        elev: 0,
+        climb: 0,
         drift: 0,
         drifting: false,
         driftSide: 1,
@@ -299,6 +301,12 @@
     if (boosting) r.nitroTime -= DT;
 
     r.surface = r.airborne ? 'air' : surfaceAt(s, r);
+
+    // Hills: slower up, faster down, and a hop off the crest at speed.
+    const el = Tracks.elevationAt(s.track, r.idx);
+    const roadDir = s.track.samples[r.idx].angle;
+    const slope = el.slope * Math.cos(angleDiff(r.heading, roadDir));
+    r.elev = el.h;
     let topMul = 1;
     let gripMul = 1;
     if (r.surface === 'mud') {
@@ -323,6 +331,22 @@
     const exitBoost = r.driftExit > 0 ? DRIFT.exitAccel : 1;
     const accel = st.accel * (boosting ? 2 : 1) * exitBoost * (1 + r.catchUp);
 
+    if (!r.airborne) {
+      vf -= HILLS.gravity * slope * DT;
+      if (slope > 0.02) {
+        r.climb = Math.max(r.climb || 0, slope);
+      } else if ((r.climb || 0) > 0.1) {
+        // Over the top: launched if you hit the crest fast enough.
+        if (vf > HILLS.launchSpeed) {
+          r.airborne = true;
+          r.vz = vf * r.climb * HILLS.launch;
+          s.events.push({ type: 'jump', id: r.id, crest: true });
+        }
+        r.climb = 0;
+      } else {
+        r.climb = 0;
+      }
+    }
     if (!r.airborne) {
       if (input.throttle > 0) {
         if (vf < top) vf += accel * input.throttle * DT * (1 - Math.max(0, vf) / (top * 1.05));
@@ -543,6 +567,10 @@
     exitAccel: 2, exitTime: 1.2, // quicker pick-up for a moment after letting go
     kickPerSec: 70, kickMax: 90, kickMinTime: 0.35, kickTime: 0.8, // speed surge (px/s, over kickTime s) out of a drift
   };
+
+  // Hills: `gravity` is how hard a slope pushes you (px/s² per unit of
+  // slope); crest a hill above `launchSpeed` and you take off.
+  const HILLS = { gravity: 320, launchSpeed: 105, launch: 1.5 };
 
   // Rumble strips only cost you if you're turning while on them.
   const BUMPS = { loss: 0.35, fullAt: 0.35 };
@@ -936,7 +964,7 @@
     };
   }
 
-  const api = { VEHICLES, VEHICLE_ORDER, prizesFor, DT, RADIUS, MAX_TIME, DRIVERS, CATCHUP, ASSIST, WALL, ANIMAL, BUMPS, DRIFT, FRENZY, frenzyRate, frenzyEarnings, animalCount, catchUpBoost, aiStats, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
+  const api = { VEHICLES, VEHICLE_ORDER, prizesFor, DT, RADIUS, MAX_TIME, DRIVERS, CATCHUP, ASSIST, WALL, ANIMAL, BUMPS, DRIFT, HILLS, FRENZY, frenzyRate, frenzyEarnings, animalCount, catchUpBoost, aiStats, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
   root.TractorSim = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

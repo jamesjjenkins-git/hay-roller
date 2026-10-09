@@ -140,6 +140,8 @@
         [300, 600], [120, 470], [110, 270],
       ],
       features: [
+        { type: 'hill', at: 0.150 },
+        { type: 'hill', at: 0.777 },
         { type: 'jump', at: 0.1 },
         { type: 'mud', at: 0.27, off: 0, len: 80 },
         { type: 'bumps', at: 0.4, len: 70 },
@@ -255,6 +257,8 @@
         [110, 250],
       ],
       features: [
+        { type: 'hill', at: 0.731 },
+        { type: 'hill', at: 0.127 },
         { type: 'jump', at: 0.08 },
         { type: 'bumps', at: 0.2, len: 70 },
         { type: 'mud', at: 0.33, off: 0, len: 80 },
@@ -403,6 +407,8 @@
         [92, 400], [98, 530], [160, 600],
       ],
       features: [
+        { type: 'hill', at: 0.297 },
+        { type: 'hill', at: 0.501 },
         { type: 'bumps', at: 0.08, len: 70 },
         { type: 'jump', at: 0.2 },
         { type: 'mud', at: 0.38, off: 0, len: 80 },
@@ -436,6 +442,8 @@
         [98, 530], [160, 600], [300, 615],
       ],
       features: [
+        { type: 'hill', at: 0.727 },
+        { type: 'hill', at: 0.446 },
         { type: 'jump', at: 0.06 },
         { type: 'bumps', at: 0.22, len: 60 },
         { type: 'mud', at: 0.37, off: 0, len: 80 },
@@ -469,6 +477,8 @@
         [1105, 540], [1060, 600], [900, 615],
       ],
       features: [
+        { type: 'hill', at: 0.336 },
+        { type: 'hill', at: 0.572 },
         { type: 'bumps', at: 0.1, len: 60 },
         { type: 'water', at: 0.24, off: 0, len: 80 },
         { type: 'jump', at: 0.44 },
@@ -504,6 +514,7 @@
         [850, 615],
       ],
       features: [
+        { type: 'hill', at: 0.513 },
         { type: 'bumps', at: 0.05, len: 70 },
         { type: 'jump', at: 0.18 },
         { type: 'jump', at: 0.24 },
@@ -535,6 +546,8 @@
         [110, 140], [90, 250], [90, 400], [95, 530], [150, 600],
       ],
       features: [
+        { type: 'hill', at: 0.633, height: 34 },
+        { type: 'hill', at: 0.419, height: 34 },
         { type: 'jump', at: 0.08 },
         { type: 'bumps', at: 0.14, len: 50 },
         { type: 'mud', at: 0.35, off: 0, len: 80 },
@@ -568,6 +581,7 @@
         [100, 560], [170, 610], [350, 615],
       ],
       features: [
+        { type: 'hill', at: 0.774 },
         { type: 'jump', at: 0.08 },
         { type: 'water', at: 0.32, off: 0, len: 70 },
         { type: 'water', at: 0.38, off: 0, len: 70 },
@@ -602,6 +616,8 @@
         [365, 320], [350, 400], [350, 450], [352, 540], [372, 598],
       ],
       features: [
+        { type: 'hill', at: 0.397 },
+        { type: 'hill', at: 0.693 },
         { type: 'bumps', at: 0.08, len: 60 },
         { type: 'jump', at: 0.2 },
         { type: 'mud', at: 0.33, off: 0, len: 80 },
@@ -686,7 +702,7 @@
       const idx = Math.floor(f.at * count) % count;
       const s = samples[idx];
       const patch = f.type === 'mud' || f.type === 'water';
-      let len = (f.len || (f.type === 'jump' ? 30 : 60)) * (patch ? PATCH_SCALE : 1);
+      let len = (f.len || (f.type === 'jump' ? 30 : f.type === 'hill' ? HILL.len : 60)) * (patch ? PATCH_SCALE : 1);
       let off = 0;
       let halfWidth = def.width / 2;
       if (patch) {
@@ -716,6 +732,8 @@
         angle: s.angle,
         len,
         halfWidth,
+        // Hills: how high the crest is (world px).
+        ...(f.type === 'hill' ? { height: f.height || HILL.height } : {}),
       };
     });
 
@@ -762,6 +780,27 @@
 
   // Position relative to the feature: along = distance along track direction,
   // across = sideways distance. Used for surface checks.
+  // Hills along the road: a smooth bump `height` px high over `len` px of
+  // track, centred on the feature. Returns the height here and the slope
+  // (rise per px) in the direction of travel round the lap.
+  const HILL = { len: 240, height: 26 };
+  function elevationAt(track, idx) {
+    let h = 0;
+    let slope = 0;
+    for (const f of track.features) {
+      if (f.type !== 'hill') continue;
+      let d = idx - f.idx;
+      if (d > track.count / 2) d -= track.count;
+      if (d < -track.count / 2) d += track.count;
+      const s = d * SAMPLE_STEP;
+      if (Math.abs(s) >= f.len / 2) continue;
+      const k = Math.PI / f.len;
+      h += f.height * Math.cos(k * s) ** 2;
+      slope += -f.height * k * Math.sin(2 * k * s);
+    }
+    return { h, slope };
+  }
+
   function inFeature(f, x, y) {
     const dx = x - f.x;
     const dy = y - f.y;
@@ -776,7 +815,7 @@
     return Math.abs(along) <= f.len / 2 && Math.abs(across) <= f.halfWidth;
   }
 
-  const api = { WORLD, TRACKS, SAMPLE_STEP, buildTrack, nearest, nearestGlobal, inFeature };
+  const api = { WORLD, TRACKS, SAMPLE_STEP, HILL, buildTrack, nearest, nearestGlobal, inFeature, elevationAt };
   root.TractorTracks = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -560,6 +560,9 @@
       c.stroke();
     }
 
+    // Hills: lit on the climb, shaded on the way down, with contour lines.
+    for (const f of t.features) if (f.type === 'hill') drawHill(c, t, f);
+
     // Features.
     for (const f of t.features) drawFeature(c, f, rng);
 
@@ -698,6 +701,38 @@
         c.fillStyle = ['#f2c9a0', '#c98e5e', '#8a5a3c'][Math.floor(rng() * 3)];
         circle(c, x + (row % 2) * 6, yy, 3.6);
         c.fill();
+      }
+    }
+  }
+
+  function drawHill(c, t, f) {
+    const n = Math.round(f.len / root.TractorTracks.SAMPLE_STEP);
+    const edge = t.halfWidth + 14;
+    for (let k = -n / 2; k < n / 2; k++) {
+      const i0 = (f.idx + Math.round(k) + t.count) % t.count;
+      const i1 = (i0 + 1) % t.count;
+      const a = t.samples[i0];
+      const b = t.samples[i1];
+      const { slope, h } = root.TractorTracks.elevationAt(t, i0);
+      const shade = Math.min(0.5, Math.abs(slope) * 1.4);
+      c.beginPath();
+      c.moveTo(a.x + a.nx * edge, a.y + a.ny * edge);
+      c.lineTo(b.x + b.nx * edge, b.y + b.ny * edge);
+      c.lineTo(b.x - b.nx * edge, b.y - b.ny * edge);
+      c.lineTo(a.x - a.nx * edge, a.y - a.ny * edge);
+      c.closePath();
+      // The sun is behind the start line: climbs catch the light.
+      c.fillStyle = slope > 0 ? `rgba(255, 245, 210, ${shade})` : `rgba(70, 40, 10, ${shade})`;
+      c.fill();
+      // Contour line every few px of height.
+      const h1 = root.TractorTracks.elevationAt(t, i1).h;
+      if (Math.floor(h / 4) !== Math.floor(h1 / 4)) {
+        c.strokeStyle = 'rgba(90, 55, 20, 0.35)';
+        c.lineWidth = 1.5;
+        c.beginPath();
+        c.moveTo(a.x + a.nx * (t.halfWidth - 2), a.y + a.ny * (t.halfWidth - 2));
+        c.lineTo(a.x - a.nx * (t.halfWidth - 2), a.y - a.ny * (t.halfWidth - 2));
+        c.stroke();
       }
     }
   }
@@ -996,7 +1031,7 @@
   }
 
   function drawShadow(ctx, r) {
-    const s = 1 + r.z / 120;
+    const s = 1 + r.z / 120 + (r.elev || 0) / 160;
     ctx.save();
     ctx.translate(r.x + 4 + r.z * 0.35, r.y + 5 + r.z * 0.6);
     ctx.rotate(r.heading + (r.drift || 0));
@@ -1016,7 +1051,8 @@
 
   // Tractor drawn facing +x: big rear wheels at the back, small steerable fronts.
   function drawTractor(ctx, r, now) {
-    const s = 1 + r.z / 120;
+    // Higher up (in the air, or on a hill) = a little bigger, closer to camera.
+    const s = 1 + r.z / 120 + (r.elev || 0) / 160;
     const shake = r.bump > 0 ? Math.sin(now / 18 + r.id) * r.bump * 1.5 : 0;
     ctx.save();
     ctx.translate(r.x, r.y - r.z * 0.4 + shake);
