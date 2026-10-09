@@ -662,6 +662,8 @@
     c.restore();
 
     t.wallItems = placeWalls(t);
+    c.fillStyle = 'rgba(0,0,0,0.18)';
+    for (const w of t.wallItems) drawWallShadow(c, w);
 
 
     // Title sign: placed in a corner clear of the road, drawn over
@@ -865,13 +867,21 @@
     c.stroke();
   }
 
+  // Light comes from the top left: a shadow falls this far right and down
+  // per px of an object's height.
+  const SHADOW = { x: 0.55, y: 0.45 };
+
+  // Walls' shadows go in the background (they never move), so a wall's
+  // shadow can't be drawn over a vehicle passing beside it.
+  function drawWallShadow(c, w) {
+    const h = WALL_H[w.kind];
+    c.beginPath();
+    c.ellipse(w.x + h * SHADOW.x, w.y + h * SHADOW.y, w.kind === 'bale' ? 13 : 10, 6.5, w.kind === 'bale' ? w.angle : 0, 0, Math.PI * 2);
+    c.fill();
+  }
+
   function drawWallSolid(c, w) {
     const h = WALL_H[w.kind];
-    // Ground shadow.
-    c.fillStyle = 'rgba(0,0,0,0.18)';
-    c.beginPath();
-    c.ellipse(w.x + 3, w.y + 3, w.kind === 'bale' ? 13 : 10, 6, w.angle || 0, 0, Math.PI * 2);
-    c.fill();
     if (w.kind === 'bale') {
       solid(c, w.x, w.y, h, '#a8842f', (cc) => {
         cc.rotate(w.angle);
@@ -1727,6 +1737,41 @@
   // Jump ramp: a wooden wedge rising towards its lip, with the lip face and
   // the side facing the camera showing.
   const RAMP_H = 8;
+  // The ramp's shadow on the road: its footprint plus the lip's shadow,
+  // cast the same way as everything else's.
+  function drawRampShadow(c, f, lift) {
+    const L = f.len;
+    const hw = f.halfWidth - 2;
+    const ux = Math.cos(f.angle);
+    const uy = Math.sin(f.angle);
+    const at = (a, w) => [f.x + ux * a - uy * w, f.y + uy * a + ux * w - lift];
+    const sh = RAMP_H * RAISE;
+    const pts = [at(-L / 2, -hw), at(-L / 2, hw), at(L / 2, hw), at(L / 2, -hw)];
+    for (const w of [-hw, hw]) {
+      const [x, y] = at(L / 2, w);
+      pts.push([x + sh * SHADOW.x * 1.6, y + sh * SHADOW.y * 1.6]);
+    }
+    c.fillStyle = 'rgba(0,0,0,0.22)';
+    c.beginPath();
+    convexHull(pts).forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+    c.fill();
+  }
+
+  function convexHull(pts) {
+    const p = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+    const half = (list) => {
+      const h = [];
+      for (const q of list) {
+        while (h.length >= 2 && cross(h[h.length - 2], h[h.length - 1], q) <= 0) h.pop();
+        h.push(q);
+      }
+      h.pop();
+      return h;
+    };
+    return half(p).concat(half(p.slice().reverse()));
+  }
+
   function drawRamp(c, f, lift) {
     const L = f.len;
     const hw = f.halfWidth - 2;
@@ -1746,11 +1791,6 @@
       c.strokeStyle = OUTLINE;
       c.stroke();
     };
-    // Shadow past the lip.
-    c.fillStyle = 'rgba(0,0,0,0.22)';
-    c.beginPath();
-    [P(L / 2, -hw, 0), P(L / 2 + 16, -hw, 0), P(L / 2 + 16, hw, 0), P(L / 2, hw, 0)].forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
-    c.fill();
     // Sides (the near one shows), then the lip face, then the top.
     for (const w of [-hw, hw]) poly([P(-L / 2, w, 0), P(L / 2, w, 0), P(L / 2, w, RAMP_H)], '#7a4f25');
     poly([P(L / 2, -hw, 0), P(L / 2, hw, 0), P(L / 2, hw, RAMP_H), P(L / 2, -hw, RAMP_H)], '#8a5a2b');
@@ -1778,7 +1818,11 @@
   }
 
   function drawFeature(c, f, rng, lift = 0) {
-    if (f.type === 'jump') return; // drawn each frame, depth-sorted
+    if (f.type === 'jump') {
+      // The ramp itself is drawn each frame, depth-sorted; its shadow is here.
+      drawRampShadow(c, f, lift);
+      return;
+    }
     c.save();
     // Sits on the road surface, which may be up a hill.
     c.translate(f.x, f.y - lift);
@@ -2132,7 +2176,9 @@
   function drawShadow(ctx, r) {
     const s = 1 + r.z / 120 + (r.elev || 0) / 160;
     ctx.save();
-    ctx.translate(r.x + 4 + r.z * 0.35, r.y + 5 + r.z * 0.6 - (r.elev || 0) * RAISE);
+    // Cast like everything else's, further away the higher it flies.
+    const h = 8 + r.z;
+    ctx.translate(r.x + h * SHADOW.x, r.y + h * SHADOW.y - (r.elev || 0) * RAISE);
     ctx.rotate(r.heading + (r.drift || 0));
     ctx.globalAlpha = Math.max(0.12, 0.3 - r.z / 300);
     const [sw, sh] = r.vehicle === 'motorbike' ? [34, 12] : r.vehicle === 'quad' ? [32, 24] : [36, 26];
