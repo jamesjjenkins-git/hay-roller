@@ -316,7 +316,10 @@
     r.catchUp = catchUpBoost(s, r);
     if (r.drifting) topMul *= DRIFT.topMul;
     const top = st.topSpeed * topMul * (boosting ? 1.45 : 1) * (1 + r.catchUp);
-    const accel = st.accel * (boosting ? 2 : 1) * (1 + r.catchUp);
+    // Coming out of a drift you pick up speed quicker for a moment.
+    r.driftExit = Math.max(0, (r.driftExit || 0) - DT);
+    const exitBoost = r.driftExit > 0 ? DRIFT.exitAccel : 1;
+    const accel = st.accel * (boosting ? 2 : 1) * exitBoost * (1 + r.catchUp);
 
     if (!r.airborne) {
       if (input.throttle > 0) {
@@ -348,6 +351,8 @@
         } else if (Math.abs(input.steer) > 0.15 && Math.sign(input.steer) !== r.driftSide) {
           r.driftSide = Math.sign(input.steer);
         }
+      } else if (wasDrifting) {
+        r.driftExit = DRIFT.exitTime;
       }
       // Turning scrubs off a little speed, which tightens the line through
       // corners; a drift carries its speed round instead.
@@ -511,6 +516,7 @@
   const DRIFT = {
     carry: 0.08, swing: 0.4, ease: 6,
     kick: 0.5, kickSteer: 0.25, turnBoost: 1.3, scrub: 0.4, topMul: 0.92, minSpeed: 50, slideEase: 4,
+    exitAccel: 2, exitTime: 0.8, // quicker pick-up for a moment after letting go
   };
 
   // Rumble strips only cost you if you're turning while on them.
