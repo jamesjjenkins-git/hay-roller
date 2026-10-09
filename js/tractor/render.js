@@ -63,6 +63,7 @@
       b.setTransform(layerScale, 0, 0, layerScale, 0, 0);
       drawBackground(b, track);
       buildWallSprites();
+      buildSignSprite();
       skid.getContext('2d').setTransform(layerScale, 0, 0, layerScale, 0, 0);
       lastSkid = new Map();
     }
@@ -90,6 +91,18 @@
         drawWallSolid(cc, { ...w, x: SPR.ox, y: SPR.oy, angle: bucket });
         wallSprites.set(key, cv);
       }
+    }
+
+    // The track's name board, drawn over everything in its corner.
+    let signSprite = null;
+    function buildSignSprite() {
+      const sg = track.sign;
+      signSprite = document.createElement('canvas');
+      signSprite.width = Math.ceil((sg.w + 20) * layerScale);
+      signSprite.height = Math.ceil((SIGN.h + SIGN.post + 12) * layerScale);
+      const sc = signSprite.getContext('2d');
+      sc.setTransform(layerScale, 0, 0, layerScale, 0, 0);
+      drawSign(sc, { ...sg, x: 2, y: 2 });
     }
 
     function clearSkids() {
@@ -376,6 +389,8 @@
         else drawTractor(ctx, it.r, now);
       }
       drawParticles('over');
+      const sg = track.sign;
+      ctx.drawImage(signSprite, sg.x - 2, sg.y - 2, signSprite.width / layerScale, signSprite.height / layerScale);
 
       // Marker over the player for the first moments of the race.
       const me = sim.racers[0];
@@ -634,17 +649,85 @@
     t.wallItems = placeWalls(t);
 
 
-    // Title sign.
+    // Title sign: placed in a corner clear of the road, drawn over
+    // everything each frame (see the renderer).
     c.save();
     c.font = `20px ${FONT}`;
-    const label = t.name.toUpperCase();
-    const w = c.measureText(label).width + 30;
-    roundRect(c, W - w - 14, H - 38, w, 30, 8);
+    t.sign = placeSign(t, c.measureText(t.name.toUpperCase()).width + 30);
+    c.restore();
+  }
+
+  // Track name board on two posts. `x`, `y` are the board's top left; the
+  // posts stand `SIGN.post` below it.
+  const SIGN = { h: 30, post: 7, pad: 8 };
+  function placeSign(t, w) {
+    const h = SIGN.h + SIGN.post;
+    const corners = [
+      [W - w - 14, H - h - 6],
+      [14, H - h - 6],
+      [W - w - 14, 8],
+      [14, 8],
+    ];
+    const lifts = t.samples.map((_, i) => liftAt(t, i));
+    let best = null;
+    for (const [x, y] of corners) {
+      // How far the board is from the nearest road edge (walls included).
+      let clear = Infinity;
+      t.samples.forEach((s, i) => {
+        const sy = s.y - lifts[i];
+        const dx = Math.max(x - s.x, 0, s.x - (x + w));
+        const dy = Math.max(y - sy, 0, sy - (y + h));
+        clear = Math.min(clear, Math.hypot(dx, dy) - (t.halfWidth + 22));
+      });
+      if (clear >= 0) return { x, y, w, label: t.name.toUpperCase() };
+      if (!best || clear > best.clear) best = { x, y, w, clear, label: t.name.toUpperCase() };
+    }
+    return best;
+  }
+
+  function drawSign(c, sg) {
+    const { x, y, w } = sg;
+    const h = SIGN.h;
+    const foot = y + h + SIGN.post;
+    c.save();
+    // Shadow on the ground, then posts, then the board with its thickness.
+    c.fillStyle = 'rgba(0,0,0,0.2)';
+    c.beginPath();
+    c.ellipse(x + w / 2 + 6, foot - 1, w / 2, 4, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = '#6b4423';
+    for (const px of [x + 14, x + w - 18]) {
+      c.fillRect(px, y + h - 4, 4, SIGN.post + 4);
+      c.strokeStyle = OUTLINE;
+      c.lineWidth = 1.2 * LINE;
+      c.strokeRect(px, y + h - 4, 4, SIGN.post + 4);
+    }
+    roundRect(c, x, y + 3, w, h, 8);
+    c.fillStyle = '#8a5a2b';
+    c.fill();
+    roundRect(c, x, y, w, h, 8);
     fillStroke(c, '#c98f52', 2.5);
-    c.fillStyle = '#fff6dc';
+    c.save();
+    roundRect(c, x, y, w, h, 8);
+    c.clip();
+    c.strokeStyle = 'rgba(120,70,30,0.25)';
+    c.lineWidth = 1;
+    for (const gy of [y + 8, y + 16, y + 23]) {
+      c.beginPath();
+      c.moveTo(x, gy);
+      c.bezierCurveTo(x + w * 0.3, gy - 2, x + w * 0.6, gy + 2, x + w, gy);
+      c.stroke();
+    }
+    c.fillStyle = 'rgba(255,240,210,0.25)';
+    c.fillRect(x, y, w, 3);
+    c.restore();
+    c.font = `20px ${FONT}`;
     c.textAlign = 'center';
     c.textBaseline = 'middle';
-    c.fillText(label, W - w / 2 - 14, H - 22);
+    c.fillStyle = 'rgba(80,45,15,0.6)';
+    c.fillText(sg.label, x + w / 2, y + h / 2 + 2.5);
+    c.fillStyle = '#fff6dc';
+    c.fillText(sg.label, x + w / 2, y + h / 2 + 1);
     c.restore();
   }
 
