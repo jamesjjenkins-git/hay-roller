@@ -28,15 +28,16 @@ if (!team) {
   process.exit(1);
 }
 
-// A free Personal Team can't upload to App Store Connect; say so up front.
+// A free Personal Team can't upload to App Store Connect. Xcode's saved
+// team list can lag behind joining the paid program (an individual
+// membership keeps the same team id), so this only warns; Apple decides.
 try {
   const teams = read('defaults read com.apple.dt.Xcode IDEProvisioningTeamByIdentifier');
   const block = teams.split(/\n\s*\}/).find((b) => b.includes(`teamID = ${team};`)) || '';
   if (/isFreeProvisioningTeam = 1;/.test(block)) {
-    console.error(`Team ${team} is a free Personal Team. TestFlight needs the paid Apple Developer`);
-    console.error('Program: join at developer.apple.com/programs, then pick the new team in Xcode');
-    console.error('(App target → Signing & Capabilities) and run this again.');
-    process.exit(1);
+    console.warn(`Note: Xcode last saw team ${team} as a free Personal Team. TestFlight needs the paid`);
+    console.warn('Apple Developer Program; if the upload fails with a team or certificate error,');
+    console.warn('check developer.apple.com/account and Xcode → Settings → Accounts.');
   }
 } catch (e) {
   // Couldn't read Xcode's team list; let xcodebuild decide.
