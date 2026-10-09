@@ -370,8 +370,9 @@
       // Drift: the travel direction lags a touch behind the nose, and the
       // back end swings out (r.drift, drawn only) in proportion to how hard
       // you're turning at speed, easing back as you straighten up.
-      vl -= vf * Math.sin(turn) * DRIFT.carry;
-      vf -= vf * (1 - Math.cos(turn)) * DRIFT.carry;
+      const carry = r.drifting ? DRIFT.slideCarry : DRIFT.carry;
+      vl -= vf * Math.sin(turn) * carry;
+      vf -= vf * (1 - Math.cos(turn)) * carry;
       let wantDrift = r.surface === 'water' || r.surface === 'mud'
         ? 0
         : r.steer * DRIFT.swing * Math.min(1, Math.max(0, vf) / st.topSpeed) * (1.4 - 0.4 * gripMul);
@@ -510,12 +511,13 @@
   // the nose (0 = on rails, 1 = ice); grip then pulls the slide back in line.
   // `swing` is how far (radians, at full turn and speed) the tail swings out.
   // The drift button: `kick` is the slide angle it throws you into (plus
-  // `kickSteer` × steering), `turnBoost` how much tighter you turn, `scrub`
+  // `kickSteer` × steering), `slideCarry` how much the car really slides
+  // wide while drifting, `turnBoost` how much tighter you turn, `scrub`
   // how much of the usual cornering speed loss remains, `topMul` the small
   // top-speed cost, all eased in and out at `slideEase` so it stays smooth.
   const DRIFT = {
     carry: 0.08, swing: 0.4, ease: 6,
-    kick: 0.5, kickSteer: 0.25, turnBoost: 1.3, scrub: 0.4, topMul: 0.92, minSpeed: 50, slideEase: 4,
+    kick: 0.66, kickSteer: 0.3, slideCarry: 0.22, turnBoost: 1.3, scrub: 0.4, topMul: 0.94, minSpeed: 50, slideEase: 4,
     exitAccel: 2, exitTime: 0.8, // quicker pick-up for a moment after letting go
   };
 
