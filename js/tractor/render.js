@@ -98,10 +98,11 @@
     function buildSignSprite() {
       const sg = track.sign;
       signSprite = document.createElement('canvas');
-      signSprite.width = Math.ceil((sg.w + 20) * layerScale);
-      signSprite.height = Math.ceil((SIGN.h + SIGN.post + 12) * layerScale);
+      const k = sg.k || 1;
+      signSprite.width = Math.ceil((sg.w + 20) * k * layerScale);
+      signSprite.height = Math.ceil((SIGN.h + SIGN.post + 12) * k * layerScale);
       const sc = signSprite.getContext('2d');
-      sc.setTransform(layerScale, 0, 0, layerScale, 0, 0);
+      sc.setTransform(layerScale * k, 0, 0, layerScale * k, 0, 0);
       drawSign(sc, { ...sg, x: 2, y: 2 });
     }
 
@@ -390,7 +391,7 @@
       }
       drawParticles('over');
       const sg = track.sign;
-      ctx.drawImage(signSprite, sg.x - 2, sg.y - 2, signSprite.width / layerScale, signSprite.height / layerScale);
+      ctx.drawImage(signSprite, sg.x - 2 * (sg.k || 1), sg.y - 2 * (sg.k || 1), signSprite.width / layerScale, signSprite.height / layerScale);
 
       // Marker over the player for the first moments of the race.
       const me = sim.racers[0];
@@ -704,8 +705,9 @@
   // World px kept clear of the sign for the race HUD (top) and the touch
   // controls (bottom corners).
   const UI_KEEP_OUT = { top: 70, bottom: 190, left: 250 };
-  function placeSign(t, w) {
-    const h = SIGN.h + SIGN.post;
+  function placeSignAt(t, w0, k) {
+    const w = w0 * k;
+    const h = (SIGN.h + SIGN.post) * k;
     // Along the bottom edge between the controls, then down either side
     // below the HUD. The corners are under the HUD and the touch controls
     // on a phone, and the top middle is the grandstand.
@@ -714,7 +716,13 @@
       corners.push([x, H - h - 6], [W - w - x, H - h - 6]);
     }
     for (let y = UI_KEEP_OUT.top; y <= H - UI_KEEP_OUT.bottom - h; y += 30) corners.push([14, y], [W - w - 14, y]);
+    // Failing those, anywhere on open grass in the field, lowest first.
+    for (let y = H - h - 40; y >= UI_KEEP_OUT.top + 20; y -= 20) {
+      for (let x = UI_KEEP_OUT.left; x <= W - w - UI_KEEP_OUT.left; x += 20) corners.push([x, y]);
+    }
     const lifts = t.samples.map((_, i) => liftAt(t, i));
+    // Scenery footprints (a rough radius each), so the sign isn't stuck on a barn.
+    const SCENERY_R = { barn: 80, pen: 80, corn: 80, pond: 80, hay: 60, sheep: 40, silo: 40, windmill: 50, tree: 45 };
     let best = null;
     for (const [x, y] of corners) {
       // How far the board is from the nearest road edge (walls included).
@@ -725,16 +733,34 @@
         const dy = Math.max(y - sy, 0, sy - (y + h));
         clear = Math.min(clear, Math.hypot(dx, dy) - (t.halfWidth + 30));
       });
+      for (const sc of t.scenery) {
+        const r = (SCENERY_R[sc.kind] || 50) * (sc.scale || 1);
+        const sdx = Math.max(x - sc.x, 0, sc.x - (x + w));
+        const sdy = Math.max(y - sc.y, 0, sc.y - (y + h));
+        clear = Math.min(clear, Math.hypot(sdx, sdy) - r);
+      }
       // Keep clear of the flagman too.
       const fm = flagmanSpot(t);
       const fdx = Math.max(x - fm.x, 0, fm.x - (x + w));
       const fdy = Math.max(y - (fm.y - fm.lift), 0, fm.y - fm.lift - 26 - (y + h));
       clear = Math.min(clear, Math.hypot(fdx, fdy) - 14);
-      if (clear >= 0) return { x, y, w, label: t.name.toUpperCase() };
-      if (!best || clear > best.clear) best = { x, y, w, clear, label: t.name.toUpperCase() };
+      if (clear >= 0) return { x, y, w: w0, k, clear: 0, label: t.name.toUpperCase() };
+      if (!best || clear > best.clear) best = { x, y, w: w0, k, clear, label: t.name.toUpperCase() };
     }
     return best;
   }
+  // Full size where there's room; on crowded tracks a smaller board that
+  // fits clear of the road beats a big one over the walls.
+  function placeSign(t, w) {
+    let best = null;
+    for (const k of [1, 0.8, 0.65]) {
+      const at = placeSignAt(t, w, k);
+      if (at.clear >= 0) return at;
+      if (!best || at.clear > best.clear) best = at;
+    }
+    return best;
+  }
+
 
   function drawSign(c, sg) {
     const { x, y, w } = sg;
