@@ -1866,6 +1866,21 @@
     }
   }
 
+  // An ellipse filled with a radial gradient (stops from the centre, 0, to
+  // the edge, 1), so it can fade out with no hard rim.
+  function softBlob(c, x, y, rx, ry, stops) {
+    c.save();
+    c.translate(x, y);
+    c.scale(rx, ry);
+    const g = c.createRadialGradient(0, 0, 0, 0, 0, 1);
+    for (const [at, col] of stops) g.addColorStop(at, col);
+    c.fillStyle = g;
+    c.beginPath();
+    c.arc(0, 0, 1, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+  }
+
   function drawFeature(c, f, rng, lift, t) {
     if (f.type === 'jump') {
       // The ramp itself is drawn each frame, depth-sorted; its shadow is here.
@@ -1879,30 +1894,17 @@
     if (f.type === 'mud') {
       const rx = f.len / 2;
       const ry = f.halfWidth;
-      // Splashed rim, the wet mud, a glossy sheen, ruts and bubbles.
-      c.fillStyle = 'rgba(100,65,30,0.55)';
+      // Soft splashed rim fading into the dirt, then the wet mud.
       for (let i = 0; i < 9; i++) {
         const a = rng() * Math.PI * 2;
-        circle(c, Math.cos(a) * (rx + 3), Math.sin(a) * (ry + 2), 3 + rng() * 4);
-        c.fill();
+        const r = 4 + rng() * 5;
+        softBlob(c, Math.cos(a) * (rx + 2), Math.sin(a) * (ry + 1), r, r, [[0, 'rgba(100,65,30,0.45)'], [1, 'rgba(100,65,30,0)']]);
       }
-      c.beginPath();
-      c.ellipse(0, 0, rx + 5, ry + 4, 0, 0, Math.PI * 2);
-      c.fillStyle = '#7a5530';
-      c.fill();
-      c.beginPath();
-      c.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
-      const g = c.createRadialGradient(-rx * 0.2, -ry * 0.3, 2, 0, 0, rx);
-      g.addColorStop(0, '#6e4824');
-      g.addColorStop(1, '#4a2e14');
-      c.fillStyle = g;
-      c.fill();
-      c.lineWidth = 1.6 * LINE;
-      c.strokeStyle = '#3a2410';
-      c.stroke();
+      softBlob(c, 0, 0, rx + 10, ry + 8, [[0.6, 'rgba(110,72,36,0.7)'], [1, 'rgba(110,72,36,0)']]);
+      softBlob(c, 0, 0, rx + 2, ry + 2, [[0, '#6e4824'], [0.7, '#4a2e14'], [0.88, 'rgba(74,46,20,0.85)'], [1, 'rgba(74,46,20,0)']]);
       c.save();
       c.beginPath();
-      c.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+      c.ellipse(0, 0, rx * 0.85, ry * 0.8, 0, 0, Math.PI * 2);
       c.clip();
       c.strokeStyle = 'rgba(40,22,8,0.55)';
       c.lineWidth = 3;
@@ -1926,22 +1928,10 @@
     } else if (f.type === 'water') {
       const rx = f.len / 2;
       const ry = f.halfWidth;
-      // Muddy edge, deeper blue in the middle, ripples and a sparkle.
-      c.beginPath();
-      c.ellipse(0, 0, rx + 4, ry + 3, 0, 0, Math.PI * 2);
-      c.fillStyle = '#8a6a3d';
-      c.fill();
-      c.beginPath();
-      c.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
-      const g = c.createRadialGradient(0, 0, 2, 0, 0, rx);
-      g.addColorStop(0, '#2f86c4');
-      g.addColorStop(0.7, '#4fa9dc');
-      g.addColorStop(1, '#8fd3f2');
-      c.fillStyle = g;
-      c.fill();
-      c.lineWidth = 1.6 * LINE;
-      c.strokeStyle = '#2b6f9c';
-      c.stroke();
+      // Damp muddy bank fading into the dirt, shallows fading into the
+      // bank, deeper blue in the middle, ripples and a sparkle.
+      softBlob(c, 0, 0, rx + 10, ry + 8, [[0.55, 'rgba(138,106,61,0.85)'], [1, 'rgba(138,106,61,0)']]);
+      softBlob(c, 0, 0, rx + 2, ry + 2, [[0, '#2f86c4'], [0.6, '#4fa9dc'], [0.82, '#8fd3f2'], [1, 'rgba(160,215,235,0)']]);
       c.strokeStyle = 'rgba(255,255,255,0.75)';
       c.lineWidth = 1.6;
       for (let i = 0; i < 3; i++) {
