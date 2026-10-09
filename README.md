@@ -186,9 +186,16 @@ npm run ios:open # opens Xcode
   pick it as the run destination and press Run. Turn on Developer Mode on the phone when asked
   (Settings → Privacy & Security), and trust the developer under Settings → General → VPN &
   Device Management. Free-account installs expire after 7 days; press Run again to renew.
-- **TestFlight** needs the paid Apple Developer Program. Once joined: pick your team, set the
-  bundle id if `com.jamesjenkins.farmyardrally` is taken, bump the build number, then
-  Product → Archive → Distribute App → TestFlight.
+- **TestFlight** needs the paid Apple Developer Program (£79/year). Once you've joined:
+  1. Xcode → Settings → Accounts: your Apple ID now shows the paid team. In the App target →
+     Signing & Capabilities, pick that team (not the "(Personal Team)").
+  2. [App Store Connect](https://appstoreconnect.apple.com) → Apps → **+** → New App: iOS, name
+     *Farmyard Rally*, bundle id `com.jamesjenkins.farmyardrally`, any SKU. (If the bundle id is
+     taken, change it in Xcode and here.)
+  3. `npm run testflight` builds the game, archives it with the next build number (the commit
+     count) and uploads it. It appears under **TestFlight** once Apple has processed it.
+  4. In TestFlight, add yourself as an internal tester (no review needed) and install with the
+     TestFlight app. External testers need a one-off beta review.
 
 ### In-app purchases (Gold and Remove ads)
 The app sells the three Gold packs and Remove ads through Apple in-app purchase. The App Store

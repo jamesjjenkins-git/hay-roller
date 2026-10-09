@@ -10,7 +10,8 @@
     "shots:setup": "npm install && npx playwright install chromium",
     "build:web": "node scripts/build-web.js",
     "ios": "node scripts/build-web.js && npx cap sync ios",
-    "ios:open": "npx cap open ios"
+    "ios:open": "npx cap open ios",
+    "testflight": "node scripts/ios-testflight.js"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.3",
