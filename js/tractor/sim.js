@@ -324,7 +324,7 @@
     if (!r.airborne) {
       if (input.throttle > 0) {
         if (vf < top) vf += accel * input.throttle * DT * (1 - Math.max(0, vf) / (top * 1.05));
-        else vf += (top - vf) * 2 * DT;
+        else if (!(r.kickT > 0)) vf += (top - vf) * 2 * DT; // a drift kick may run past top speed
       }
       if (input.brake > 0) {
         if (vf > 10) vf -= 320 * input.brake * DT;
@@ -534,7 +534,7 @@
     carry: 0.08, swing: 0.4, ease: 6,
     kick: 0.66, kickSteer: 0.3, slideCarry: 0.22, turnBoost: 1.3, scrub: 0.4, topMul: 0.94, minSpeed: 50, slideEase: 4,
     exitAccel: 2, exitTime: 1.2, // quicker pick-up for a moment after letting go
-    kickPerSec: 26, kickMax: 36, kickMinTime: 0.35, kickTime: 0.6, // speed surge (px/s, over kickTime s) out of a drift
+    kickPerSec: 70, kickMax: 90, kickMinTime: 0.35, kickTime: 0.8, // speed surge (px/s, over kickTime s) out of a drift
   };
 
   // Rumble strips only cost you if you're turning while on them.
