@@ -2,6 +2,8 @@
 
 A browser-based, cartoon farm-themed casino. All credits are **free play money** with no cash value.
 
+![Hay Bale Derby mid-race](docs/race-screenshot.png)
+
 ## Games
 
 ### Hay Bale Derby (playable)
@@ -15,6 +17,8 @@ bounce, slow down or divert any bale that hits them — the heavier the animal, 
 - The live race uses a seed drawn only when you press *Roll 'em!*, so the outcome can't be known
   while betting.
 - Bets are win-only: payout = stake × odds, rounded down.
+
+![Race results](docs/results-screenshot.png)
 
 ### Coming soon
 Piggy Bank Slots, Egg Roulette, Cow Pat Bingo (placeholders in the lobby).
