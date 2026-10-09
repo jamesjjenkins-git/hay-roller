@@ -112,11 +112,11 @@ Everything runs behind adapters so going live doesn't touch game code:
   Google AdMob (`@capacitor-community/admob`): consent form, App Tracking Transparency prompt,
   a native home banner and rewarded videos. It serves Google **test ads** until
   `js/monetize/ad-config.js` is switched live (see *Real ads* below).
-- `js/monetize/store.js` — purchases go through a `billing` adapter. The default is **test
+- `js/monetize/store.js` — purchases go through a `billing` adapter. In a browser that's **test
   mode**: it asks for confirmation and grants the item without taking money (clearly labelled
-  in the wallet). Replace it with Apple in-app purchases (e.g. RevenueCat or
-  `cordova-plugin-purchase`) using the product ids in `PRODUCTS`; Apple requires IAP for
-  digital goods.
+  in the wallet). In the iPhone app it's Apple in-app purchase (`js/monetize/iap.js` over the
+  app's own StoreKit 2 plugin in `plugins/farm-store`), with App Store prices and a Restore
+  purchases button; see *In-app purchases* below.
 - `js/monetize/rewards.js` — welcome, daily and ad-reward rules and caps.
 
 For testing, add `?dev` to the URL to show a developer Hay top-up in the wallet.
@@ -171,6 +171,31 @@ npm run ios:open # opens Xcode
   bundle id if `com.jamesjenkins.farmyardrally` is taken, bump the build number, then
   Product → Archive → Distribute App → TestFlight.
 
+### In-app purchases (Gold and Remove ads)
+The app sells the three Gold packs and Remove ads through Apple in-app purchase. The App Store
+product ids are fixed in `js/monetize/iap.js` (Apple never lets an id be reused):
+
+| Product | App Store id | Type |
+| --- | --- | --- |
+| Pocket of Gold (100) | `com.jamesjenkins.farmyardrally.gold.small` | Consumable |
+| Pail of Gold (550) | `com.jamesjenkins.farmyardrally.gold.medium` | Consumable |
+| Barrow of Gold (1,200) | `com.jamesjenkins.farmyardrally.gold.large` | Consumable |
+| Remove ads | `com.jamesjenkins.farmyardrally.removeads` | Non-consumable |
+
+**Testing now, no paid account needed:** run the app from Xcode. The shared *App* scheme uses
+`ios/App/App/Products.storekit` (Product → Scheme → Edit Scheme → Run → Options → StoreKit
+Configuration), so purchases go through Xcode's local StoreKit test store: no money, no App
+Store Connect. Debug → StoreKit → Manage Transactions lets you refund, approve Ask to Buy, or
+clear purchases to test again. If Xcode doesn't pick the file up, choose it in that menu.
+
+**Selling for real** (needs the paid Apple Developer Program):
+1. App Store Connect → Business: accept the **Paid Apps agreement** and add banking and tax.
+2. Create the app with bundle id `com.jamesjenkins.farmyardrally`, then the four products
+   above with **exactly those ids**, their prices, names and a review screenshot each.
+3. Users and Access → Sandbox: add a **sandbox tester** to try real-flow purchases on TestFlight.
+4. Submit the products together with the first app version (first-time products are reviewed
+   with the app).
+
 ### Real ads (AdMob)
 The app already shows Google's test ads (banner on the home page, rewarded videos in the wallet
 and after races). To earn from real ones:
@@ -205,7 +230,8 @@ npm test         # Node 20+; covers the wallet, rewards, store, all three credit
 | `js/sound.js` | Synthesized sound effects (WebAudio) |
 | `js/app.js` | Lobby, wallet modal, routing |
 | `js/monetize/rewards.js` | Welcome gift, daily bonus, reward-ad payouts and daily cap |
-| `js/monetize/store.js` | Gold packs and Remove ads; billing adapter (test mode by default) |
+| `js/monetize/store.js` | Gold packs and Remove ads; billing adapter (test mode in a browser) |
+| `js/monetize/iap.js`, `plugins/farm-store/` | Apple in-app purchase: billing adapter and the app's StoreKit 2 plugin |
 | `js/monetize/ads.js` | Home banner and reward-video adapter with placeholder provider |
 | `js/monetize/admob.js`, `js/monetize/ad-config.js` | AdMob provider for the iPhone app; ad ids and the live switch |
 | `js/pending.js` | Saves mini-game payouts until they're credited (crash-safe) |

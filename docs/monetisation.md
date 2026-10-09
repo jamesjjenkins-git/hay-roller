@@ -54,10 +54,25 @@ provider shows labelled placeholders; in the iPhone app
 ## Purchases
 
 - **Gold packs** (in the 🪙 store) and **Remove ads**.
-- All purchases go through a billing adapter in `js/monetize/store.js`. The
-  default is **test mode**: a confirm dialog that takes no money. Real
-  purchases need the App Store build with StoreKit (e.g. via a Capacitor
-  plugin) behind the same adapter.
+- All purchases go through a billing adapter in `js/monetize/store.js`. In a
+  browser it's **test mode**: a confirm dialog that takes no money. In the
+  iPhone app it's **Apple in-app purchase**, and the app never falls back to
+  test mode (if the App Store can't be reached, purchases are just off).
+- **Our own small StoreKit 2 plugin** (`plugins/farm-store`) rather than a
+  third-party one: four products don't need a purchase service like
+  RevenueCat, the third-party plugins ship releases almost daily, and we need
+  exact control of when a purchase is finished. The plugin only talks to
+  StoreKit; the rules are in `js/monetize/iap.js` and `store.js`.
+- **Grant, then finish, once.** A paid purchase is granted before Apple is
+  told it's done, and each transaction is granted at most once (the ids are
+  remembered). Purchases that complete outside the purchase flow (the app
+  closed mid-purchase, Ask to Buy approved later) are picked up on launch and
+  as they arrive. So nothing paid for is lost and nothing is given twice.
+- **Apple says who owns Remove ads.** The saved flag is only for the first
+  paint; on launch it's checked against the App Store, so a restore on a new
+  phone adds it and a refund removes it. A Restore purchases button is in the
+  store (App Review requires one).
+- Prices shown in the app are the App Store's own, in the player's currency.
 - Premium paints cost 60–200 Gold; ordinary paints are free.
 
 ## Free Hay

@@ -1,0 +1,76 @@
+{
+  "identifier": "A9D5507E-A42A-53FE-9765-2A4A74BE2048",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "0.99",
+      "familyShareable": false,
+      "internalID": "6403977794",
+      "localizations": [
+        {
+          "description": "100 Gold for premium paint jobs.",
+          "displayName": "Pocket of Gold",
+          "locale": "en_GB"
+        }
+      ],
+      "productID": "com.jamesjenkins.farmyardrally.gold.small",
+      "referenceName": "Pocket of Gold",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "4.99",
+      "familyShareable": false,
+      "internalID": "6482722880",
+      "localizations": [
+        {
+          "description": "550 Gold for premium paint jobs.",
+          "displayName": "Pail of Gold",
+          "locale": "en_GB"
+        }
+      ],
+      "productID": "com.jamesjenkins.farmyardrally.gold.medium",
+      "referenceName": "Pail of Gold",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "9.99",
+      "familyShareable": false,
+      "internalID": "6441565801",
+      "localizations": [
+        {
+          "description": "1,200 Gold for premium paint jobs.",
+          "displayName": "Barrow of Gold",
+          "locale": "en_GB"
+        }
+      ],
+      "productID": "com.jamesjenkins.farmyardrally.gold.large",
+      "referenceName": "Barrow of Gold",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "2.99",
+      "familyShareable": false,
+      "internalID": "6445170535",
+      "localizations": [
+        {
+          "description": "Hides the home page banner for good.",
+          "displayName": "Remove ads",
+          "locale": "en_GB"
+        }
+      ],
+      "productID": "com.jamesjenkins.farmyardrally.removeads",
+      "referenceName": "Remove ads",
+      "type": "NonConsumable"
+    }
+  ],
+  "settings": {
+    "_locale": "en_GB",
+    "_storefront": "GBR",
+    "_failTransactionsEnabled": false
+  },
+  "subscriptionGroups": [],
+  "version": {
+    "major": 4,
+    "minor": 0
+  }
+}
