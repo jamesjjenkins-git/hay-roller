@@ -531,6 +531,7 @@
     kinds: { pig: { r: 9 }, sheep: { r: 9 }, cow: { r: 11 } },
     walk: 18, // px/s while wandering
     slow: 0.4, // fraction of the tractor's speed lost on a hit
+    driftSlow: 0.5, // ...multiplied by this when you hit it mid-drift
     kick: 2.2, // the animal flies off at this multiple of the tractor's speed
     friction: 1.1, // per second while tumbling
     cooldown: 1.5, // s before the same animal can be hit again
@@ -746,7 +747,8 @@
         a.hitCooldown = ANIMAL.cooldown;
         a.x = r.x + nx * (RADIUS + a.r);
         a.y = r.y + ny * (RADIUS + a.r);
-        const slow = Math.min(0.7, ANIMAL.slow * (r.stats.knock || 1));
+        // Sliding into one sideways shoves it aside: it costs less speed.
+        const slow = Math.min(0.7, ANIMAL.slow * (r.stats.knock || 1) * (r.drifting ? ANIMAL.driftSlow : 1));
         r.vx *= 1 - slow;
         r.vy *= 1 - slow;
         r.bump = Math.max(r.bump, 0.6);

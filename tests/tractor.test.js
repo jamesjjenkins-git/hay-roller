@@ -539,3 +539,32 @@ test('series: Quad Cup unlocks with a top 3 at the Harvest Grand Prix, with its 
   g.setVehicle('tractor');
   assert.equal(g.bestFor('harvest').place, 3);
 });
+
+test('drifting into an animal costs less speed than hitting it normally', () => {
+  const hit = (drift) => {
+    const s = Sim.createRace(Tracks.TRACKS[0], { seed: 1 });
+    const me = s.racers[0];
+    const a = s.animals[0];
+    const c = s.track.samples[a.idx];
+    me.x = a.x - c.tx * 30;
+    me.y = a.y - c.ty * 30;
+    me.heading = c.angle;
+    me.vx = c.tx * 160;
+    me.vy = c.ty * 160;
+    me.idx = Tracks.nearestGlobal(s.track, me.x, me.y);
+    me.drifting = drift;
+    a.mode = 'pause';
+    a.timer = 10;
+    for (let t = 0; t < 30; t++) {
+      const before = Math.hypot(me.vx, me.vy);
+      Sim.step(s, { 0: { steer: 0, throttle: 1, brake: 0, nitro: false, drift } });
+      if (s.events.some((e) => e.type === 'animal')) return 1 - Math.hypot(me.vx, me.vy) / before;
+      s.events.length = 0;
+    }
+    return null;
+  };
+  const normal = hit(false);
+  const drifting = hit(true);
+  assert.ok(normal != null && drifting != null);
+  assert.ok(drifting < normal * 0.75, `drift loss ${drifting.toFixed(2)} vs normal ${normal.toFixed(2)}`);
+});
