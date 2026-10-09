@@ -305,8 +305,10 @@
         <div class="wallet-balance gold"><span class="coin">🪙</span><span id="wallet-gold">0</span> Gold</div>
         <p class="muted">Gold buys premium paint jobs in the garage. It can't be used for bets or swapped for Hay.</p>
         <p class="test-mode hidden" id="test-mode-note">🧪 <b>Test mode:</b> purchases are free and no money is taken. Prices show what they'll cost once the app is in the App Store.</p>
+        <p class="test-mode hidden" id="store-unavailable">The App Store isn't reachable right now, so purchases are off. Check your connection and try again.</p>
         <div class="packs" id="store-packs"></div>
         <div id="store-extras"></div>
+        <button type="button" class="link-btn hidden" id="restore-purchases">Restore purchases</button>
       </section>
 
       <h3>Recent Hay activity</h3>
@@ -335,6 +337,7 @@
   <script src="js/tractor/game.js"></script>
   <script src="js/monetize/rewards.js"></script>
   <script src="js/monetize/store.js"></script>
+  <script src="js/monetize/iap.js"></script>
   <script src="js/monetize/ads.js"></script>
   <script src="js/monetize/ad-config.js"></script>
   <script src="js/monetize/admob.js"></script>

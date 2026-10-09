@@ -12,12 +12,17 @@
     storage = null;
   }
   const rewards = root.FarmRewards.createRewards({ storage, wallet });
-  const store = root.FarmStore.createStore({
-    storage,
-    goldWallet: gold,
-    billing: root.FarmStore.testBilling(async (p) =>
-      confirm(`TEST MODE — no money will be taken.\n\nBuy "${p.name}" (${p.price} in the App Store)?`)),
-  });
+  // In the iPhone app purchases are real (Apple in-app purchase); only the
+  // browser build uses the free test mode. The app never falls back to it.
+  const isNativeApp = !!(root.Capacitor && root.Capacitor.isNativePlatform && root.Capacitor.isNativePlatform());
+  const iapPlugin = root.FarmIAP && root.FarmIAP.nativePlugin();
+  const billing = iapPlugin
+    ? root.FarmIAP.createAppStoreBilling({ plugin: iapPlugin })
+    : isNativeApp
+      ? { async loadProducts() { throw new Error('In-app purchase unavailable'); }, async purchase() { return { ok: false, error: 'unavailable' }; }, async restore() { return []; } }
+      : root.FarmStore.testBilling(async (p) =>
+        confirm(`TEST MODE — no money will be taken.\n\nBuy "${p.name}" (${p.price} in the App Store)?`));
+  const store = root.FarmStore.createStore({ storage, goldWallet: gold, billing });
 
   const $ = (sel) => document.querySelector(sel);
   const fmt = (n) => n.toLocaleString('en-GB');
@@ -93,15 +98,18 @@
 
   function renderStore() {
     $('#test-mode-note').classList.toggle('hidden', !store.testMode);
+    $('#store-unavailable').classList.toggle('hidden', store.available);
+    const off = store.available ? '' : ' disabled';
     $('#store-packs').innerHTML = store.PRODUCTS.filter((p) => p.kind === 'gold').map((p) => `
-      <button type="button" class="pack gold-pack" data-buy="${p.id}">
+      <button type="button" class="pack gold-pack" data-buy="${p.id}"${off}>
         ${p.tag ? `<span class="pack-tag">${p.tag}</span>` : ''}
-        <b>🪙 ${fmt(p.gold)}</b><small>${p.name}</small><span class="price">${p.price}</span>
+        <b>🪙 ${fmt(p.gold)}</b><small>${p.name}</small><span class="price">${store.price(p.id)}</span>
       </button>`).join('');
     const ra = store.PRODUCTS.find((p) => p.id === 'remove_ads');
     $('#store-extras').innerHTML = store.owns('remove_ads')
       ? `<div class="store-row owned"><span>🚫📢</span><span><b>Ads removed</b><small>Thanks for supporting the farm!</small></span><span class="price">Owned ✓</span></div>`
-      : `<button type="button" class="store-row" data-buy="remove_ads"><span>🚫📢</span><span><b>${ra.name}</b><small>${ra.desc}</small></span><span class="price">${ra.price}</span></button>`;
+      : `<button type="button" class="store-row" data-buy="remove_ads"${off}><span>🚫📢</span><span><b>${ra.name}</b><small>${ra.desc}</small></span><span class="price">${store.price('remove_ads')}</span></button>`;
+    $('#restore-purchases').classList.toggle('hidden', store.testMode);
   }
 
   function openWallet(section) {
@@ -167,11 +175,16 @@
     const dev = e.target.closest('[data-dev]');
     if (buy) {
       const id = buy.dataset.buy;
+      buy.disabled = true;
       const res = await store.buy(id);
       if (res.ok && !res.already) {
         sound.fanfare();
         const p = store.PRODUCTS.find((x) => x.id === id);
         toast(p.kind === 'gold' ? `+🪙${fmt(p.gold)} Gold added` : `${p.name} — done!`, 'good');
+      } else if (res.pending) {
+        toast("Waiting for approval — it'll arrive as soon as it's approved.", 'info', 5000);
+      } else if (res.error) {
+        toast(res.error === 'unavailable' ? "The store isn't available right now." : res.error, 'warn');
       }
       renderStore();
       renderGold();
@@ -182,6 +195,25 @@
       modal.close();
     }
   });
+
+  $('#restore-purchases').addEventListener('click', async () => {
+    try {
+      const ids = await store.restore();
+      toast(ids.length ? 'Purchases restored.' : 'Nothing to restore on this Apple ID.', 'info');
+    } catch (e) {
+      toast("Couldn't reach the App Store to restore purchases.", 'warn');
+    }
+    renderStore();
+  });
+
+  // Purchases that complete later (Ask to Buy approved, or interrupted last time).
+  store.onDelivered((p) => {
+    sound.fanfare();
+    toast(p.kind === 'gold' ? `+🪙${fmt(p.gold)} Gold added — thanks!` : `${p.name} — done!`, 'good');
+    renderGold();
+  });
+  store.subscribe(() => renderStore());
+  store.init();
 
   $('#reset-wallet').addEventListener('click', () => {
     if (!confirm('Reset your Hay to 0 and clear its history? (Gold and purchases are kept.)')) return;
