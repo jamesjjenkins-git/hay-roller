@@ -62,8 +62,34 @@
       const b = bg.getContext('2d');
       b.setTransform(layerScale, 0, 0, layerScale, 0, 0);
       drawBackground(b, track);
+      buildWallSprites();
       skid.getContext('2d').setTransform(layerScale, 0, 0, layerScale, 0, 0);
       lastSkid = new Map();
+    }
+
+    // Wall pieces are pre-drawn once per look (kind, colour, angle) and then
+    // drawn every frame in depth order with everything else, so a vehicle
+    // passes behind the near wall and in front of the far one.
+    const SPR = { w: 44, h: 54, ox: 22, oy: 38 };
+    let wallSprites = new Map();
+    function wallKey(w) {
+      if (w.kind === 'bale') return `b${w.n % 2}:${Math.round((((w.angle % Math.PI) + Math.PI) % Math.PI) / (Math.PI / 48)) % 48}`;
+      return w.kind === 'tyre' ? `t${w.n % 2}` : `r${w.n % 3}`;
+    }
+    function buildWallSprites() {
+      wallSprites = new Map();
+      for (const w of track.wallItems || []) {
+        const key = wallKey(w);
+        if (wallSprites.has(key)) continue;
+        const cv = document.createElement('canvas');
+        cv.width = Math.ceil(SPR.w * layerScale);
+        cv.height = Math.ceil(SPR.h * layerScale);
+        const cc = cv.getContext('2d');
+        cc.setTransform(layerScale, 0, 0, layerScale, 0, 0);
+        const bucket = w.kind === 'bale' ? (Number(key.split(':')[1]) * Math.PI) / 48 : 0;
+        drawWallSolid(cc, { ...w, x: SPR.ox, y: SPR.oy, angle: bucket });
+        wallSprites.set(key, cv);
+      }
     }
 
     function clearSkids() {
@@ -325,10 +351,25 @@
       for (const p of sim.pickups) drawPickup(ctx, p, now);
       drawParticles('under');
 
-      const order = sim.racers.slice().sort((a, b) => a.z - b.z || a.y - b.y);
-      for (const a of sim.animals || []) drawFarmAnimal(ctx, a, now);
-      for (const r of order) drawShadow(ctx, r);
-      for (const r of order) drawTractor(ctx, r, now);
+      // Everything that stands up, back to front: walls, animals, vehicles.
+      for (const r of sim.racers) drawShadow(ctx, r);
+      const items = [];
+      const x0 = v.rx - 30;
+      const x1 = v.rx + v.rw + 30;
+      const y0 = v.ry - 30;
+      const y1 = v.ry + v.rh + 60;
+      for (const w of track.wallItems || []) {
+        if (w.x < x0 || w.x > x1 || w.y < y0 || w.y > y1) continue;
+        items.push({ y: w.gy, w });
+      }
+      for (const a of sim.animals || []) items.push({ y: a.y, a });
+      for (const r of sim.racers) items.push({ y: r.y + (r.airborne ? 40 : 0), r });
+      items.sort((a, b) => a.y - b.y);
+      for (const it of items) {
+        if (it.w) ctx.drawImage(wallSprites.get(wallKey(it.w)), it.w.x - SPR.ox, it.w.y - SPR.oy, SPR.w, SPR.h);
+        else if (it.a) drawFarmAnimal(ctx, it.a, now);
+        else drawTractor(ctx, it.r, now);
+      }
       drawParticles('over');
 
       // Marker over the player for the first moments of the race.
@@ -505,11 +546,15 @@
       c.fillStyle = (x / 80) % 2 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
       c.fillRect(x, 0, 80, H);
     }
+    // Raised and sunken ground (Ironman pack), drawn before anything sits on it.
+    const groundAt = t.terrain ? (x, y) => root.TractorTracks.terrainHeight(t.terrain, x, y) : () => 0;
+    if (t.terrain) drawTerrain(c, t);
     c.strokeStyle = 'rgba(30, 100, 30, 0.35)';
     c.lineWidth = 1.5;
     for (let i = 0; i < 700; i++) {
       const x = rng() * W;
-      const y = rng() * H;
+      const gy = rng() * H;
+      const y = gy - groundAt(x, gy) * RAISE; // tufts sit on the raised ground
       c.beginPath();
       c.moveTo(x - 2, y + 3);
       c.lineTo(x, y - 2);
@@ -521,7 +566,7 @@
     drawGrandstand(c, rng);
 
     // Scenery in the infield and margins.
-    for (const sc of t.scenery.slice().sort((a, b) => a.y - b.y)) drawSceneryDepth(c, sc, rng);
+    for (const sc of t.scenery.slice().sort((a, b) => a.y - b.y)) drawSceneryDepth(c, sc, rng, groundAt(sc.x, sc.y));
 
     // Track: outer berm, then dirt.
     c.lineJoin = 'round';
@@ -565,7 +610,7 @@
     if (t.elev && t.elev.some((h) => Math.abs(h) > 0.3)) drawRaisedRoad(c, t, rng);
 
     // Features.
-    for (const f of t.features) drawFeature(c, f, rng);
+    for (const f of t.features) drawFeature(c, f, rng, liftAt(t, f.idx));
 
     // Start/finish chequers.
     const s0 = t.samples[0];
@@ -611,21 +656,21 @@
         const tight = edgeLen / Math.max(0.001, Math.abs(turn)) < BARREL_RADIUS;
         const py = p.y - liftAt(t, i);
         if (placed % 9 === 0) {
-          walls.push({ kind: 'tyre', x: p.x, y: py, n: Math.floor(placed / 9) });
+          walls.push({ kind: 'tyre', x: p.x, y: py, gy: p.y, n: Math.floor(placed / 9) });
           nextAt = travelled + 20;
         } else if (tight) {
-          walls.push({ kind: 'barrel', x: p.x, y: py, n: placed });
+          walls.push({ kind: 'barrel', x: p.x, y: py, gy: p.y, n: placed });
           nextAt = travelled + 18;
         } else {
-          walls.push({ kind: 'bale', x: p.x, y: py, n: placed, angle: p.angle });
+          walls.push({ kind: 'bale', x: p.x, y: py, gy: p.y, n: placed, angle: p.angle });
           nextAt = travelled + 25;
         }
         placed++;
       }
     }
     // Back to front, so nearer walls overlap the ones behind them.
-    walls.sort((a, b) => a.y - b.y);
-    for (const w of walls) drawWallSolid(c, w);
+    // Drawn each frame, depth-sorted with the vehicles (see the renderer).
+    t.wallItems = walls;
 
     // Title sign.
     c.save();
@@ -639,6 +684,60 @@
     c.textBaseline = 'middle';
     c.fillText(label, W - w / 2 - 14, H - 22);
     c.restore();
+  }
+
+  // The ground as raised/sunken land: small cells drawn back to front, each a
+  // column from the ground up to its height (a grassy bank where it's higher
+  // than the cell in front) with a grass top shaded by the slope.
+  const TERRAIN_CX = 4; // cell width
+  const TERRAIN_CY = 2; // cell height (fine, so slopes read smooth)
+  function drawTerrain(c, t) {
+    const cw = TERRAIN_CX;
+    const ch = TERRAIN_CY;
+    const hAt = (x, y) => root.TractorTracks.terrainHeight(t.terrain, x, y);
+    // Only where there's any terrain nearby.
+    const cols = Math.ceil(W / cw);
+    const rows = Math.ceil(H / ch);
+    const grid = [];
+    let any = false;
+    for (let j = 0; j <= rows + 1; j++) {
+      const row = [];
+      for (let i = 0; i <= cols + 1; i++) {
+        const h = hAt(i * cw + cw / 2, j * ch + ch / 2);
+        if (Math.abs(h) > 0.4) any = true;
+        row.push(h);
+      }
+      grid.push(row);
+    }
+    if (!any) return;
+    for (let j = 0; j <= rows; j++) {
+      for (let i = 0; i <= cols; i++) {
+        const h = grid[j][i];
+        // Skip flat ground unless it's next to a dip (it has to cover the
+        // near edge of the pit).
+        const behind = j > 0 ? grid[j - 1][i] : 0;
+        if (Math.abs(h) < 0.4 && behind > -0.4) continue;
+        const x = i * cw;
+        const y = j * ch;
+        const lift = h * RAISE;
+        // Grass, lit from above: slopes facing the camera a little darker,
+        // slopes facing away a little lighter.
+        const dx = ((grid[j][i + 1] || 0) - (grid[j][Math.max(0, i - 1)] || 0)) / (2 * cw);
+        const dy = (((grid[j + 1] && grid[j + 1][i]) || 0) - behind) / (2 * ch);
+        const light = Math.max(-0.14, Math.min(0.14, -(dx * 0.6 + dy) * 0.9));
+        const top = shade('#6fbf4f', light);
+        // Bank below (raised ground) or the far wall of a dip.
+        if (h > 0) {
+          c.fillStyle = shade('#6fbf4f', light - 0.14);
+          c.fillRect(x, y - lift, cw + 0.5, ch + lift + 0.5);
+        } else if (h < 0) {
+          c.fillStyle = '#7a5a32';
+          c.fillRect(x, y, cw + 0.5, -lift + ch + 0.5);
+        }
+        c.fillStyle = top;
+        c.fillRect(x, y - lift, cw + 0.5, ch + 0.5);
+      }
+    }
   }
 
   // ---------- Depth ----------
@@ -724,7 +823,8 @@
     tree: { h: 18, side: '#6b4423', foot: (c) => circle(c, 0, 0, 7), canopy: true },
   };
 
-  function drawSceneryDepth(c, sc, rng) {
+  function drawSceneryDepth(c, sc0, rng, ground = 0) {
+    const sc = ground ? { ...sc0, y: sc0.y - ground * RAISE } : sc0;
     const d = SCENERY_SOLID[sc.kind];
     if (!d) {
       drawScenery(c, sc, rng);
@@ -883,9 +983,67 @@
     }
   }
 
-  function drawFeature(c, f, rng) {
+  // Jump ramp: a wooden wedge rising towards its lip, with the lip face and
+  // the side facing the camera showing.
+  const RAMP_H = 11;
+  function drawRamp(c, f, lift) {
+    const L = f.len;
+    const hw = f.halfWidth - 6;
+    const ux = Math.cos(f.angle);
+    const uy = Math.sin(f.angle);
+    const nx = -uy;
+    const ny = ux;
+    // Point on the ramp: `a` along (−L/2..L/2), `w` across, `h` up.
+    const P = (a, w, h) => [f.x + ux * a + nx * w, f.y + uy * a + ny * w - lift - h * RAISE];
+    const poly = (pts, fill) => {
+      c.beginPath();
+      pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+      c.closePath();
+      c.fillStyle = fill;
+      c.fill();
+      c.lineWidth = 1.5 * LINE;
+      c.strokeStyle = OUTLINE;
+      c.stroke();
+    };
+    // Shadow past the lip.
+    c.fillStyle = 'rgba(0,0,0,0.22)';
+    c.beginPath();
+    [P(L / 2, -hw, 0), P(L / 2 + 16, -hw, 0), P(L / 2 + 16, hw, 0), P(L / 2, hw, 0)].forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+    c.fill();
+    // Sides (the near one shows), then the lip face, then the top.
+    for (const w of [-hw, hw]) poly([P(-L / 2, w, 0), P(L / 2, w, 0), P(L / 2, w, RAMP_H)], '#7a4f25');
+    poly([P(L / 2, -hw, 0), P(L / 2, hw, 0), P(L / 2, hw, RAMP_H), P(L / 2, -hw, RAMP_H)], '#8a5a2b');
+    poly([P(-L / 2, -hw, 0), P(-L / 2, hw, 0), P(L / 2, hw, RAMP_H), P(L / 2, -hw, RAMP_H)], '#d79e5c');
+    // Planks across, and two arrows up the middle.
+    c.strokeStyle = 'rgba(80,45,15,0.5)';
+    c.lineWidth = 1.5;
+    for (let a = -L / 2 + 6; a < L / 2; a += 7) {
+      const h = ((a + L / 2) / L) * RAMP_H;
+      const [x0, y0] = P(a, -hw + 2, h);
+      const [x1, y1] = P(a, hw - 2, h);
+      c.beginPath();
+      c.moveTo(x0, y0);
+      c.lineTo(x1, y1);
+      c.stroke();
+    }
+    c.fillStyle = '#fff6dc';
+    for (const w of [-hw / 2, hw / 2]) {
+      const pts = [P(-6, w - 7, RAMP_H * 0.3), P(6, w, RAMP_H * 0.7), P(-6, w + 7, RAMP_H * 0.3)];
+      c.beginPath();
+      pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+      c.closePath();
+      c.fill();
+    }
+  }
+
+  function drawFeature(c, f, rng, lift = 0) {
+    if (f.type === 'jump') {
+      drawRamp(c, f, lift);
+      return;
+    }
     c.save();
-    c.translate(f.x, f.y);
+    // Sits on the road surface, which may be up a hill.
+    c.translate(f.x, f.y - lift);
     c.rotate(f.angle);
     if (f.type === 'mud') {
       c.beginPath();
@@ -923,37 +1081,6 @@
         g.addColorStop(1, 'rgba(110,60,25,0.45)');
         c.fillStyle = g;
         roundRect(c, x - 6, -f.halfWidth + 4, 12, f.halfWidth * 2 - 8, 6);
-        c.fill();
-      }
-    } else if (f.type === 'jump') {
-      const L = f.len;
-      const hw = f.halfWidth - 6;
-      c.fillStyle = 'rgba(0,0,0,0.25)';
-      c.fillRect(L / 2, -hw, 14, hw * 2);
-      const g = c.createLinearGradient(-L / 2, 0, L / 2, 0);
-      g.addColorStop(0, '#b97a3e');
-      g.addColorStop(1, '#e9b06a');
-      roundRect(c, -L / 2, -hw, L, hw * 2, 4);
-      c.fillStyle = g;
-      c.fill();
-      c.lineWidth = 2.5 * LINE;
-      c.strokeStyle = OUTLINE;
-      c.stroke();
-      c.strokeStyle = 'rgba(80,45,15,0.5)';
-      c.lineWidth = 1.5;
-      for (let y = -hw + 8; y < hw; y += 9) {
-        c.beginPath();
-        c.moveTo(-L / 2 + 2, y);
-        c.lineTo(L / 2 - 2, y);
-        c.stroke();
-      }
-      c.fillStyle = '#fff6dc';
-      for (const y of [-hw / 2, hw / 2]) {
-        c.beginPath();
-        c.moveTo(-6, y - 7);
-        c.lineTo(6, y);
-        c.lineTo(-6, y + 7);
-        c.closePath();
         c.fill();
       }
     }

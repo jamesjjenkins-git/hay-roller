@@ -379,7 +379,7 @@
       ],
       features: [
         { type: 'jump', at: 0.1 },
-        { type: 'mud', at: 0.267, off: 0 },
+        { type: 'mud', at: 0.258, off: 0 },
         { type: 'bumps', at: 0.433 },
         { type: 'water', at: 0.6, off: 0 },
         { type: 'jump', at: 0.871 },
@@ -421,7 +421,7 @@
       features: [
         { type: 'bumps', at: 0.1 },
         { type: 'jump', at: 0.283 },
-        { type: 'mud', at: 0.433, off: 0 },
+        { type: 'mud', at: 0.414, off: 0 },
         { type: 'water', at: 0.6, off: 0 },
         { type: 'jump', at: 0.767 },
         { type: 'bumps', at: 0.933 },
@@ -508,7 +508,7 @@
         { type: 'jump', at: 0.044 },
         { type: 'bumps', at: 0.12 },
         { type: 'water', at: 0.32, off: 0 },
-        { type: 'jump', at: 0.52 },
+        { type: 'jump', at: 0.464 },
         { type: 'mud', at: 0.72, off: 0 },
       ],
       scenery: [
@@ -549,9 +549,8 @@
       features: [
         { type: 'bumps', at: 0.072 },
         { type: 'mud', at: 0.32, off: 0 },
-        { type: 'jump', at: 0.612 },
         { type: 'water', at: 0.708, off: 0 },
-        { type: 'bumps', at: 0.92 },
+        { type: 'bumps', at: 0.869 },
       ],
       scenery: [
         { kind: 'tree', x: 792, y: 514, scale: 0.6 },
@@ -587,10 +586,10 @@
         [174, 595], [249, 595], [325, 595],
       ],
       features: [
-        { type: 'bumps', at: 0.12 },
+        { type: 'bumps', at: 0.088 },
         { type: 'mud', at: 0.32, off: 0 },
-        { type: 'water', at: 0.52, off: 0 },
-        { type: 'jump', at: 0.672 },
+        { type: 'water', at: 0.511, off: 0 },
+        { type: 'jump', at: 0.666 },
         { type: 'bumps', at: 0.92 },
       ],
       scenery: [
@@ -667,11 +666,11 @@
         [538, 595],
       ],
       features: [
-        { type: 'bumps', at: 0.1 },
-        { type: 'jump', at: 0.291 },
+        { type: 'bumps', at: 0.07 },
+        { type: 'jump', at: 0.314 },
         { type: 'mud', at: 0.433, off: 0 },
-        { type: 'water', at: 0.6, off: 0 },
-        { type: 'jump', at: 0.759 },
+        { type: 'water', at: 0.577, off: 0 },
+        { type: 'jump', at: 0.793 },
         { type: 'water', at: 0.933, off: 0 },
       ],
       scenery: [

@@ -142,8 +142,9 @@
 
     // 2x2 grid behind the start line (just you in a Frenzy round).
     const racers = (frenzy ? DRIVERS.slice(0, 1) : DRIVERS).map((d, i) => {
-      const back = 34 + Math.floor(i / 2) * 44;
-      const side = (i % 2 ? 1 : -1) * track.halfWidth * 0.45;
+      // Two by two, with room between so the tractors don't overlap.
+      const back = 30 + Math.floor(i / 2) * 58;
+      const side = (i % 2 ? 1 : -1) * track.halfWidth * 0.52;
       const x = start.x - start.tx * back + start.nx * side;
       const y = start.y - start.ty * back + start.ny * side;
       const isPlayer = i === 0;
