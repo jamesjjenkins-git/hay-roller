@@ -299,25 +299,41 @@ test('unlock-all opens every track and can be switched off', () => {
   assert.strictEqual(Tracks.TRACKS.filter((t) => !g.isUnlocked(t)).length, locked.length);
 });
 
-test('straight-line assist lines the nose up when not steering, but never fights a turn', () => {
+test('straight-line assist only steadies small drifts and never drives for you', () => {
   const def = Tracks.TRACKS[0];
   const run = (assist, steer, offset) => {
     const s = Sim.createRace(def, { seed: 1 });
-    // Get rolling along the first straight.
     for (let i = 0; i < 90; i++) {
       const me = s.racers[0];
       me.heading = s.track.samples[me.idx].angle;
       Sim.step(s, { 0: { steer: 0, throttle: 1, brake: 0 } });
     }
     const me = s.racers[0];
-    me.heading = s.track.samples[(me.idx + 5) % s.track.count].angle + offset;
+    me.heading = s.track.samples[me.idx].angle + offset;
     for (let i = 0; i < 30; i++) Sim.step(s, { 0: { steer, throttle: 1, brake: 0, assist } });
-    return Math.abs(Sim.angleDiff(s.track.samples[(me.idx + 5) % s.track.count].angle, me.heading));
+    return Math.abs(Sim.angleDiff(s.track.samples[me.idx].angle, me.heading));
   };
-  assert.ok(run(true, 0, 0.3) < 0.08, 'small misalignment is corrected');
-  assert.ok(run(false, 0, 0.3) > 0.2, 'without assist it stays misaligned');
-  assert.ok(run(true, 0, 1.2) > 1.0, 'large angles are left alone');
-  assert.ok(run(true, 0.55, 0.3) > 0.3, 'no correction while the player is steering');
+  assert.ok(run(true, 0, 0.15) < 0.05, 'a small drift is steadied');
+  assert.ok(run(false, 0, 0.15) > run(true, 0, 0.15) + 0.08, 'the assist is what corrected it');
+  assert.ok(run(true, 0, 0.4) > 0.3, 'anything bigger is left to the player');
+  assert.ok(run(true, 0.55, 0.15) > 0.3, 'no correction while the player is steering');
+});
+
+test('letting go of the steering in the lead loses the race', () => {
+  const def = Tracks.TRACKS[0];
+  let losses = 0;
+  for (let seed = 1; seed <= 4; seed++) {
+    const s = Sim.createRace(def, { seed });
+    while (!s.done && s.t < 200) {
+      const me = s.racers[0];
+      const input = { steer: 0, throttle: 1, brake: 0, assist: true };
+      if (me.lap <= 1) input.steer = stickDriver(s).steer; // race properly for lap 1
+      Sim.step(s, { 0: input });
+      s.events.length = 0;
+    }
+    if (s.racers[0].place !== 1) losses++;
+  }
+  assert.strictEqual(losses, 4, 'coasting hands-off should not win');
 });
 
 test('walls glance you off with a small speed loss instead of sticking', () => {

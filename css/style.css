@@ -939,7 +939,7 @@ body.in-race .topbar { display: none; }
   display: none;
   position: absolute;
   inset: 0;
-  z-index: 5;
+  z-index: 20; /* above the pause menu, so it's clear why the race is waiting */
   place-items: center;
   align-content: center;
   text-align: center;

@@ -44,13 +44,15 @@
   }
 
   // Walls: glance off rather than stick. bounce = fraction of the inward
-  // speed reflected; align = how much the nose turns along the wall per
-  // contact frame; loss = speed lost on a head-on knock; scrape = friction
-  // per second while sliding along.
-  const WALL = { bounce: 0.2, align: 0.35, loss: 0.18, scrape: 0.35 };
+  // speed reflected; loss = speed lost on a head-on knock (less for a
+  // glancing one); scrape = friction per second while touching.
+  // deflect = how far (radians) the nose is turned away from the wall on contact.
+  const WALL = { bounce: 0.2, deflect: 0.12, loss: 0.18, scrape: 1.5 };
 
   // Straight-line assist for touch steering (radians, radians/second).
-  const ASSIST = { maxAngle: 0.5, rate: 1.4 };
+  // Deliberately weak: it only steadies you on straights and can't follow a
+  // bend (a bend turns the road faster than `rate`), so you still have to steer.
+  const ASSIST = { maxAngle: 0.2, rate: 0.4 };
 
   // Rubber banding, player only: if you drop well behind the tractor directly
   // ahead, you get a gentle boost that fades as you close back up behind it.
@@ -286,12 +288,12 @@
       r.steer += (input.steer - r.steer) * Math.min(1, easing * DT);
       r.heading += r.steer * st.turnRate * turnFactor * dir * DT;
 
-      // Straight-line assist (player option): with no steering input, gently
-      // line the nose up with the road ahead — only when already nearly
-      // aligned, so it never fights a deliberate turn or recovery.
+      // Straight-line assist (player option): with no steering input, nudge
+      // the nose toward the direction of the road right here — only when
+      // already within ~11 degrees, so it never fights a turn or drives for you.
       if (input.assist && Math.abs(input.steer) < 0.05 && speed > 30 && dir > 0) {
-        const ahead = s.track.samples[(r.idx + 5) % s.track.count];
-        const err = angleDiff(ahead.angle, r.heading);
+        const here = s.track.samples[r.idx];
+        const err = angleDiff(here.angle, r.heading);
         if (Math.abs(err) < ASSIST.maxAngle) {
           r.heading += Math.sign(err) * Math.min(Math.abs(err), ASSIST.rate * DT);
         }
@@ -349,15 +351,20 @@
         const headOn = Math.min(1, Math.abs(vn) / speed); // 0 = grazing, 1 = straight in
         r.vx -= c.nx * vn * (1 + WALL.bounce);
         r.vy -= c.ny * vn * (1 + WALL.bounce);
-        // Steer the nose along the wall so the throttle doesn't keep pushing
-        // you back into it.
-        const along = Math.atan2(c.ty, c.tx);
-        const tangent = Math.abs(angleDiff(along, r.heading)) < Math.PI / 2 ? along : along + Math.PI;
+        // Glance off: point the nose a little *away* from the wall (past
+        // parallel), so you bounce back into the track instead of sticking to
+        // it or riding along it.
+        const wallDir = Math.atan2(c.ty, c.tx);
+        const tangent = Math.abs(angleDiff(wallDir, r.heading)) < Math.PI / 2 ? wallDir : wallDir + Math.PI;
         const intoWall = (Math.cos(r.heading) * c.nx + Math.sin(r.heading) * c.ny) * side > 0;
-        if (intoWall) r.heading += angleDiff(tangent, r.heading) * WALL.align;
+        if (intoWall) {
+          const away = Math.atan2(-c.ny * side, -c.nx * side);
+          const turnAway = Math.sign(angleDiff(away, tangent)) * WALL.deflect;
+          r.heading = tangent + turnAway;
+        }
         // One small speed penalty per knock, bigger the more head-on it was.
         if (r.wallHit <= 0) {
-          const keep = 1 - WALL.loss * (0.35 + 0.65 * headOn);
+          const keep = 1 - WALL.loss * (0.6 + 0.4 * headOn);
           r.vx *= keep;
           r.vy *= keep;
           r.wallHit = 0.3;

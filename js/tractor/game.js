@@ -6,6 +6,7 @@
   const TROPHY_ICON = { gold: '🥇', silver: '🥈', bronze: '🥉' };
   const SELECTED_KEY = 'farmCasino.tractor.track';
   const VIEW_KEY = 'farmCasino.tractor.view';
+  const COUNTDOWN_SECONDS = 3;
 
   const ordinal = (n) => n + (['th', 'st', 'nd', 'rd'][n % 100 > 10 && n % 100 < 14 ? 0 : n % 10] || 'th');
   const fmt = (n) => n.toLocaleString('en-GB');
@@ -409,7 +410,7 @@
         playerLevel: garage.level,
       });
       phase = 'countdown';
-      countdown = 3;
+      countdown = COUNTDOWN_SECONDS;
       acc = 0;
       banner = null;
       finalLapShown = false;
@@ -700,7 +701,13 @@
       lastNow = now;
       if (!sim || phase === 'garage') return;
 
-      if (phase === 'countdown') {
+      // Phones must be sideways to race: hold the countdown until rotated,
+      // and pause if the phone is turned upright mid-race.
+      const needsRotate = raceEl.classList.contains('portrait') && matchMedia('(pointer: coarse)').matches;
+      if (needsRotate && phase === 'racing') togglePause();
+      if (phase === 'countdown' && needsRotate) {
+        countdown = COUNTDOWN_SECONDS;
+      } else if (phase === 'countdown') {
         const before = Math.ceil(countdown);
         countdown -= dt;
         if (countdown <= 0) {
