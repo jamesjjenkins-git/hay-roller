@@ -192,3 +192,81 @@ test('rivals never share a colour with the player', () => {
     assert.strictEqual(colors[0], color);
   }
 });
+
+// A human-ish thumb: re-aims ~6 times a second with a little error.
+function humanDriver(seed) {
+  const { mulberry32 } = require('../js/rng.js');
+  const rng = mulberry32(seed * 7 + 1);
+  let n = 0;
+  let aim = 0;
+  return (s) => {
+    const me = s.racers[0];
+    if (n++ % 6 === 0) {
+      const tg = s.track.samples[(me.idx + 10) % s.track.count];
+      aim = Math.atan2(tg.y - me.y, tg.x - me.x) + (rng() - 0.5) * 0.25;
+    }
+    return { steer: Math.max(-1, Math.min(1, Sim.angleDiff(aim, me.heading) * 2.5)), throttle: 1, brake: 0, nitro: false };
+  };
+}
+
+test('the first track is winnable with a stock tractor', () => {
+  let wins = 0;
+  for (let seed = 1; seed <= 12; seed++) {
+    const s = Sim.createRace(Tracks.TRACKS[0], { seed });
+    const drive = humanDriver(seed);
+    while (!s.done) {
+      Sim.step(s, { 0: drive(s) });
+      s.events.length = 0;
+    }
+    if (s.racers[0].place === 1) wins++;
+  }
+  assert.ok(wins >= 4, `stock tractor won only ${wins}/12 on Muddy Meadow`);
+});
+
+test('rivals are slower than a stock tractor on track 1 and reach full pace on the last', () => {
+  const first = Tracks.TRACKS[0];
+  const last = Tracks.TRACKS[Tracks.TRACKS.length - 1];
+  const stock = Sim.statsFor({});
+  assert.ok(Sim.aiStats(first, 0, 0).topSpeed < stock.topSpeed * 0.95);
+  assert.ok(Sim.aiStats(last, 0, 0).topSpeed > Sim.statsFor({ speed: 4 }).topSpeed);
+});
+
+test('rubber banding only helps the player when well behind the car ahead', () => {
+  const s = Sim.createRace(Tracks.TRACKS[0], { seed: 1 });
+  const [me, a, b, c] = s.racers;
+  a.progress = 1000; b.progress = 900; c.progress = 800;
+  me.progress = 700; // 100 behind the next car: no help
+  assert.strictEqual(Sim.catchUpBoost(s, me), 0);
+  me.progress = 800 - (Sim.CATCHUP.fullGap + 50); // far behind: full help
+  assert.strictEqual(Sim.catchUpBoost(s, me), Sim.CATCHUP.maxBoost);
+  me.progress = 800 - (Sim.CATCHUP.startGap + Sim.CATCHUP.fullGap) / 2;
+  const mid = Sim.catchUpBoost(s, me);
+  assert.ok(mid > 0 && mid < Sim.CATCHUP.maxBoost);
+  me.progress = 1200; // leading: nothing
+  assert.strictEqual(Sim.catchUpBoost(s, me), 0);
+  assert.strictEqual(Sim.catchUpBoost(s, a), 0, 'AI never gets it');
+});
+
+test('after a crash the player claws back towards the pack', () => {
+  // Same race twice; the player stalls for 4s mid-race. Compare the gap to the
+  // car ahead 10s later with and without rubber banding.
+  const gapLater = (boost) => {
+    const saved = Sim.CATCHUP.maxBoost;
+    Sim.CATCHUP.maxBoost = boost;
+    const s = Sim.createRace(Tracks.TRACKS[0], { seed: 3 });
+    const drive = humanDriver(3);
+    while (s.t < 30) {
+      const stalled = s.t > 12 && s.t < 16;
+      const input = drive(s);
+      Sim.step(s, { 0: stalled ? { ...input, throttle: 0, brake: 1 } : input });
+      s.events.length = 0;
+    }
+    Sim.CATCHUP.maxBoost = saved;
+    const me = s.racers[0];
+    const ahead = Math.min(...s.racers.filter((r) => r.progress > me.progress).map((r) => r.progress));
+    return ahead - me.progress;
+  };
+  const withBand = gapLater(0.16);
+  const without = gapLater(0);
+  assert.ok(withBand < without - 60, `gap with banding ${withBand.toFixed(0)} vs without ${without.toFixed(0)}`);
+});

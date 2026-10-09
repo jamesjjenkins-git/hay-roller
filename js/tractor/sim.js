@@ -24,11 +24,37 @@
   }
 
   // AI rivals get tougher on later tracks and as the player upgrades.
+  // AI rivals get tougher on later tracks and as the player upgrades.
+  // `pace` scales their speed: on the first track they are clearly slower than
+  // a stock tractor (they drive cleaner lines than a thumb can), reaching full
+  // pace by the last track.
+  const AI_PACE_MIN = 0.91;
   function aiStats(track, playerLevel, index) {
     const skill = track.aiSkill + Math.min(0.5, playerLevel * 0.025);
     const spread = [1.0, 0.96, 0.92][index % 3];
-    const lv = Math.max(0, Math.min(5, skill * 5 * spread + 0.3));
-    return statsFor({ accel: lv, speed: lv, handling: lv, boost: Math.round(lv / 2) });
+    const lv = Math.max(0, Math.min(5, skill * 5 * spread));
+    const st = statsFor({ accel: lv, speed: lv, handling: lv, boost: Math.round(lv / 2) });
+    const pace = (AI_PACE_MIN + (1 - AI_PACE_MIN) * Math.min(1, skill)) * (0.98 + spread * 0.02);
+    st.topSpeed *= pace;
+    st.accel *= pace;
+    return st;
+  }
+
+  // Rubber banding, player only: if you drop well behind the tractor directly
+  // ahead, you get a gentle boost that fades as you close back up behind it.
+  // It never helps you past anyone — only back into the fight.
+  const CATCHUP = { startGap: 140, fullGap: 420, maxBoost: 0.16 };
+  function catchUpBoost(s, r) {
+    if (!r.isPlayer || r.finished) return 0;
+    let gap = Infinity;
+    for (const o of s.racers) {
+      if (o === r) continue;
+      const ahead = (o.finished ? s.laps * s.track.length : o.progress) - r.progress;
+      if (ahead > 0 && ahead < gap) gap = ahead;
+    }
+    if (!isFinite(gap) || gap <= CATCHUP.startGap) return 0;
+    const t = Math.min(1, (gap - CATCHUP.startGap) / (CATCHUP.fullGap - CATCHUP.startGap));
+    return CATCHUP.maxBoost * t;
   }
 
   const DRIVERS = [
@@ -220,8 +246,9 @@
       topMul = 0.75 + st.rough * 0.25;
       r.bump = Math.max(r.bump, 0.6 * (1 - st.rough * 0.7));
     }
-    const top = st.topSpeed * topMul * (boosting ? 1.45 : 1);
-    const accel = st.accel * (boosting ? 2 : 1);
+    r.catchUp = catchUpBoost(s, r);
+    const top = st.topSpeed * topMul * (boosting ? 1.45 : 1) * (1 + r.catchUp);
+    const accel = st.accel * (boosting ? 2 : 1) * (1 + r.catchUp);
 
     if (!r.airborne) {
       if (input.throttle > 0) {
@@ -474,7 +501,7 @@
     };
   }
 
-  const api = { DT, RADIUS, MAX_TIME, DRIVERS, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
+  const api = { DT, RADIUS, MAX_TIME, DRIVERS, CATCHUP, catchUpBoost, aiStats, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
   root.TractorSim = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

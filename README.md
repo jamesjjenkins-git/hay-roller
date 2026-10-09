@@ -25,6 +25,11 @@ bumps.
   - **Top Speed** — go faster flat out
   - **Handling** — tighter turns and more grip
   - **Boosts** — one more nitro per race
+- **Fair rivals:** on the first track rival tractors run at about 91% of a stock tractor's pace
+  (they drive cleaner lines than a thumb can), rising to full pace by the Grand Prix. A little
+  **rubber banding** helps only the player: fall more than ~140px behind the tractor directly
+  ahead and you get up to +16% speed, fading out as you close back up behind it. It never
+  helps you pass anyone.
 - **Ten tracks**, unlocked in order by finishing 3rd or better on the one before: Muddy Meadow,
   Barnyard Bend, Pig Pen Pass, Duck Pond Dash, Cornfield Chase, Sheep Dip Slalom, Haystack Hill,
   Windmill Way, Orchard Run and the Harvest Grand Prix. Rivals get faster and prizes get bigger
