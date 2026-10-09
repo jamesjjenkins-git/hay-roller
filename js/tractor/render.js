@@ -666,6 +666,7 @@
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.drawImage(patches, 0, 0);
     c.restore();
+    patches.width = patches.height = 0; // free it (iOS limits canvas memory)
     for (const f of t.features) if (f.type === 'jump') drawFeature(c, f, rng, liftAt(t, f.idx), t);
 
     // Start/finish chequers, on the road surface (which may be up a hill).
@@ -698,18 +699,20 @@
   // Track name board on two posts. `x`, `y` are the board's top left; the
   // posts stand `SIGN.post` below it.
   const SIGN = { h: 30, post: 7, pad: 8 };
+  // World px kept clear of the sign for the race HUD (top) and the touch
+  // controls (bottom corners).
+  const UI_KEEP_OUT = { top: 70, bottom: 190, left: 250 };
   function placeSign(t, w) {
     const h = SIGN.h + SIGN.post;
-    // The corners first, then anywhere along the bottom or top edge (the
-    // top only either side of the grandstand).
-    const corners = [
-      [W - w - 14, H - h - 6],
-      [14, H - h - 6],
-      [W - w - 14, 8],
-      [14, 8],
-    ];
-    for (let x = W - w - 54; x > 14; x -= 40) corners.push([x, H - h - 6]);
-    for (let x = W - w - 54; x > 14; x -= 40) if (x + w < 290 || x > 910) corners.push([x, 8]);
+    // Along the bottom edge between the controls, then down either side
+    // below the HUD. The corners are under the HUD and the touch controls
+    // on a phone, and the top middle is the grandstand.
+    const corners = [];
+    for (let x = Math.round((W - w) / 2); x >= UI_KEEP_OUT.left; x -= 40) {
+      corners.push([x, H - h - 6], [W - w - x, H - h - 6]);
+    }
+    for (let y = UI_KEEP_OUT.top; y <= H - UI_KEEP_OUT.bottom - h; y += 30) corners.push([14, y], [W - w - 14, y]);
+    corners.push([W - w - 14, H - h - 6], [14, H - h - 6]);
     const lifts = t.samples.map((_, i) => liftAt(t, i));
     let best = null;
     for (const [x, y] of corners) {
@@ -721,6 +724,11 @@
         const dy = Math.max(y - sy, 0, sy - (y + h));
         clear = Math.min(clear, Math.hypot(dx, dy) - (t.halfWidth + 30));
       });
+      // Keep clear of the flagman too.
+      const fm = flagmanSpot(t);
+      const fdx = Math.max(x - fm.x, 0, fm.x - (x + w));
+      const fdy = Math.max(y - (fm.y - fm.lift), 0, fm.y - fm.lift - 26 - (y + h));
+      clear = Math.min(clear, Math.hypot(fdx, fdy) - 14);
       if (clear >= 0) return { x, y, w, label: t.name.toUpperCase() };
       if (!best || clear > best.clear) best = { x, y, w, clear, label: t.name.toUpperCase() };
     }
