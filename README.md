@@ -92,6 +92,9 @@ Both mini games decide the result before the animation and save any payout first
 the page mid-spin or mid-run still pays out the next time you open the game.
 
 ## Currencies, ads and the store
+
+The decisions behind this (and what we chose not to do) are in [docs/monetisation.md](docs/monetisation.md).
+
 - **🌾 Hay** — the game currency, shared by every game. **Hay is never sold.** You get it from a
   500 welcome gift, a 200 daily bonus (resets at local midnight), opt-in reward ads (150 each,
   up to 10 a day), and winnings. After a race with prize money you can watch an ad to double it.
