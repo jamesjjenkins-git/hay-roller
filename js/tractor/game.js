@@ -3,6 +3,7 @@
   const Sim = root.TractorSim;
   const { TRACKS, WORLD, buildTrack } = root.TractorTracks;
   const { UPGRADES, PAINTS, COSMETICS, TROPHIES, SERIES, MAX_LEVEL, SPARE_NITROS, createGarage } = root.TractorGarage;
+  const DEV = typeof location !== 'undefined' && /[?&]dev\b/.test(location.search);
   const LOOK_LABELS = { decal: 'Decals', hat: 'Hats', trail: 'Trails' };
   const Badges = root.TractorBadges;
   const TROPHY_ICON = { gold: '🥇', silver: '🥈', bronze: '🥉' };
@@ -33,7 +34,7 @@
 
     const PACKS = [
       { id: 'farm', name: '🚜 Farm tracks' },
-      { id: 'ironman', name: '🏜️ Ironman pack' },
+      { id: 'ironman', name: '🏜️ Back Forty pack' },
     ];
     let selected = TRACKS.find((t) => t.id === localStorage.getItem(SELECTED_KEY)) || TRACKS[0];
     if (!garage.isUnlocked(selected)) selected = TRACKS[0];
@@ -412,7 +413,7 @@
           ${spare ? `<label class="arm-nitro"><input type="checkbox" data-arm-nitro ${garage.armNitro ? 'checked' : ''}> Take one into the next race</label>` : ''}</div>
         <button class="btn btn-buy-gold" data-spare-nitro>${SPARE_NITROS.count} for 🪙 ${SPARE_NITROS.gold}</button>`;
 
-      // Track packs: the farm tracks, then the Ironman pack.
+      // Track packs: the farm tracks, then the Back Forty pack.
       const pack = selected.pack || 'farm';
       $('#pack-tabs').innerHTML = PACKS.map((pk) => {
         const first = TRACKS.find((t) => (t.pack || 'farm') === pk.id);
@@ -445,6 +446,9 @@
         list.scrollTop = Math.max(0, active.offsetTop - list.offsetTop - 8);
       }
       $('#dock-track-name').textContent = selected.name;
+      // Testing switch: only with ?dev in the address, never in a normal build.
+      $('#unlock-all-row').classList.toggle('hidden', !DEV);
+      if (!DEV && garage.unlockAll) garage.setUnlockAll(false);
       $('#unlock-all').checked = garage.unlockAll;
 
       drawPreview();

@@ -108,7 +108,7 @@ provider shows labelled placeholders; in the iPhone app
 ## Farmyard Rally economy
 
 - Race prizes per track: 1st/2nd/3rd/4th, from 300 for a win on the first
-  track up to 1,500 on the bonus track; the Ironman pack pays 1,100–1,500.
+  track up to 1,500 on the bonus track; the Back Forty pack pays 1,100–1,500.
 - Series multipliers: Quad Cup pays 1.6× and its upgrades cost 2×; Motorbike
   Cup pays 2.4× with upgrades at 3.5×.
 - Fastest lap bonus: a tenth of the winner's prize.

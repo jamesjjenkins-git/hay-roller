@@ -1535,6 +1535,9 @@ kbd {
 }
 .paints { row-gap: 18px; }
 
+/* The App Store ships updates, not the in-page update check. */
+html.native-app .web-only { display: none; }
+
 /* Cosmetics (Gold): a row each for decals, hats and trails. */
 .looks { display: grid; gap: 14px; margin: 4px 0 16px; }
 .look-row { display: grid; gap: 4px; }

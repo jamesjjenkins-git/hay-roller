@@ -30,7 +30,7 @@
     { id: 'sweep', icon: '🎈', name: 'Pest Control', kind: 'count', tiers: [1, 3, 10], desc: (n) => `Pop every animal in Farmyard Frenzy${times(n)}` },
     { id: 'quickpop', icon: '💥', name: 'Quick Pop', kind: 'best', tiers: [40, 60, 80], desc: (n) => `Pop ${n} animals in the first 30 seconds of Farmyard Frenzy` },
     { id: 'farm', icon: '🌾', name: 'Farm Champion', kind: 'best', tiers: [3, 7, 11], desc: (n) => `Win on ${n} different farm tracks` },
-    { id: 'iron', icon: '🏜️', name: 'Ironman', kind: 'best', tiers: [2, 5, 8], desc: (n) => `Win on ${n} different Ironman tracks` },
+    { id: 'iron', icon: '🏜️', name: 'Back Forty', kind: 'best', tiers: [2, 5, 8], desc: (n) => `Win on ${n} different Back Forty tracks` },
     { id: 'vehicles', icon: '🚜', name: 'All-Rounder', kind: 'best', tiers: [1, 2, 3], desc: (n) => (n === 1 ? 'Win a race' : `Win in ${n} different vehicles`) },
     { id: 'regular', icon: '📅', name: 'Regular', kind: 'best', tiers: [3, 7, 30], desc: (n) => `Race on ${n} different days` },
   ];

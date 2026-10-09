@@ -17,8 +17,8 @@ bumps.
   the pause menu: slide left or right anywhere on the left half to steer at a steady rate; hold
   still for a moment and it's just like lifting your thumb.
   Gas is automatic. **DRIFT** (hold to slide sideways — tighter turns that keep your speed, steer the other way to switch sides; you can drift a whole lap), **NITRO** and **BRAKE** (hold to reverse) sit bottom-right. Keyboard: Shift or X to drift. Play in landscape.
-- **Hills** like Super Off Road: climbing costs speed, the way down gives it back (and a bit more), and cresting a hill at speed throws you into the air — further on quads and motorbikes. Climbs are lit and descents shaded, with contour lines, and vehicles grow slightly as they get higher. Found on the long straights of Cornfield Chase, Orchard Run and most of the Ironman pack.
-- **🏜️ Ironman pack**: eight extra tracks following the driving lines of the classic NES Super Off Road maps (Fandango, Sidewinder, Wipeout, Big Dukes, Blaster, Cliffhanger, Huevos Grande, Hurricane Gulch), drawn top-down. Each has terrain read off the original's shading — raised straights, ridges, a high rim, a sunken pit — so the road climbs and drops with the ground, and the stretches that cross meet at the same height. Opens after a top 3 at the Harvest Grand Prix; pick it with the pack switcher above the track list.
+- **Hills** like Super Off Road: climbing costs speed, the way down gives it back (and a bit more), and cresting a hill at speed throws you into the air — further on quads and motorbikes. Climbs are lit and descents shaded, with contour lines, and vehicles grow slightly as they get higher. Found on the long straights of Cornfield Chase, Orchard Run and most of the Back Forty pack.
+- **🏜️ Back Forty pack**: eight extra tracks (Hoedown Hollow, Rattlesnake Ridge, Mudslide Mesa, Big Barn Bluff, Thunder Quarry, Clifftop Farm, Egg Basket Basin, Twister Gulch). Each has its own terrain — raised straights, ridges, a high rim, a sunken pit — so the road climbs and drops with the ground, and the stretches that cross meet at the same height. Opens after a top 3 at the Harvest Grand Prix; pick it with the pack switcher above the track list.
 - **Three race series**: 🚜 **Tractor Cup** → 🏁 **Quad Cup** → 🏍️ **Motorbike Cup**. Each runs the same 11 tracks against rivals on the same vehicle, with its own upgrades (2× and 3.5× the price) and bigger prizes (1.6× and 2.4×). Finish top 3 at the Harvest Grand Prix to unlock the next series. Quads are 25% faster, twitchy and slidey with bigger drifts; motorbikes are 50% faster, lean hard into turns and get knocked about more by walls and animals.
 - **🎈 Farmyard Frenzy bonus round** after every race: just you, 100 escaped animals and one minute. They pop like balloons when you hit them (and scatter when you bear down on them). Every 5 popped pays 5% of that track's winning prize (🌾15 per 5 on Muddy Meadow up to 🌾75 per 5 on the bonus track), so popping all 100 is worth a race win, plus a 25% clean-sweep bonus. Best score per track is remembered.
 - **Two camera views**, switchable any time with the 📷 camera button at the top of the race screen, the **V**
@@ -49,8 +49,8 @@ bumps.
 - **Bonus track 11: Figure-8 Frenzy** — a figure of eight with a real crossroads in the middle
   where racers cross paths (and can T-bone each other). Unlocks after a top-3 finish at the
   Harvest Grand Prix.
-- **Unlock all tracks (testing):** a switch under the track list in the garage opens every track
-  regardless of results; switch it off to go back to normal unlocks.
+- **Unlock all tracks (testing):** with `?dev` in the address, a switch under the track list in
+  the garage opens every track regardless of results. It's hidden in normal play and in the app.
 
 - **Awards:** finish 1st, 2nd or 3rd for a 🥇🥈🥉 trophy on that track. Set the quickest lap of
   the race for the ⏱️ **Fastest Lap** award and a bonus (a tenth of the track's winning prize).
@@ -70,7 +70,7 @@ bumps.
   race), Speedy (nitros in a race), Lights to Flag (lead every lap and win), Comeback Kid (win
   from last), Drift King (drift kicks in a race), Long Slide (longest unbroken drift), Sideways (drift time in
   a race), Frequent Flyer (jumps in a race), Lap Record,
-  Pest Control and Quick Pop (Farmyard Frenzy), Farm Champion and Ironman (wins on different
+  Pest Control and Quick Pop (Farmyard Frenzy), Farm Champion and Back Forty (wins on different
   tracks), All-Rounder (wins in each vehicle) and Regular (days raced). New tiers show on the
   results screen; the Trophy Cabinet shows every badge with progress to its next tier. Targets
   are in `js/tractor/badges.js`.

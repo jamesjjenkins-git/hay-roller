@@ -353,20 +353,20 @@
         { kind: 'hay', x: 1100, y: 130 },
       ],
     },
-    // ---------- Ironman pack ----------
-    // Eight tracks traced from the classic NES Super Off Road layouts (as a
-    // top-down plan). Finish top 3 at the Harvest Grand Prix to open the pack.
+    // ---------- Back Forty pack (ids keep the old 'iron-' prefix) ----------
+    // Eight late-game tracks with raised and sunken ground. Finish top 3 at
+    // the Harvest Grand Prix to open the pack.
     {
       id: 'iron-fandango',
       pack: 'ironman',
-      name: 'Fandango',
+      name: 'Hoedown Hollow',
       blurb: 'High straights top and bottom, joined by kinks down through the low ground either side.',
       laps: 3,
       width: 88,
       aiSkill: 0.27,
       reward: [1100, 580, 300, 110],
       unlock: { track: 'harvest', place: 3 },
-      // Ground shapes read off the NES map's shading (see terrainHeight).
+      // Ground shapes for this layout (see terrainHeight).
       terrain: [
         { type: 'plateau', poly: [[40, 60], [1160, 60], [1160, 150], [40, 150]], h: 28, fall: 120 },
         { type: 'plateau', poly: [[40, 550], [1160, 550], [1160, 650], [40, 650]], h: 22, fall: 110 },
@@ -400,14 +400,14 @@
     {
       id: 'iron-sidewinder',
       pack: 'ironman',
-      name: 'Sidewinder',
+      name: 'Rattlesnake Ridge',
       blurb: 'A big sweep round a tight hairpin, over the ridge three times a lap.',
       laps: 3,
       width: 88,
       aiSkill: 0.36,
       reward: [1150, 610, 310, 120],
       unlock: { track: 'iron-fandango', place: 3 },
-      // Ground shapes read off the NES map's shading (see terrainHeight).
+      // Ground shapes for this layout (see terrainHeight).
       terrain: [
         { type: 'ridge', a: [700, 470], b: [860, 60], w: 26, h: 26, fall: 60 },
       ],
@@ -440,7 +440,7 @@
     {
       id: 'iron-wipeout',
       pack: 'ironman',
-      name: 'Wipeout',
+      name: 'Mudslide Mesa',
       blurb: 'A figure of eight: high ground across the top and a crossroads in the middle.',
       laps: 3,
       width: 88,
@@ -448,7 +448,7 @@
       reward: [1200, 640, 320, 120],
       unlock: { track: 'iron-sidewinder', place: 3 },
       crossings: [{ x: 623, y: 308, r: 200, bridge: true }],
-      // Ground shapes read off the NES map's shading (see terrainHeight).
+      // Ground shapes for this layout (see terrainHeight).
       terrain: [
         { type: 'plateau', poly: [[40, 50], [1160, 50], [1160, 130], [40, 130]], h: 28, fall: 100 },
         { type: 'mound', x: 800, y: 600, r: 22, h: 14, fall: 50 },
@@ -483,7 +483,7 @@
     {
       id: 'iron-bigdukes',
       pack: 'ironman',
-      name: 'Big Dukes',
+      name: 'Big Barn Bluff',
       blurb: 'Round the humps on the top, then down into the big pit — the two lines cross at the bottom of it.',
       laps: 3,
       width: 88,
@@ -491,7 +491,7 @@
       reward: [1250, 660, 340, 130],
       unlock: { track: 'iron-wipeout', place: 3 },
       crossings: [{ x: 516, y: 440, r: 183, bridge: true }],
-      // Ground shapes read off the NES map's shading (see terrainHeight).
+      // Ground shapes for this layout (see terrainHeight).
       terrain: [
         { type: 'plateau', poly: [[430, 380], [600, 380], [600, 500], [430, 500]], h: -26, fall: 90 },
         { type: 'mound', x: 400, y: 105, r: 14, h: 14, fall: 46 },
@@ -527,7 +527,7 @@
     {
       id: 'iron-blaster',
       pack: 'ironman',
-      name: 'Blaster',
+      name: 'Thunder Quarry',
       blurb: 'Over the long bridge again and again, crossing itself twice on the way.',
       laps: 3,
       width: 88,
@@ -535,7 +535,7 @@
       reward: [1300, 690, 350, 130],
       unlock: { track: 'iron-bigdukes', place: 3 },
       crossings: [{ x: 643, y: 420, r: 177, bridge: true, over: 1 }, { x: 741, y: 280, r: 177, bridge: true }],
-      // Ground shapes read off the NES map's shading (see terrainHeight).
+      // Ground shapes for this layout (see terrainHeight).
       terrain: [
         { type: 'mound', x: 160, y: 205, r: 10, h: 10, fall: 34 },
         { type: 'mound', x: 250, y: 228, r: 10, h: 10, fall: 34 },
@@ -568,14 +568,14 @@
     {
       id: 'iron-cliffhanger',
       pack: 'ironman',
-      name: 'Cliffhanger',
+      name: 'Clifftop Farm',
       blurb: 'Up the long ramp onto the high rim, then over the cliff into the infield.',
       laps: 3,
       width: 88,
       aiSkill: 0.37,
       reward: [1250, 660, 340, 130],
       unlock: { track: 'iron-blaster', place: 3 },
-      // Ground shapes read off the NES map's shading (see terrainHeight).
+      // Ground shapes for this layout (see terrainHeight).
       terrain: [
         { type: 'plateau', poly: [[40, 50], [1160, 50], [1160, 150], [40, 150]], h: 30, fall: 130 },
         { type: 'ramp', a: [800, 560], b: [1090, 230], w: 36, h0: 0, h1: 30, fall: 60 },
@@ -608,14 +608,14 @@
     {
       id: 'iron-huevos',
       pack: 'ironman',
-      name: 'Huevos Grande',
+      name: 'Egg Basket Basin',
       blurb: 'Climb onto the egg plateau, splash past the ponds, then drop back down.',
       laps: 3,
       width: 88,
       aiSkill: 0.42,
       reward: [1350, 720, 360, 140],
       unlock: { track: 'iron-cliffhanger', place: 3 },
-      // Ground shapes read off the NES map's shading (see terrainHeight).
+      // Ground shapes for this layout (see terrainHeight).
       terrain: [
         { type: 'plateau', poly: [[300, 250], [1000, 250], [1000, 450], [300, 450]], h: 28, fall: 80 },
       ],
@@ -647,14 +647,14 @@
     {
       id: 'iron-hurricane',
       pack: 'ironman',
-      name: 'Hurricane Gulch',
+      name: 'Twister Gulch',
       blurb: 'Off the high ground on the right, across the gulch and through the creek.',
       laps: 3,
       width: 88,
       aiSkill: 0.45,
       reward: [1500, 800, 410, 150],
       unlock: { track: 'iron-huevos', place: 3 },
-      // Ground shapes read off the NES map's shading (see terrainHeight).
+      // Ground shapes for this layout (see terrainHeight).
       terrain: [
         { type: 'plateau', poly: [[1000, 60], [1160, 60], [1160, 450], [1000, 450]], h: 30, fall: 130 },
         { type: 'ridge', a: [110, 150], b: [110, 500], w: 26, h: 18, fall: 60 },
