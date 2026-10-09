@@ -347,7 +347,6 @@
       blitLayer(skid, v);
       ctx.setTransform(v.k, 0, 0, v.k, -v.rx * v.k, -v.ry * v.k);
 
-      drawFlagman(ctx, sim, view, now);
       drawParticles('under');
 
       // Everything that stands up, back to front: walls, animals, vehicles.
@@ -366,12 +365,14 @@
       // Ramps sort a little behind their centre so anything on them is drawn on top.
       for (const f of track.features) if (f.type === 'jump') items.push({ y: f.y - 24, f });
       for (const r of sim.racers) items.push({ y: r.y + (r.airborne ? 40 : 0), r });
+      items.push({ y: flagmanSpot(track).y, flag: true });
       items.sort((a, b) => a.y - b.y);
       for (const it of items) {
         if (it.w) ctx.drawImage(wallSprites.get(wallKey(it.w)), it.w.x - SPR.ox, it.w.y - SPR.oy, SPR.w, SPR.h);
         else if (it.a) drawFarmAnimal(ctx, it.a, now);
         else if (it.p) drawPickup(ctx, it.p, now);
         else if (it.f) drawRamp(ctx, it.f, liftAt(track, it.f.idx));
+        else if (it.flag) drawFlagman(ctx, sim, view, now);
         else drawTractor(ctx, it.r, now);
       }
       drawParticles('over');
@@ -616,10 +617,10 @@
     // Features.
     for (const f of t.features) drawFeature(c, f, rng, liftAt(t, f.idx));
 
-    // Start/finish chequers.
+    // Start/finish chequers, on the road surface (which may be up a hill).
     const s0 = t.samples[0];
     c.save();
-    c.translate(s0.x, s0.y);
+    c.translate(s0.x, s0.y - liftAt(t, 0));
     c.rotate(s0.angle);
     const sq = t.width / 8;
     for (let i = 0; i < 8; i++) {
@@ -2073,40 +2074,74 @@
     rider(ctx, r, -2, lean);
   }
 
-  function drawFlagman(ctx, sim, view, now) {
-    const t = sim.track;
+  // Where the flagman stands: beside the start line, on whichever side is on
+  // screen and clear of road, at the height of the ground there.
+  function flagmanSpot(t) {
+    if (t.flagman) return t.flagman;
     const s0 = t.samples[0];
-    const off = t.halfWidth + 30;
-    const x = s0.x - s0.nx * off;
-    const y = s0.y - s0.ny * off;
+    const groundAt = (x, y) => (t.terrain ? root.TractorTracks.terrainHeight(t.terrain, x, y) : 0);
+    let best = null;
+    for (const side of [-1, 1]) {
+      for (const off of [t.halfWidth + 30, t.halfWidth + 40]) {
+        const x = s0.x + s0.nx * off * side;
+        const y = s0.y + s0.ny * off * side;
+        const lift = groundAt(x, y) * RAISE;
+        const inside = x > 20 && x < W - 20 && y - lift > 40 && y < H - 12;
+        if (inside && !onSurface(t, x, y, t.halfWidth + 18)) {
+          best = { x, y, lift };
+          break;
+        }
+      }
+      if (best) break;
+    }
+    t.flagman = best || { x: s0.x - s0.nx * (t.halfWidth + 30), y: s0.y - s0.ny * (t.halfWidth + 30), lift: 0 };
+    return t.flagman;
+  }
+
+  function drawFlagman(ctx, sim, view, now) {
+    const { x, y, lift } = flagmanSpot(sim.track);
     ctx.save();
-    ctx.translate(x, y);
-    circle(ctx, 0, 0, 9);
+    ctx.translate(x, y - lift);
+    // Standing figure: shadow, legs, body, then head, seen from above-front.
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.beginPath();
+    ctx.ellipse(3, 2, 8, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#3a3f4a';
+    ctx.fillRect(-3.5, -7, 3, 7);
+    ctx.fillRect(0.5, -7, 3, 7);
+    roundRect(ctx, -5.5, -17, 11, 11, 3.5);
     fillStroke(ctx, '#2f7de2', 2);
-    circle(ctx, 0, 0, 5);
+    circle(ctx, 0, -20, 4.5);
     fillStroke(ctx, '#f2c9a0', 1.5);
+    ctx.fillStyle = '#e2412f';
+    ctx.beginPath();
+    ctx.ellipse(0, -22.5, 4.6, 2.2, 0, Math.PI, 0);
+    ctx.fill();
+    ctx.translate(4, -14);
     const wave = Math.sin(now / 120) * 0.6;
     let color = '#2fae4a';
     if (view.countdown > 0) color = view.countdown > 1 ? '#e2412f' : '#f4c20d';
     if (view.finalLap) color = '#fff';
     if (view.chequered) color = 'chequer';
-    ctx.rotate(-0.6 + (view.countdown > 0 ? 0 : wave));
+    ctx.rotate(-1.1 + (view.countdown > 0 ? 0 : wave * 0.7));
     ctx.strokeStyle = OUTLINE;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.6;
     ctx.beginPath();
-    ctx.moveTo(6, 0);
-    ctx.lineTo(24, 0);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(20, 0);
     ctx.stroke();
     if (color === 'chequer') {
       for (let i = 0; i < 3; i++) for (let k = 0; k < 2; k++) {
         ctx.fillStyle = (i + k) % 2 ? '#222' : '#fff';
-        ctx.fillRect(14 + i * 4, 1 + k * 4, 4, 4);
+        ctx.fillRect(10 + i * 4, 1 + k * 4, 4, 4);
       }
     } else {
       ctx.fillStyle = color;
-      ctx.fillRect(14, 1, 12, 8);
+      ctx.fillRect(10, 1, 12, 8);
     }
-    ctx.strokeRect(14, 1, 12, 8);
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(10, 1, 12, 8);
     ctx.restore();
   }
 
