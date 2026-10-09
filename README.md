@@ -1,15 +1,15 @@
 # Farmyard Rally 🚜🌾
 
-A cartoon farm game for phones (and desktop browsers). Race your tractor, earn credits, upgrade
-it, and race again. Credits are free in-game currency with no cash value.
+A cartoon farm game for phones (and desktop browsers). Race tractors, quads and motorbikes, earn
+credits, upgrade, and race again. Credits are free in-game currency with no cash value.
 
-![Tractor Rally on an iPhone in landscape](docs/tractor-race.png)
+![Farmyard Rally on an iPhone in landscape](docs/tractor-race.png)
 
 ## Games
 
-### Tractor Rally (main game)
+### Farmyard Rally (main game)
 A single-screen, top-down off-road race in the style of the classic arcade *Super Off Road*: four
-tractors on a dirt track ringed with hay bales and tyres, with jumps, mud, water splashes and
+racers on a dirt track ringed with hay bales and tyres, with jumps, mud, water splashes and
 bumps.
 
 - **Controls (phone):** hold the **◀ ▶ steering buttons** bottom-left to turn (tap to nudge, hold
@@ -24,22 +24,22 @@ bumps.
 - **Two camera views**, switchable any time with the 📷 camera button at the top of the race screen, the **V**
   key, or the pause menu (the choice is remembered):
   - **Whole track** — the classic single-screen *Super Off Road* view.
-  - **Close-up** — a *Micro Machines*-style camera that follows your tractor with a little
+  - **Close-up** — a *Micro Machines*-style camera that follows you with a little
     look-ahead and fills the whole screen, with edge arrows pointing to off-screen rivals and a
     minimap of the track.
 - **Controls (keyboard):** ← → steer, ↓ brake/reverse, Space nitro, Esc pause.
 - **Pause → Controls** explains the controls for the device you're playing on (phone or
   keyboard), with a link to the other set.
-- **Cash bags and nitro cans** pop up on the track. Grab them before the other tractors do.
+- **Cash bags and nitro cans** pop up on the track. Grab them before your rivals do.
 - **Prizes:** credits for your finishing place plus any cash bags you grabbed.
 - **The garage:** spend credits on four upgrades, 5 levels each, and choose a paint job:
   - **Acceleration** — get up to speed faster
   - **Top Speed** — go faster flat out
   - **Handling** — tighter turns and more grip
   - **Boosts** — one more nitro per race
-- **Fair rivals:** on the first track rival tractors run at about 91% of a stock tractor's pace
+- **Fair rivals:** on the first track rivals run at about 91% of a stock vehicle's pace
   (they drive cleaner lines than a thumb can), rising to full pace by the Grand Prix. A little
-  **rubber banding** helps only the player: fall more than ~140px behind the tractor directly
+  **rubber banding** helps only the player: fall more than ~140px behind the rival directly
   ahead and you get up to +16% speed, fading out as you close back up behind it. It never
   helps you pass anyone.
 - **Ten tracks**, unlocked in order by finishing 3rd or better on the one before: Muddy Meadow,
@@ -47,7 +47,7 @@ bumps.
   Windmill Way, Orchard Run and the Harvest Grand Prix. Rivals get faster and prizes get bigger
   (300 → 1,400 credits for a win) as you go, and rivals also scale a little with your upgrades.
 - **Bonus track 11: Figure-8 Frenzy** — a figure of eight with a real crossroads in the middle
-  where tractors cross paths (and can T-bone each other). Unlocks after a top-3 finish at the
+  where racers cross paths (and can T-bone each other). Unlocks after a top-3 finish at the
   Harvest Grand Prix.
 - **Unlock all tracks (testing):** a switch under the track list in the garage opens every track
   regardless of results; switch it off to go back to normal unlocks.
@@ -216,7 +216,7 @@ and after races). To earn from real ones:
 ## Tests
 ```sh
 npm run shots    # screenshot every track into screenshots/ (first time: npm run shots:setup)
-npm test         # Node 20+; covers the wallet, rewards, store, all three credit games and Tractor Rally
+npm test         # Node 20+; covers the wallet, rewards, store, all three credit games and Farmyard Rally
 ```
 
 ## Code layout

@@ -1,7 +1,7 @@
 {
   "name": "Farmyard Rally",
   "short_name": "Farm Rally",
-  "description": "Race and upgrade your tractor in cartoon farmyard rallies.",
+  "description": "Race tractors, quads and motorbikes in cartoon farmyard rallies.",
   "start_url": "./index.html#/tractor-rally",
   "scope": "./",
   "display": "fullscreen",

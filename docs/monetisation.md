@@ -7,7 +7,7 @@ don't get re-argued (or quietly undone).
 ## Principles
 
 - **Hay is earned, never sold.** Hay is the play-money that the credit games
-  (Hay Bale Derby, Piggy Bank Slots, Egg Roulette) and Tractor Rally use. It
+  (Hay Bale Derby, Piggy Bank Slots, Egg Roulette) and Farmyard Rally (the racing game) use. It
   has no cash value and can't be bought, sold or withdrawn. Keeping real money
   out of the betting loop keeps the casino mini-games on the right side of
   app-store gambling rules ("simulated gambling" with no purchasable currency)
@@ -82,7 +82,7 @@ provider shows labelled placeholders; in the iPhone app
 - Hay is never zero for long: the daily bonus and reward ads mean a player who
   loses everything can always get back into a race.
 
-## Tractor Rally economy
+## Farmyard Rally economy
 
 - Race prizes per track: 1st/2nd/3rd/4th, from 300 for a win on the first
   track up to 1,500 on the bonus track; the Ironman pack pays 1,100–1,500.

@@ -306,7 +306,7 @@
     root.scrollTo(0, 0);
   }
 
-  // Lobby art: a tractor in your current paint job.
+  // Lobby art: a tractor, a quad and a motorbike (yours in your paint job).
   function drawLobbyArt() {
     const c = $('#lobby-tractor-art');
     if (!c || !c.clientWidth) return;
@@ -323,17 +323,17 @@
     x.fillRect(0, h * 0.22 - 6, w, 6);
     x.fillRect(0, h * 0.78, w, 6);
     const paint = root.TractorGarage.createGarage().paintHex();
-    const draw = (px, py, color, s) => {
+    const draw = (px, py, color, s, vehicle) => {
       x.save();
       x.translate(px, py);
       x.scale(s, s);
-      root.TractorRender.drawTractor(x, { x: 0, y: 0, z: 0, heading: 0, steer: 0, color, isPlayer: color === paint, bump: 0, progress: px, id: 0 }, 0);
+      root.TractorRender.drawTractor(x, { x: 0, y: 0, z: 0, heading: 0, steer: 0, color, vehicle, isPlayer: color === paint, bump: 0, progress: px, id: 0 }, 0);
       x.restore();
     };
     const s = Math.min(2.6, Math.max(1.4, h / 90));
-    draw(w * 0.25, h * 0.38, '#2f7de2', s);
-    draw(w * 0.42, h * 0.62, '#2fae4a', s);
-    draw(w * 0.68, h * 0.45, paint, s * 1.1);
+    draw(w * 0.25, h * 0.38, '#2f7de2', s, 'tractor');
+    draw(w * 0.42, h * 0.62, '#2fae4a', s, 'quad');
+    draw(w * 0.68, h * 0.45, paint, s * 1.1, 'motorbike');
   }
 
   root.addEventListener('hashchange', route);

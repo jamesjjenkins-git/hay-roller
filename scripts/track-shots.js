@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Screenshots of every Tractor Rally track, for checking the art.
+// Screenshots of every Farmyard Rally track, for checking the art.
 //
 //   npm run shots                 every track, whole-track camera
 //   npm run shots -- --close      close-up camera instead
@@ -93,7 +93,7 @@ function serve() {
   const html = `<!doctype html><meta charset="utf-8"><title>Track screenshots</title>
 <style>body{font-family:sans-serif;background:#222;color:#eee;margin:16px}div{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px}
 figure{margin:0}img{width:100%;border-radius:6px}figcaption{padding:4px 2px}</style>
-<h1>Tractor Rally tracks</h1><div>${ids.map((id) => `<figure><img src="${id}.png"><figcaption>${Tracks.TRACKS.find((t) => t.id === id).name} (${id})</figcaption></figure>`).join('')}</div>`;
+<h1>Farmyard Rally tracks</h1><div>${ids.map((id) => `<figure><img src="${id}.png"><figcaption>${Tracks.TRACKS.find((t) => t.id === id).name} (${id})</figcaption></figure>`).join('')}</div>`;
   fs.writeFileSync(path.join(OUT, 'index.html'), html);
   console.log('saved screenshots/index.html');
   if (errors.length) {

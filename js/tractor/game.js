@@ -634,8 +634,8 @@
     const STEER_TEXT = '';
     function steerText() {
       return steerMode === 'buttons'
-        ? 'Hold <b>◀</b> or <b>▶</b> at the bottom left to turn — tap for a small nudge, hold for a steady turn. Let go and the tractor keeps the direction it\'s pointing. You can rock your thumb between them without lifting. (Switch back to the slider from the pause menu.)'
-        : 'Put your thumb anywhere on the <b>left half</b> of the screen and slide <b>left or right</b> to turn. Hold your thumb still for a moment and it\'s just like lifting it: the tractor stops turning and keeps the direction it\'s pointing, and the slider re-centres under your thumb.' + ' (Switch back to buttons from the pause menu.)';
+        ? 'Hold <b>◀</b> or <b>▶</b> at the bottom left to turn — tap for a small nudge, hold for a steady turn. Let go and you keep the direction you\'re pointing. You can rock your thumb between them without lifting. (Switch back to the slider from the pause menu.)'
+        : 'Put your thumb anywhere on the <b>left half</b> of the screen and slide <b>left or right</b> to turn. Hold your thumb still for a moment and it\'s just like lifting it: you stop turning and keep the direction you\'re pointing, and the slider re-centres under your thumb.' + ' (Switch back to buttons from the pause menu.)';
     }
     const CONTROLS = {
       touch: {
@@ -644,7 +644,7 @@
           ['👆', 'Steer', STEER_TEXT],
           ['🚜', 'Gas', 'Automatic — you’re always on the throttle.'],
           ['🔥', 'Nitro', 'Tap <b>NITRO</b> for a burst of speed. Counter at the top right.'],
-          ['🌀', 'Drift', 'Hold <b>DRIFT</b> to throw the tractor sideways. You turn tighter and keep your speed through corners (but top out a little lower), and steering the other way swings you into the opposite slide. You can drift a whole lap.'],
+          ['🌀', 'Drift', 'Hold <b>DRIFT</b> to throw yourself sideways. You turn tighter and keep your speed through corners (but top out a little lower), and steering the other way swings you into the opposite slide. You can drift a whole lap.'],
           ['🛑', 'Brake', 'Hold <b>BRAKE</b> to slow down. Keep holding when stopped to reverse out of trouble.'],
           ['⏸️', 'Pause', 'Tap the pause button at the top right.'],
           ['📷', 'Camera', 'Tap the 📷 button at the top of the screen to switch between the close-up camera and the whole track.'],
@@ -779,7 +779,7 @@
       const award = garage.recordResult(selected.id, e.place, me.finishTime, { fastestLap: e.fastestLap, bestLap: e.bestLap });
       const newSeries = SERIES.filter((sr) => garage.seriesUnlocked(sr.id)).slice(seriesBefore);
       const extras = [e.cash ? `+${e.cash} cash bags` : '', e.fastestLap ? `+${e.lapBonus} fastest lap` : ''].filter(Boolean).join(', ');
-      if (e.total > 0) wallet.credit(e.total, `Tractor Rally — ${ordinal(e.place)} at ${selected.name}${extras ? ` (${extras})` : ''}`);
+      if (e.total > 0) wallet.credit(e.total, `Farmyard Rally — ${ordinal(e.place)} at ${selected.name}${extras ? ` (${extras})` : ''}`);
       if (e.place === 1) sound.fanfare();
       else sound.coins();
 
