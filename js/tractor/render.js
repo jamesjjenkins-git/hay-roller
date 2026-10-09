@@ -627,7 +627,7 @@
   }
 
   // Outlines are drawn at this fraction of their nominal width: thin and crisp.
-  const LINE = 0.6;
+  const LINE = 0.45;
   function fillStroke(ctx, fill, lw = 2.5, stroke = OUTLINE) {
     ctx.fillStyle = fill;
     ctx.fill();
@@ -2951,7 +2951,7 @@
     ctx.ellipse(-1, 0, 5, 7.5, 0, 0, Math.PI * 2);
     paint(ctx, r.isPlayer ? '#2f6fd0' : '#4a4a4a', lit, 6, 1.8);
     ctx.strokeStyle = OUTLINE;
-    ctx.lineWidth = 2.8;
+    ctx.lineWidth = 2.4;
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(1, -5);
@@ -2989,7 +2989,7 @@
     // Racks: a frame of tubes.
     for (const [x0, w] of [[-17.5, 7], [12.5, 6]]) {
       roundRect(ctx, x0, -6.5, w, 13, 2);
-      ctx.lineWidth = 2.4;
+      ctx.lineWidth = 2.0;
       ctx.strokeStyle = OUTLINE;
       ctx.stroke();
       ctx.lineWidth = 1.2;
@@ -3028,7 +3028,7 @@
     ctx.rotate(r.steer * 0.3);
     ctx.lineCap = 'round';
     ctx.strokeStyle = OUTLINE;
-    ctx.lineWidth = 2.6;
+    ctx.lineWidth = 2.2;
     ctx.beginPath();
     ctx.moveTo(0, -8);
     ctx.lineTo(0, 8);
@@ -3084,7 +3084,7 @@
     ctx.rotate(r.steer * 0.35);
     ctx.lineCap = 'round';
     ctx.strokeStyle = OUTLINE;
-    ctx.lineWidth = 2.4;
+    ctx.lineWidth = 2.0;
     ctx.beginPath();
     ctx.moveTo(0, -8);
     ctx.lineTo(0, 8);
