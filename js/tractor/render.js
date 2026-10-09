@@ -1451,23 +1451,14 @@
       }
     },
     pond(c, rng) {
-      // Muddy bank, then water getting deeper towards the middle, a few
-      // reeds and lily pads, and a duck.
-      c.beginPath();
-      c.ellipse(0, 0, 76, 42, 0.2, 0, Math.PI * 2);
-      c.fillStyle = '#8a6a3d';
-      c.fill();
-      c.beginPath();
-      c.ellipse(0, 0, 70, 37, 0.2, 0, Math.PI * 2);
-      const g = c.createRadialGradient(-10, -6, 6, 0, 0, 72);
-      g.addColorStop(0, '#2f86c4');
-      g.addColorStop(0.65, '#4fa9dc');
-      g.addColorStop(1, '#8fd3f2');
-      c.fillStyle = g;
-      c.fill();
-      c.lineWidth = 2 * LINE;
-      c.strokeStyle = '#2b6f9c';
-      c.stroke();
+      // Damp muddy bank fading into the grass, shallows fading into the
+      // bank, deeper blue in the middle (soft edges, like the puddles on the
+      // track), then a few reeds and lily pads, and a duck.
+      c.save();
+      c.rotate(0.2);
+      softBlob(c, 0, 0, 86, 50, [[0.6, 'rgba(138,106,61,0.85)'], [0.8, 'rgba(120,120,55,0.45)'], [1, 'rgba(110,140,60,0)']]);
+      softBlob(c, -4, -2, 74, 40, [[0, '#2f86c4'], [0.55, '#4fa9dc'], [0.82, '#8fd3f2'], [1, 'rgba(160,215,235,0)']]);
+      c.restore();
       c.strokeStyle = 'rgba(255,255,255,0.7)';
       c.lineWidth = 2;
       for (let i = 0; i < 3; i++) {

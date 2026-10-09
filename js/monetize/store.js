@@ -2,9 +2,24 @@
 //
 // Real money only ever buys Gold or Remove ads. Gold is spent on cosmetics
 // (premium paints) and can never be turned into Hay or used in the casino
-// games. Purchases go through a `billing` adapter. The default adapter is a
-// TEST MODE that grants items without taking payment; on the App Store it is
-// replaced by an Apple in-app purchase adapter (see README).
+// games. Purchases go through a `billing` adapter. In a browser that's a
+// TEST MODE that grants items without taking payment; in the iPhone app it's
+// Apple in-app purchase (js/monetize/iap.js).
+//
+// Billing adapter:
+//   purchase(product)   -> { ok, transactionId } | { cancelled } | { pending } | { error }
+//   restore()           -> ids of entitlements owned
+//   testMode            true for the free test adapter
+// and, for real payments:
+//   loadProducts()      -> { [id]: displayPrice }, the store's own prices
+//   finish(txId)        tell the store a purchase has been granted
+//   unfinished()        -> [{ transactionId, productId }] paid for, not yet finished
+//   entitlements()      -> ids of entitlements owned right now (refunds drop out)
+//   onTransaction(fn)   purchases completing outside buy() (Ask to Buy, etc.)
+//
+// A paid purchase is granted first and finished after, and each transaction
+// is granted at most once, so neither a crash nor a repeat delivery can lose
+// or double what was paid for.
 (function (root) {
   const KEY = 'farmCasino.store.v1';
 
@@ -29,18 +44,27 @@
     };
   }
 
+  // How many granted transaction ids to remember (they only need to outlive
+  // the store redelivering them).
+  const GRANTED_KEEP = 200;
+
   function createStore({ storage, goldWallet, billing }) {
     let state = load();
     const listeners = new Set();
+    const deliveredListeners = new Set();
+    let prices = {};
+    // Real payments can't be taken until the store's products have loaded.
+    let available = !billing.loadProducts;
+    let listening = false;
 
     function load() {
       try {
         const raw = storage && storage.getItem(KEY);
-        if (raw) return { owned: [], ...JSON.parse(raw) };
+        if (raw) return { owned: [], granted: [], ...JSON.parse(raw) };
       } catch (e) {
         // Fresh state.
       }
-      return { owned: [] };
+      return { owned: [], granted: [] };
     }
 
     function save() {
@@ -60,10 +84,92 @@
       }
     }
 
+    // Grant a paid purchase once, then let the store finish it.
+    async function deliver(product, transactionId) {
+      let granted = false;
+      if (!transactionId || !state.granted.includes(transactionId)) {
+        grant(product);
+        granted = true;
+        if (transactionId) {
+          state.granted = [...state.granted, transactionId].slice(-GRANTED_KEEP);
+          save();
+        }
+      }
+      if (transactionId && billing.finish) {
+        try {
+          await billing.finish(transactionId);
+        } catch (e) {
+          // Comes back as unfinished next launch; it won't be granted twice.
+        }
+      }
+      return granted;
+    }
+
+    // A purchase that arrived on its own (Ask to Buy approved, or one
+    // interrupted last time): grant it and tell the page.
+    async function deliverLate(t) {
+      const product = PRODUCTS.find((p) => p.id === t.productId);
+      if (!product) return;
+      if (t.revoked) {
+        await syncEntitlements();
+        return;
+      }
+      if (await deliver(product, t.transactionId)) deliveredListeners.forEach((fn) => fn(product));
+    }
+
+    // Who owns what is the store's to say: a restore on a new phone adds it,
+    // a refund takes it away.
+    async function syncEntitlements() {
+      if (!billing.entitlements) return;
+      let ids;
+      try {
+        ids = await billing.entitlements();
+      } catch (e) {
+        return; // Keep what we had.
+      }
+      const ent = PRODUCTS.filter((p) => p.kind === 'entitlement').map((p) => p.id);
+      const owned = [...state.owned.filter((id) => !ent.includes(id)), ...ent.filter((id) => ids.includes(id))];
+      if (owned.join() !== state.owned.join()) {
+        state.owned = owned;
+        save();
+      }
+    }
+
     return {
       PRODUCTS,
       get testMode() {
         return !!billing.testMode;
+      },
+      get available() {
+        return available;
+      },
+      price(id) {
+        return prices[id] || PRODUCTS.find((p) => p.id === id).price;
+      },
+      // Load prices, pick up anything paid for but not granted, and check
+      // what's owned. Safe to call more than once.
+      async init() {
+        if (billing.onTransaction && !listening) {
+          listening = true;
+          billing.onTransaction((t) => deliverLate(t));
+        }
+        if (billing.loadProducts) {
+          try {
+            prices = await billing.loadProducts();
+            available = PRODUCTS.every((p) => prices[p.id]);
+          } catch (e) {
+            available = false;
+          }
+          listeners.forEach((fn) => fn());
+        }
+        if (billing.unfinished) {
+          try {
+            for (const t of await billing.unfinished()) await deliverLate(t);
+          } catch (e) {
+            // Try again next launch.
+          }
+        }
+        await syncEntitlements();
       },
       owns(id) {
         return state.owned.includes(id);
@@ -72,8 +178,14 @@
         const product = PRODUCTS.find((p) => p.id === id);
         if (!product) return { ok: false, error: 'Unknown product' };
         if (product.kind === 'entitlement' && this.owns(id)) return { ok: true, already: true };
-        const result = await billing.purchase(product);
-        if (result.ok) grant(product);
+        if (!available) return { ok: false, error: 'The store isn\'t available right now.' };
+        let result;
+        try {
+          result = await billing.purchase(product);
+        } catch (e) {
+          return { ok: false, error: 'The purchase didn\'t go through.' };
+        }
+        if (result.ok) await deliver(product, result.transactionId);
         return result;
       },
       async restore() {
@@ -87,6 +199,9 @@
       subscribe(fn) {
         listeners.add(fn);
         return () => listeners.delete(fn);
+      },
+      onDelivered(fn) {
+        deliveredListeners.add(fn);
       },
     };
   }
