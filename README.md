@@ -205,7 +205,7 @@ product ids are fixed in `js/monetize/iap.js` (Apple never lets an id be reused)
 `ios/App/App/Products.storekit` (Product → Scheme → Edit Scheme → Run → Options → StoreKit
 Configuration), so purchases go through Xcode's local StoreKit test store: no money, no App
 Store Connect. Debug → StoreKit → Manage Transactions lets you refund, approve Ask to Buy, or
-clear purchases to test again. If Xcode doesn't pick the file up, choose it in that menu.
+clear purchases to test again.
 
 **Selling for real** (needs the paid Apple Developer Program):
 1. App Store Connect → Business: accept the **Paid Apps agreement** and add banking and tax.
