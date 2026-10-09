@@ -226,6 +226,7 @@
 
       <div class="race-frame">
         <canvas id="race-canvas" aria-label="Race track: six hay bales rolling downhill"></canvas>
+        <button class="bet-prompt hidden" id="bet-prompt">👇 Place your bets below</button>
         <div class="race-overlay" id="race-overlay"></div>
       </div>
 
@@ -251,6 +252,11 @@
             <ol class="live" id="live-positions"></ol>
           </div>
         </aside>
+      </div>
+      <!-- Floats at the bottom while you're down among the bale cards. -->
+      <div class="derby-dock hidden" id="derby-dock">
+        <span>Total bet <b id="dock-total">0</b></span>
+        <button class="btn btn-primary" id="dock-start">Roll 'em!</button>
       </div>
     </section>
   </main>

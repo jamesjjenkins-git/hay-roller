@@ -1227,6 +1227,49 @@ kbd {
   .slot-machine { --cell: 64px; }
 }
 
+/* ---------- Hay Bale Derby: scroll helpers ---------- */
+
+.bet-prompt {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  z-index: 2;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 3px solid var(--ink);
+  background: var(--straw);
+  box-shadow: 0 4px 0 var(--ink);
+  font-family: var(--font-display);
+  font-size: 18px;
+  white-space: nowrap;
+  animation: nudge 1.2s ease-in-out infinite;
+}
+.bet-prompt.hidden { display: none; }
+@keyframes nudge { 50% { transform: translate(-50%, 6px); } }
+.derby-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  background: var(--cream);
+  border-top: 4px solid var(--ink);
+  box-shadow: 0 -4px 0 rgba(0,0,0,0.12);
+  font-weight: 800;
+}
+.derby-dock.hidden { display: none; }
+.derby-dock b { font-family: var(--font-display); font-weight: 400; font-size: 22px; margin-left: 4px; }
+.derby-dock .btn { flex: 1; max-width: 260px; font-size: 20px; }
+@media (prefers-reduced-motion: reduce) { .bet-prompt { animation: none; } }
+@media (max-width: 900px) { #view-hay-derby { padding-bottom: 90px; } }
+@media (max-width: 560px) { .bet-prompt { font-size: 14px; padding: 5px 12px; bottom: 8px; } }
+
 /* ---------- Monetisation: Gold, store, free Hay, ads ---------- */
 
 .gold-pill { background: #ffe9a8; padding: 6px 14px; }

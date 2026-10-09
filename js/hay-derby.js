@@ -120,6 +120,49 @@
       if (phase === 'betting') startRace();
     });
 
+    // ---------- Phone-friendly scrolling ----------
+    // On small screens the bale cards sit below the race. A prompt on the race
+    // points down to them, a dock lets you start without scrolling back up,
+    // and starting the race scrolls the race back into view.
+    const frameEl = $('.race-frame');
+    const promptEl = $('#bet-prompt');
+    const dock = $('#derby-dock');
+    let boardVisible = false;
+    let startVisible = true;
+
+    function scrollToEl(target, offset = 10) {
+      const bar = document.querySelector('.topbar');
+      const top = target.getBoundingClientRect().top + root.scrollY - (bar ? bar.offsetHeight : 0) - offset;
+      root.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    }
+
+    function updateHelpers() {
+      const betting = phase === 'betting';
+      promptEl.classList.toggle('hidden', !mounted || !betting || boardVisible);
+      dock.classList.toggle('hidden', !mounted || !betting || startVisible || !boardVisible);
+      $('#dock-total').textContent = fmt(totalBet());
+      $('#dock-start').textContent = totalBet() > 0 ? `Roll 'em! (${fmt(totalBet())})` : 'Watch race';
+    }
+
+    if ('IntersectionObserver' in root) {
+      new IntersectionObserver((entries) => {
+        boardVisible = entries[0].isIntersecting;
+        updateHelpers();
+      }, { threshold: 0.01 }).observe(board);
+      new IntersectionObserver((entries) => {
+        startVisible = entries[0].isIntersecting;
+        updateHelpers();
+      }, { threshold: 0.6 }).observe(startBtn);
+    }
+
+    promptEl.addEventListener('click', () => {
+      sound.click();
+      scrollToEl($('#race-status'));
+    });
+    $('#dock-start').addEventListener('click', () => {
+      if (phase === 'betting') startRace();
+    });
+
     wallet.subscribe(() => mounted && renderBoard());
 
     root.addEventListener('resize', () => mounted && renderer.resize());
@@ -180,6 +223,10 @@
       acc = 0;
       sound.beep(false);
       renderBoard();
+      // Bring the race back on screen if you were down among the cards.
+      if (frameEl.getBoundingClientRect().top < 0 || frameEl.getBoundingClientRect().bottom > root.innerHeight) {
+        scrollToEl($('.game-header'));
+      }
     }
 
     function settle(result, quiet) {
@@ -371,7 +418,7 @@
         // statusEl is updated by the pricing loop.
       } else if (betting) {
         statusEl.textContent = wallet.balance === 0 && total === 0
-          ? 'Your wallet is empty — add some free credits to play.'
+          ? 'Your wallet is empty — get free Hay in your wallet (daily bonus or a short ad).'
           : 'Pick a chip, then tap a bale to back it. Odds pay out on the winner.';
       } else if (phase === 'countdown' || phase === 'racing') {
         statusEl.textContent = 'And they’re off down the hill! Watch out for the livestock…';
@@ -379,6 +426,7 @@
         statusEl.textContent = 'Race over!';
       }
       renderChips();
+      updateHelpers();
     }
 
     function renderLive() {
@@ -421,6 +469,7 @@
           field = null;
         }
         mounted = false;
+        updateHelpers();
         cancelAnimationFrame(rafId);
         rafId = null;
         clearTimeout(pricingTimer);
