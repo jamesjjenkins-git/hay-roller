@@ -237,6 +237,8 @@
             else if (r.surface === 'water') particles.push({ type: 'drop', x: rearX, y: rearY, vx: (Math.random() - 0.5) * 80 - fx * 40, vy: (Math.random() - 0.5) * 80 - fy * 40, life: 0.5, max: 0.5 });
             else dust(rearX, rearY);
           }
+          const tp = trailParticle(r, rearX, rearY, fx, fy);
+          if (tp) particles.push(tp);
         }
         if ((r.nitroTime > 0 && Math.random() < 0.8) || (r.kickT > 0 && Math.random() < 0.5)) {
           particles.push({ type: 'flame', x: r.x - fx * 18, y: r.y - fy * 18 - lift, vx: -fx * 90 + (Math.random() - 0.5) * 30, vy: -fy * 90 + (Math.random() - 0.5) * 30, life: 0.25, max: 0.25 });
@@ -301,6 +303,8 @@
             ctx.fillStyle = '#bfe9ff';
             circle(ctx, p.x, p.y, 2.5);
             ctx.fill();
+          } else if (p.type === 'trail') {
+            drawTrailParticle(ctx, p, k);
           }
           ctx.globalAlpha = 1;
           continue;
@@ -2799,6 +2803,216 @@
   };
 
   // Tractor drawn facing +x: big rear wheels at the back, small steerable fronts.
+  // ---------- Cosmetics (bought with Gold) ----------
+  // The player's racer carries `look` = { decal, hat, trail }; everything
+  // here draws nothing without it (rivals, older callers).
+
+  // Where each vehicle's decal goes, in its own frame (facing +x).
+  const DECAL_AREA = {
+    tractor: { x: -4, y: -6, w: 22, h: 12, r: 4 }, // the bonnet
+    quad: { x: 1, y: -8, w: 13, h: 16, r: 6 }, // the front of the body
+    motorbike: { x: -1, y: -4.5, w: 11, h: 9, r: 4 }, // the tank
+  };
+
+  function drawDecal(ctx, r) {
+    const kind = r.look && r.look.decal;
+    if (!kind || kind === 'none') return;
+    const a = DECAL_AREA[r.vehicle] || DECAL_AREA.tractor;
+    const cx = a.x + a.w / 2;
+    const cy = a.y + a.h / 2;
+    ctx.save();
+    roundRect(ctx, a.x, a.y, a.w, a.h, a.r);
+    ctx.clip();
+    if (kind === 'stripes') {
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      for (const off of [-0.2, 0.2]) ctx.fillRect(a.x, cy + off * a.h - a.h * 0.07, a.w, a.h * 0.14);
+    } else if (kind === 'checkers') {
+      const sq = a.h / 5;
+      for (let i = 0; i * sq < a.w; i++) {
+        for (let j = 0; j < 2; j++) {
+          ctx.fillStyle = (i + j) % 2 ? '#1e1e1e' : '#fafafa';
+          ctx.fillRect(a.x + i * sq, cy - sq + j * sq, sq, sq);
+        }
+      }
+    } else if (kind === 'flames') {
+      // Tongues of flame streaming back from the front.
+      const front = a.x + a.w;
+      for (const [dy, len] of [[-0.26, 0.62], [0, 0.9], [0.26, 0.62]]) {
+        const y = cy + dy * a.h;
+        const L = len * a.w;
+        const t = a.h * 0.16;
+        ctx.beginPath();
+        ctx.moveTo(front, y - t);
+        ctx.quadraticCurveTo(front - L * 0.5, y - t * 1.6, front - L, y + t * 0.4);
+        ctx.quadraticCurveTo(front - L * 0.55, y + t * 0.2, front, y + t);
+        ctx.closePath();
+        ctx.fillStyle = '#ff6a1f';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(front, y - t * 0.45);
+        ctx.quadraticCurveTo(front - L * 0.35, y - t * 0.6, front - L * 0.62, y + t * 0.2);
+        ctx.quadraticCurveTo(front - L * 0.3, y + t * 0.1, front, y + t * 0.45);
+        ctx.closePath();
+        ctx.fillStyle = '#ffd23f';
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+    if (kind === 'number' || kind === 'star') {
+      const rad = Math.min(a.w, a.h) * 0.38;
+      if (kind === 'number') {
+        circle(ctx, cx, cy, rad);
+        fillStroke(ctx, '#fafafa', 1.4);
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(Math.PI / 2); // reads from behind, like a racing number
+        ctx.fillStyle = '#1e1e1e';
+        ctx.font = `${rad * 1.5}px ${FONT}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('7', 0, rad * 0.08);
+        ctx.restore();
+      } else {
+        starPath(ctx, cx, cy, 5, rad, rad * 0.45);
+        fillStroke(ctx, '#ffd23f', 1.4);
+      }
+    }
+  }
+
+  // Where the driver's head is, in the vehicle's own frame.
+  function headAt(r) {
+    if (r.vehicle === 'quad') return [-3, r.steer * 1.5];
+    if (r.vehicle === 'motorbike') return [-2, r.steer * 4 + (r.drift || 0) * 3];
+    return [-9.5, 0]; // on the tractor's cab roof
+  }
+
+  // A hat standing up from the head (drawn upright on screen, not turned
+  // with the vehicle), with (0, 0) where it sits.
+  function drawHat(ctx, kind) {
+    if (kind === 'straw') {
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 7.5, 3.4, 0, 0, Math.PI * 2);
+      fillStroke(ctx, '#e8c46a', 1.4);
+      roundRect(ctx, -3.8, -5.5, 7.6, 5.8, 2.4);
+      fillStroke(ctx, '#f0d27e', 1.4);
+      ctx.fillStyle = '#d8432f';
+      ctx.fillRect(-3.8, -1.8, 7.6, 1.6);
+    } else if (kind === 'cowboy') {
+      ctx.beginPath();
+      ctx.moveTo(-8.5, -1.5);
+      ctx.quadraticCurveTo(0, 3.5, 8.5, -1.5);
+      ctx.quadraticCurveTo(0, 1, -8.5, -1.5);
+      ctx.closePath();
+      fillStroke(ctx, '#8b5a2b', 1.4);
+      ctx.beginPath();
+      ctx.moveTo(-4.2, -0.5);
+      ctx.lineTo(-3.6, -6.5);
+      ctx.quadraticCurveTo(0, -4.8, 3.6, -6.5);
+      ctx.lineTo(4.2, -0.5);
+      ctx.closePath();
+      fillStroke(ctx, '#a06a35', 1.4);
+      ctx.fillStyle = '#3b2a14';
+      ctx.fillRect(-4.1, -2, 8.2, 1.4);
+    } else if (kind === 'party') {
+      ctx.beginPath();
+      ctx.moveTo(-4, 0);
+      ctx.lineTo(0, -11);
+      ctx.lineTo(4, 0);
+      ctx.closePath();
+      fillStroke(ctx, '#5bd1ff', 1.4);
+      ctx.save();
+      ctx.clip();
+      ctx.fillStyle = '#ff5d8f';
+      for (const y of [-8, -4]) ctx.fillRect(-5, y, 10, 1.8);
+      ctx.restore();
+      circle(ctx, 0, -11, 1.8);
+      fillStroke(ctx, '#ffd23f', 1.2);
+    } else if (kind === 'viking') {
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(side * 4, -3);
+        ctx.quadraticCurveTo(side * 9, -4, side * 8.5, -10);
+        ctx.quadraticCurveTo(side * 7, -6, side * 3.5, -5.5);
+        ctx.closePath();
+        fillStroke(ctx, '#f4ead2', 1.3);
+      }
+      ctx.beginPath();
+      ctx.ellipse(0, -0.5, 5, 6, 0, Math.PI, 0);
+      ctx.closePath();
+      fillStroke(ctx, '#9aa3ab', 1.4);
+      ctx.fillStyle = '#6b737a';
+      ctx.fillRect(-5, -1.6, 10, 1.6);
+    } else if (kind === 'crown') {
+      ctx.beginPath();
+      ctx.moveTo(-5, 0);
+      ctx.lineTo(-5, -6);
+      ctx.lineTo(-2.5, -3.2);
+      ctx.lineTo(0, -7.5);
+      ctx.lineTo(2.5, -3.2);
+      ctx.lineTo(5, -6);
+      ctx.lineTo(5, 0);
+      ctx.closePath();
+      fillStroke(ctx, '#f2c230', 1.4);
+      for (const [x, col] of [[-2.8, '#e2412f'], [0, '#2f6fe2'], [2.8, '#2fae4a']]) {
+        circle(ctx, x, -1.6, 0.9);
+        ctx.fillStyle = col;
+        ctx.fill();
+      }
+    }
+  }
+
+  // Trail particles left behind the player.
+  let trailCount = 0;
+  function trailParticle(r, x, y, fx, fy) {
+    const kind = r.look && r.look.trail;
+    if (!kind || kind === 'none' || Math.random() > 0.5) return null;
+    const side = (Math.random() - 0.5) * 12;
+    return {
+      type: 'trail',
+      kind,
+      x: x - fy * side,
+      y: y + fx * side,
+      vx: -fx * 20 + (Math.random() - 0.5) * 16,
+      vy: -fy * 20 + (Math.random() - 0.5) * 16 - (kind === 'bubbles' ? 14 : 4),
+      life: 0.8,
+      max: 0.8,
+      hue: (trailCount++ * 47) % 360, // rainbow: each one the next colour round
+      size: 2.4 + Math.random() * 1.6,
+    };
+  }
+
+  function drawTrailParticle(ctx, p, k) {
+    const sz = p.size * (p.kind === 'bubbles' ? 1.6 - k * 0.6 : 0.6 + k * 0.5);
+    ctx.globalAlpha = Math.min(1, k * 1.6);
+    if (p.kind === 'bubbles') {
+      circle(ctx, p.x, p.y, sz);
+      ctx.fillStyle = 'rgba(190,235,255,0.35)';
+      ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(120,200,240,0.9)';
+      ctx.stroke();
+      circle(ctx, p.x - sz * 0.35, p.y - sz * 0.35, sz * 0.25);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+    } else if (p.kind === 'hearts') {
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y + sz);
+      ctx.bezierCurveTo(p.x - sz * 1.6, p.y - sz * 0.2, p.x - sz * 0.7, p.y - sz * 1.4, p.x, p.y - sz * 0.5);
+      ctx.bezierCurveTo(p.x + sz * 0.7, p.y - sz * 1.4, p.x + sz * 1.6, p.y - sz * 0.2, p.x, p.y + sz);
+      ctx.fillStyle = '#ff5d8f';
+      ctx.fill();
+    } else if (p.kind === 'sparkle') {
+      starPath(ctx, p.x, p.y, 4, sz * 1.4, sz * 0.4);
+      ctx.fillStyle = k > 0.5 ? '#fff6a8' : '#f2c230';
+      ctx.fill();
+    } else if (p.kind === 'rainbow') {
+      circle(ctx, p.x, p.y, sz * 1.2);
+      ctx.fillStyle = `hsl(${p.hue}, 90%, 60%)`;
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
   function drawTractor(ctx, r, now) {
     // Higher up (in the air, or on a hill) = a little bigger, closer to camera.
     const s = 1 + r.z / 120 + (r.elev || 0) / 160;
@@ -2826,6 +3040,14 @@
     const art = r.vehicle === 'quad' ? drawQuadBody : r.vehicle === 'motorbike' ? drawBikeBody : drawTractorBody;
     art(ctx, r, lit);
     ctx.restore();
+    if (r.look && r.look.hat && r.look.hat !== 'none') {
+      const [hx, hy] = headAt(r);
+      ctx.save();
+      ctx.translate(r.x + (Math.cos(body) * hx - Math.sin(body) * hy) * s, baseY - depth.h * s + (Math.sin(body) * hx + Math.cos(body) * hy) * s - 2 * s);
+      ctx.scale(s, s);
+      drawHat(ctx, r.look.hat);
+      ctx.restore();
+    }
   }
 
   // A panel filled with `col`, lit from `lit` (a unit vector in the
@@ -2910,6 +3132,7 @@
     ctx.fillStyle = shade(col, 0.2);
     roundRect(ctx, -2, -1.6, 18, 3.2, 1.6);
     ctx.fill();
+    drawDecal(ctx, r);
     // Grille and headlights.
     roundRect(ctx, 15.5, -4.5, 3.5, 9, 1.2);
     ctx.fillStyle = '#3b3b3b';
@@ -3036,6 +3259,7 @@
       paint(ctx, col, lit, 5, 1.6, 0.16, [x, side * 8.4]);
     }
     gloss(ctx, 4, -5.5, 8, 2, 0.4);
+    drawDecal(ctx, r);
     // Headlight.
     roundRect(ctx, 12, -2.5, 2.4, 5, 1.2);
     fillStroke(ctx, '#fff6c8', 1.2);
@@ -3099,6 +3323,7 @@
     ctx.fillStyle = shade(col, 0.16);
     ctx.fill();
     gloss(ctx, 3, -2.6, 5, 1.6, 0.6);
+    drawDecal(ctx, r);
     // Number plate.
     roundRect(ctx, 10, -3.5, 4.5, 7, 2);
     fillStroke(ctx, '#fff', 1.3);
