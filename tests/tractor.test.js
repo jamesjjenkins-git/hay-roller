@@ -4,6 +4,25 @@ const Tracks = require('../js/tractor/tracks.js');
 const Sim = require('../js/tractor/sim.js');
 const Garage = require('../js/tractor/garage.js');
 
+// A sample in the middle of the longest straight stretch of a track.
+function straightIdx(t) {
+  let best = 0;
+  let bestRun = 0;
+  let run = 0;
+  for (let k = 0; k < t.count * 2; k++) {
+    const i = k % t.count;
+    let d = t.samples[(i + 1) % t.count].angle - t.samples[i].angle;
+    while (d > Math.PI) d -= 2 * Math.PI;
+    while (d < -Math.PI) d += 2 * Math.PI;
+    run = Math.abs(d) < 0.01 ? run + 1 : 0;
+    if (run > bestRun && run < t.count) {
+      bestRun = run;
+      best = (i - Math.floor(run / 2) + t.count) % t.count;
+    }
+  }
+  return best;
+}
+
 function memStore() {
   const d = {};
   return { getItem: (k) => (k in d ? d[k] : null), setItem: (k, v) => (d[k] = String(v)), removeItem: (k) => delete d[k] };
@@ -341,10 +360,12 @@ test('walls glance you off with a small speed loss instead of sticking', () => {
   for (const r of s.racers.slice(1)) {
     r.stats.topSpeed = 1;
     r.stats.accel = 0;
+    r.x = -2000; // parked well out of the way
   }
+  s.animals = [];
   const me = s.racers[0];
-  const sm = s.track.samples[40];
-  me.idx = 40;
+  me.idx = straightIdx(s.track);
+  const sm = s.track.samples[me.idx];
   me.x = sm.x;
   me.y = sm.y;
   me.heading = sm.angle - 0.8; // ~45 degrees straight at the wall
@@ -601,7 +622,9 @@ test('sliding into the outside wall mid-drift costs less than a normal knock', (
     const s = Sim.createRace(Tracks.TRACKS[0], { seed: 1 });
     s.animals = [];
     const me = s.racers[0];
-    const c = s.track.samples[40];
+    for (const r of s.racers.slice(1)) r.x = -2000;
+    s.animals = [];
+    const c = s.track.samples[straightIdx(s.track)];
     me.x = c.x + c.nx * (s.track.halfWidth - 16);
     me.y = c.y + c.ny * (s.track.halfWidth - 16);
     const into = Math.sign(Sim.angleDiff(Math.atan2(c.ny, c.nx), c.angle));

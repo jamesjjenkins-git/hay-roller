@@ -143,10 +143,13 @@
     // 2x2 grid behind the start line (just you in a Frenzy round).
     const racers = (frenzy ? DRIVERS.slice(0, 1) : DRIVERS).map((d, i) => {
       // Two by two, with room between so the tractors don't overlap.
+      // The grid follows the road back from the line, so it stays on the
+      // track even if there's a bend not far behind it.
       const back = 30 + Math.floor(i / 2) * 58;
       const side = (i % 2 ? 1 : -1) * track.halfWidth * 0.52;
-      const x = start.x - start.tx * back + start.nx * side;
-      const y = start.y - start.ty * back + start.ny * side;
+      const g = track.samples[(track.count - Math.round(back / Tracks.SAMPLE_STEP)) % track.count];
+      const x = g.x + g.nx * side;
+      const y = g.y + g.ny * side;
       const isPlayer = i === 0;
       const stats = isPlayer ? statsFor(playerUpgrades, vehicle) : aiStats(track, playerLevel, i - 1, vehicle);
       return {
@@ -160,7 +163,8 @@
         y,
         vx: 0,
         vy: 0,
-        heading: start.angle,
+        heading: g.angle,
+        gridBack: back,
         steer: 0,
         elev: 0,
         climb: 0,
@@ -191,7 +195,7 @@
       };
     });
     // Progress is measured from the start line; the grid sits just behind it.
-    for (const r of racers) r.progress = -signedBehind(track, r);
+    for (const r of racers) r.progress = -r.gridBack;
 
     return {
       track,
