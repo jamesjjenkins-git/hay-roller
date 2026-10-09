@@ -2794,165 +2794,306 @@
     ctx.translate(r.x, baseY - depth.h * s);
     ctx.rotate(body);
     ctx.scale(s, s);
-    if (r.vehicle === 'quad' || r.vehicle === 'motorbike') {
-      (r.vehicle === 'quad' ? drawQuadBody : drawBikeBody)(ctx, r);
-      ctx.restore();
-      return;
-    }
-
-    // Rear wheels with tread.
-    for (const side of [-1, 1]) {
-      ctx.save();
-      ctx.translate(-9, side * 11.5);
-      roundRect(ctx, -8, -4.5, 16, 9, 3);
-      fillStroke(ctx, '#262626', 2);
-      ctx.strokeStyle = '#555';
-      ctx.lineWidth = 1.5;
-      const spin = ((r.progress || 0) / 3) % 4;
-      for (let i = -8 + spin; i < 8; i += 4) {
-        ctx.beginPath();
-        ctx.moveTo(i, -4);
-        ctx.lineTo(i + 1.5, 4);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-    // Front wheels turn with steering.
-    for (const side of [-1, 1]) {
-      ctx.save();
-      ctx.translate(11, side * 9);
-      ctx.rotate(r.steer * 0.45);
-      roundRect(ctx, -4.5, -3, 9, 6, 2);
-      fillStroke(ctx, '#262626', 1.8);
-      ctx.restore();
-    }
-    // Front axle and hood.
-    ctx.fillStyle = '#444';
-    ctx.fillRect(10, -8, 2.5, 16);
-    roundRect(ctx, -4, -6, 22, 12, 4);
-    fillStroke(ctx, r.color, 2.2);
-    ctx.fillStyle = shade(r.color, 0.18);
-    ctx.fillRect(0, -3, 15, 3);
-    // Grille
-    ctx.fillStyle = '#ddd';
-    ctx.fillRect(16, -4, 2.5, 8);
-    // Cab with roof.
-    roundRect(ctx, -17, -9, 15, 18, 3);
-    fillStroke(ctx, shade(r.color, -0.12), 2.2);
-    roundRect(ctx, -15.5, -7.5, 12, 15, 2);
-    ctx.fillStyle = '#fff8e6';
-    ctx.fill();
-    // Exhaust stack
-    circle(ctx, 4, -4, 2.4);
-    fillStroke(ctx, '#555', 1.5);
-    // Driver hat peeking (roof stripe)
-    ctx.fillStyle = r.isPlayer ? '#ffd23f' : 'rgba(0,0,0,0.12)';
-    ctx.fillRect(-14, -2, 9, 4);
+    // Light from the top left of the screen, whichever way the vehicle faces.
+    // (The screen's light direction (-0.6, -0.8) turned into its frame.)
+    const lit = { x: -0.6 * Math.cos(body) - 0.8 * Math.sin(body), y: 0.6 * Math.sin(body) - 0.8 * Math.cos(body) };
+    const art = r.vehicle === 'quad' ? drawQuadBody : r.vehicle === 'motorbike' ? drawBikeBody : drawTractorBody;
+    art(ctx, r, lit);
     ctx.restore();
   }
 
-  function tyre(ctx, x, y, w, h, angle, r) {
+  // A panel filled with `col`, lit from `lit` (a unit vector in the
+  // vehicle's own frame pointing towards the light): lighter on that side,
+  // darker on the far side. `len` is about half the panel's size.
+  function litPaint(ctx, col, lit, len, amt = 0.16, cx = 0, cy = 0) {
+    const g = ctx.createLinearGradient(cx + lit.x * len, cy + lit.y * len, cx - lit.x * len, cy - lit.y * len);
+    g.addColorStop(0, shade(col, amt));
+    g.addColorStop(0.5, col);
+    g.addColorStop(1, shade(col, -amt));
+    return g;
+  }
+
+  // `at` is the panel's centre [x, y], where its gradient is anchored.
+  function paint(ctx, col, lit, len, lw = 2.2, amt = 0.16, at = [0, 0]) {
+    ctx.fillStyle = litPaint(ctx, col, lit, len, amt, at[0], at[1]);
+    ctx.fill();
+    ctx.lineWidth = lw * LINE;
+    ctx.strokeStyle = OUTLINE;
+    ctx.stroke();
+  }
+
+  // A chunky tyre seen from above, centred at (x, y), `w` long and `h`
+  // wide: dark rubber, chevron lugs that roll with the distance driven,
+  // and a lighter sidewall edge on the outside.
+  function tyre(ctx, x, y, w, h, angle, r, side = 1) {
     ctx.save();
     ctx.translate(x, y);
     if (angle) ctx.rotate(angle);
-    roundRect(ctx, -w / 2, -h / 2, w, h, Math.min(w, h) / 2.5);
-    fillStroke(ctx, '#262626', 1.8);
-    ctx.strokeStyle = '#555';
-    ctx.lineWidth = 1.2;
-    const spin = ((r.progress || 0) / 2.5) % 3;
-    for (let i = -w / 2 + spin; i < w / 2; i += 3) {
+    roundRect(ctx, -w / 2, -h / 2, w, h, Math.min(w, h) / 2.6);
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fill();
+    ctx.save();
+    ctx.clip();
+    const step = Math.max(2.6, w / 4.2);
+    const spin = ((r.progress || 0) / 2.2) % step;
+    ctx.fillStyle = '#4a4a4a';
+    for (let i = -w / 2 - step + spin; i < w / 2 + step; i += step) {
       ctx.beginPath();
-      ctx.moveTo(i, -h / 2 + 1);
-      ctx.lineTo(i, h / 2 - 1);
-      ctx.stroke();
+      ctx.moveTo(i, -h / 2);
+      ctx.lineTo(i + step * 0.45, 0);
+      ctx.lineTo(i, h / 2);
+      ctx.lineTo(i - step * 0.35, h / 2);
+      ctx.lineTo(i + step * 0.1, 0);
+      ctx.lineTo(i - step * 0.35, -h / 2);
+      ctx.closePath();
+      ctx.fill();
     }
+    // Sidewall: a lighter edge along the outside, shade along the inside.
+    ctx.fillStyle = 'rgba(255,255,255,0.13)';
+    ctx.fillRect(-w / 2, side > 0 ? h / 2 - 1.4 : -h / 2, w, 1.4);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(-w / 2, side > 0 ? -h / 2 : h / 2 - 1.2, w, 1.2);
+    ctx.restore();
+    roundRect(ctx, -w / 2, -h / 2, w, h, Math.min(w, h) / 2.6);
+    ctx.lineWidth = 1.8 * LINE;
+    ctx.strokeStyle = '#111';
+    ctx.stroke();
     ctx.restore();
   }
 
-  function rider(ctx, r, x, lean) {
-    // Shoulders and arms reaching to the bars, then a helmet with a visor.
+  // A glossy highlight: a soft white streak.
+  function gloss(ctx, x, y, w, h, a = 0.45) {
+    ctx.fillStyle = `rgba(255,255,255,${a})`;
+    roundRect(ctx, x, y, w, h, Math.min(w, h) / 2);
+    ctx.fill();
+  }
+
+  // Tractor, facing +x: big lugged rear wheels under curved mudguards, a cab
+  // with a glass front and a white roof, a long bonnet with a grille and
+  // headlights, and an exhaust stack.
+  function drawTractorBody(ctx, r, lit) {
+    const col = r.color;
+    for (const side of [-1, 1]) tyre(ctx, -9, side * 11.5, 16, 9, 0, r, side);
+    for (const side of [-1, 1]) tyre(ctx, 11, side * 9, 9, 6, r.steer * 0.45, r, side);
+    // Front axle.
+    ctx.fillStyle = '#3a3a3a';
+    ctx.fillRect(10, -8, 2.5, 16);
+    // Bonnet: body colour with a raised centre ridge and louvres.
+    roundRect(ctx, -4, -6, 22, 12, 4);
+    paint(ctx, col, lit, 9, 2.2, 0.16, [7, 0]);
+    ctx.fillStyle = shade(col, 0.2);
+    roundRect(ctx, -2, -1.6, 18, 3.2, 1.6);
+    ctx.fill();
+    // Grille and headlights.
+    roundRect(ctx, 15.5, -4.5, 3.5, 9, 1.2);
+    ctx.fillStyle = '#3b3b3b';
+    ctx.fill();
+    ctx.strokeStyle = '#9a9a9a';
+    ctx.lineWidth = 0.7;
+    for (const gy of [-3, -1, 1, 3]) {
+      ctx.beginPath();
+      ctx.moveTo(16, gy);
+      ctx.lineTo(18.5, gy);
+      ctx.stroke();
+    }
+    for (const side of [-1, 1]) {
+      circle(ctx, 16.8, side * 5.2, 1.7);
+      fillStroke(ctx, '#fff6c8', 1.2);
+    }
+    // Mudguards over the rear wheels, in the body colour.
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(-14.5, side * 8.5);
+      ctx.quadraticCurveTo(-14.5, side * 14.8, -9, side * 15);
+      ctx.quadraticCurveTo(-3.5, side * 14.8, -3.5, side * 8.5);
+      ctx.closePath();
+      paint(ctx, col, lit, 6, 1.8, 0.16, [-9, side * 12]);
+      gloss(ctx, -12, side * 12 - 0.8, 5, 1.4, 0.35);
+    }
+    // Cab: body-coloured base, glass all round, white roof on top.
+    roundRect(ctx, -17, -9, 15, 18, 3);
+    paint(ctx, shade(col, -0.12), lit, 9, 2.2, 0.16, [-9.5, 0]);
+    roundRect(ctx, -15.8, -7.8, 12.6, 15.6, 2.4);
+    const glass = ctx.createLinearGradient(-16, -8, -3, 8);
+    glass.addColorStop(0, '#bfe6f5');
+    glass.addColorStop(1, '#5fa8c8');
+    ctx.fillStyle = glass;
+    ctx.fill();
+    roundRect(ctx, -15.2, -7, 10.8, 14, 2.2);
+    ctx.fillStyle = litPaint(ctx, '#f4efe2', lit, 8, 0.1, -9.8, 0);
+    ctx.fill();
+    ctx.lineWidth = 1.2 * LINE;
+    ctx.strokeStyle = 'rgba(59,42,20,0.6)';
+    ctx.stroke();
+    gloss(ctx, -13.5, -5.5, 6, 2, 0.6);
+    // Roof stripe: yellow on yours.
+    ctx.fillStyle = r.isPlayer ? '#ffd23f' : shade(col, 0.05);
+    roundRect(ctx, -14, -1.6, 8.4, 3.2, 1.4);
+    ctx.fill();
+    // Exhaust stack: chrome with a dark mouth.
+    circle(ctx, 4, -4, 2.5);
+    ctx.fillStyle = litPaint(ctx, '#c9c9c9', lit, 2.5, 0.25, 4, -4);
+    ctx.fill();
+    ctx.lineWidth = 1.4 * LINE;
+    ctx.strokeStyle = OUTLINE;
+    ctx.stroke();
+    circle(ctx, 4, -4, 1.2);
+    ctx.fillStyle = '#222';
+    ctx.fill();
+  }
+
+  function rider(ctx, r, x, lean, lit) {
+    // Shoulders and arms reaching to the bars, then a helmet with a stripe
+    // and a visor.
     ctx.save();
     ctx.translate(x, lean);
     ctx.beginPath();
     ctx.ellipse(-1, 0, 5, 7.5, 0, 0, Math.PI * 2);
-    fillStroke(ctx, r.isPlayer ? '#2f6fd0' : '#4a4a4a', 1.8);
+    paint(ctx, r.isPlayer ? '#2f6fd0' : '#4a4a4a', lit, 6, 1.8);
     ctx.strokeStyle = OUTLINE;
-    ctx.lineWidth = 2.6;
+    ctx.lineWidth = 2.8;
+    ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(1, -5);
     ctx.lineTo(9, -6.5 - lean * 0.3);
     ctx.moveTo(1, 5);
     ctx.lineTo(9, 6.5 - lean * 0.3);
     ctx.stroke();
+    ctx.strokeStyle = r.isPlayer ? '#2f6fd0' : '#5a5a5a';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+    const helmet = r.isPlayer ? '#ffd23f' : r.color;
     circle(ctx, 0, 0, 5);
-    fillStroke(ctx, r.isPlayer ? '#ffd23f' : r.color, 2);
+    paint(ctx, helmet, lit, 5, 2, 0.22);
+    ctx.save();
+    circle(ctx, 0, 0, 5);
+    ctx.clip();
+    ctx.fillStyle = r.isPlayer ? '#e2412f' : '#fff';
+    ctx.fillRect(-6, -1, 12, 2);
+    ctx.restore();
+    roundRect(ctx, 2, -3.4, 2.8, 6.8, 1.4);
     ctx.fillStyle = '#263238';
-    ctx.fillRect(2.2, -3.2, 2.6, 6.4);
+    ctx.fill();
+    gloss(ctx, -3, -3.6, 3, 1.4, 0.55);
     ctx.restore();
   }
 
-  // Quad bike, facing +x: four fat tyres, a chunky body and racks.
-  function drawQuadBody(ctx, r) {
-    tyre(ctx, -9, -10, 10, 6, 0, r);
-    tyre(ctx, -9, 10, 10, 6, 0, r);
-    tyre(ctx, 11, -9.5, 9, 5.5, r.steer * 0.45, r);
-    tyre(ctx, 11, 9.5, 9, 5.5, r.steer * 0.45, r);
-    // Rear rack, body and front rack.
-    roundRect(ctx, -17, -7, 7, 14, 2);
-    fillStroke(ctx, '#555', 1.6);
+  // Quad bike, facing +x: four fat tyres under mudguards, a chunky body with
+  // a padded seat, tubular racks front and back, and a headlight.
+  function drawQuadBody(ctx, r, lit) {
+    const col = r.color;
+    tyre(ctx, -9, -10, 10, 6, 0, r, -1);
+    tyre(ctx, -9, 10, 10, 6, 0, r, 1);
+    tyre(ctx, 11, -9.5, 9, 5.5, r.steer * 0.45, r, -1);
+    tyre(ctx, 11, 9.5, 9, 5.5, r.steer * 0.45, r, 1);
+    // Racks: a frame of tubes.
+    for (const [x0, w] of [[-17.5, 7], [12.5, 6]]) {
+      roundRect(ctx, x0, -6.5, w, 13, 2);
+      ctx.lineWidth = 2.4;
+      ctx.strokeStyle = OUTLINE;
+      ctx.stroke();
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = '#8c8c8c';
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x0 + w / 2, -6.5);
+      ctx.lineTo(x0 + w / 2, 6.5);
+      ctx.stroke();
+    }
+    // Body and the mudguards over each wheel.
     roundRect(ctx, -12, -8, 26, 16, 6);
-    fillStroke(ctx, r.color, 2.2);
-    ctx.fillStyle = shade(r.color, 0.18);
-    ctx.fillRect(4, -5, 8, 3);
-    roundRect(ctx, 13, -6, 5, 12, 2);
-    fillStroke(ctx, '#555', 1.6);
-    // Seat.
-    roundRect(ctx, -9, -4, 10, 8, 3);
-    fillStroke(ctx, '#2b2b2b', 1.5);
+    paint(ctx, col, lit, 12, 2.2, 0.16, [1, 0]);
+    for (const [x, side] of [[-9, -1], [-9, 1], [11, -1], [11, 1]]) {
+      ctx.beginPath();
+      ctx.ellipse(x, side * 7.6, 5, 2.4, 0, side > 0 ? 0 : Math.PI, side > 0 ? Math.PI : Math.PI * 2);
+      ctx.closePath();
+      paint(ctx, col, lit, 5, 1.6, 0.16, [x, side * 8.4]);
+    }
+    gloss(ctx, 4, -5.5, 8, 2, 0.4);
+    // Headlight.
+    roundRect(ctx, 12, -2.5, 2.4, 5, 1.2);
+    fillStroke(ctx, '#fff6c8', 1.2);
+    // Seat: padded with a seam.
+    roundRect(ctx, -10, -4.2, 11, 8.4, 3.4);
+    paint(ctx, '#2b2b2b', lit, 5, 1.5, 0.12, [-4.5, 0]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(-8.5, 0);
+    ctx.lineTo(-0.5, 0);
+    ctx.stroke();
     // Handlebars turn with the steering.
     ctx.save();
     ctx.translate(8, 0);
     ctx.rotate(r.steer * 0.3);
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = OUTLINE;
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(0, -8);
+    ctx.lineTo(0, 8);
+    ctx.stroke();
+    ctx.strokeStyle = '#c9c9c9';
+    ctx.lineWidth = 1.1;
+    ctx.stroke();
+    ctx.fillStyle = '#1e1e1e';
+    for (const gy of [-8, 8]) {
+      roundRect(ctx, -1.4, gy - 1.8, 2.8, 3.6, 1);
+      ctx.fill();
+    }
+    ctx.restore();
+    rider(ctx, r, -3, r.steer * 1.5, lit);
+  }
+
+  // Motorbike, facing +x: two wheels in line under mudguards, a slim body
+  // with a shiny tank, a chrome exhaust, and a rider who leans into turns.
+  function drawBikeBody(ctx, r, lit) {
+    const col = r.color;
+    const lean = r.steer * 4 + (r.drift || 0) * 3;
+    tyre(ctx, -13, 0, 13, 5, 0, r);
+    tyre(ctx, 14, 0, 12, 4.5, r.steer * 0.35, r);
+    // Mudguards.
+    for (const [x, w] of [[-12, 5.5], [13.5, 5]]) {
+      roundRect(ctx, x - w / 2, -2.4, w, 4.8, 2.4);
+      paint(ctx, col, lit, 4, 1.4, 0.16, [x, 0]);
+    }
+    // Swingarm and exhaust.
+    ctx.fillStyle = '#4a4a4a';
+    ctx.fillRect(-13, -1.2, 10, 2.4);
+    roundRect(ctx, -17, 3, 13, 3.2, 1.6);
+    paint(ctx, '#d0d0d0', lit, 6, 1.2, 0.28, [-10.5, 4.6]);
+    circle(ctx, -17, 4.6, 1);
+    ctx.fillStyle = '#333';
+    ctx.fill();
+    // Body and tank.
+    roundRect(ctx, -8, -4.5, 20, 9, 4);
+    paint(ctx, col, lit, 9, 2.2, 0.16, [2, 0]);
+    ctx.beginPath();
+    ctx.ellipse(5.5, 0, 5, 3.6, 0, 0, Math.PI * 2);
+    ctx.fillStyle = shade(col, 0.16);
+    ctx.fill();
+    gloss(ctx, 3, -2.6, 5, 1.6, 0.6);
+    // Number plate.
+    roundRect(ctx, 10, -3.5, 4.5, 7, 2);
+    fillStroke(ctx, '#fff', 1.3);
+    ctx.fillStyle = col;
+    ctx.fillRect(11.6, -2.4, 1.4, 4.8);
+    // Bars.
+    ctx.save();
+    ctx.translate(10, 0);
+    ctx.rotate(r.steer * 0.35);
+    ctx.lineCap = 'round';
     ctx.strokeStyle = OUTLINE;
     ctx.lineWidth = 2.4;
     ctx.beginPath();
     ctx.moveTo(0, -8);
     ctx.lineTo(0, 8);
     ctx.stroke();
-    ctx.restore();
-    rider(ctx, r, -3, r.steer * 1.5);
-  }
-
-  // Motorbike, facing +x: two wheels in line, a slim body, and a rider who
-  // leans into the turn.
-  function drawBikeBody(ctx, r) {
-    const lean = r.steer * 4 + (r.drift || 0) * 3;
-    tyre(ctx, -13, 0, 13, 5, 0, r);
-    tyre(ctx, 14, 0, 12, 4.5, r.steer * 0.35, r);
-    // Swingarm, exhaust and frame.
-    ctx.fillStyle = '#555';
-    ctx.fillRect(-13, -1.2, 10, 2.4);
-    roundRect(ctx, -16, 3, 12, 3, 1.5);
-    fillStroke(ctx, '#c9c9c9', 1.2);
-    roundRect(ctx, -8, -4.5, 20, 9, 4);
-    fillStroke(ctx, r.color, 2);
-    // Tank stripe and number plate.
-    ctx.fillStyle = shade(r.color, 0.2);
-    ctx.fillRect(2, -2.5, 7, 5);
-    roundRect(ctx, 9, -3.5, 5, 7, 2);
-    fillStroke(ctx, '#fff', 1.4);
-    // Bars.
-    ctx.save();
-    ctx.translate(10, 0);
-    ctx.rotate(r.steer * 0.35);
-    ctx.strokeStyle = OUTLINE;
-    ctx.lineWidth = 2.2;
-    ctx.beginPath();
-    ctx.moveTo(0, -8);
-    ctx.lineTo(0, 8);
+    ctx.strokeStyle = '#c9c9c9';
+    ctx.lineWidth = 1;
     ctx.stroke();
     ctx.restore();
-    rider(ctx, r, -2, lean);
+    rider(ctx, r, -2, lean, lit);
   }
 
   // Where the flagman stands: beside the start line, on whichever side is on
