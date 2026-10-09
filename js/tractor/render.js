@@ -562,29 +562,45 @@
     }
     c.restore();
 
-    // Walls: hay bales with tyre stacks, both edges.
+    // Walls: hay bales with tyre stacks along both edges. Items are spaced
+    // by distance along the edge itself, so they don't bunch up on the
+    // inside of bends; where the edge curves tightly, round oil barrels
+    // replace the long bales.
     for (const side of [-1, 1]) {
       const off = side * (t.halfWidth + 7);
-      for (let i = 0; i < t.count; i += 3) {
-        const s = t.samples[i];
-        const x = s.x + s.nx * off;
-        const y = s.y + s.ny * off;
-        if (x < -10 || x > W + 10 || y < -10 || y > H + 10) continue;
+      const pts = t.samples.map((s) => ({ x: s.x + s.nx * off, y: s.y + s.ny * off, angle: s.angle }));
+      let travelled = 0;
+      let nextAt = 0;
+      let placed = 0;
+      for (let i = 0; i < t.count; i++) {
+        const p = pts[i];
+        const prev = pts[(i - 1 + t.count) % t.count];
+        if (i > 0) travelled += Math.hypot(p.x - prev.x, p.y - prev.y);
+        if (travelled < nextAt) continue;
+        if (p.x < -10 || p.x > W + 10 || p.y < -10 || p.y > H + 10) continue;
         // On the inside of tight bends the offset edge folds back over the
-        // road; don't draw bales where there's driving surface.
-        if (onSurface(t, x, y, t.halfWidth + 3)) continue;
-        if ((i / 3) % 9 === 0) {
-          circle(c, x, y, 8);
-          fillStroke(c, '#2a2a2a', 2);
-          circle(c, x, y, 3.5);
-          c.fillStyle = (i / 27) % 2 ? '#e2412f' : '#fff';
-          c.fill();
+        // road; don't draw anything where there's driving surface.
+        if (onSurface(t, p.x, p.y, t.halfWidth + 3)) continue;
+        // Local radius of this edge, from how fast it turns.
+        const a0 = pts[(i - 3 + t.count) % t.count];
+        const a1 = pts[(i + 3) % t.count];
+        let turn = a1.angle - a0.angle;
+        while (turn > Math.PI) turn -= Math.PI * 2;
+        while (turn < -Math.PI) turn += Math.PI * 2;
+        const edgeLen = Math.hypot(a1.x - a0.x, a1.y - a0.y);
+        const tight = edgeLen / Math.max(0.001, Math.abs(turn)) < BARREL_RADIUS;
+        if (placed % 9 === 0) {
+          drawTyreStack(c, p.x, p.y, Math.floor(placed / 9) % 2);
+          nextAt = travelled + 20;
+        } else if (tight) {
+          drawBarrel(c, p.x, p.y, placed);
+          nextAt = travelled + 18;
         } else {
           c.save();
-          c.translate(x, y);
-          c.rotate(s.angle);
+          c.translate(p.x, p.y);
+          c.rotate(p.angle);
           roundRect(c, -12, -7, 24, 14, 3);
-          fillStroke(c, (i / 3) % 2 ? '#e6bd55' : '#dcb04a', 1.8);
+          fillStroke(c, placed % 2 ? '#e6bd55' : '#dcb04a', 1.8);
           c.strokeStyle = 'rgba(120,80,20,0.6)';
           c.lineWidth = 1;
           c.beginPath();
@@ -594,7 +610,9 @@
           c.lineTo(4, 6);
           c.stroke();
           c.restore();
+          nextAt = travelled + 25;
         }
+        placed++;
       }
     }
 
@@ -610,6 +628,32 @@
     c.textBaseline = 'middle';
     c.fillText(label, W - w / 2 - 14, H - 22);
     c.restore();
+  }
+
+  // Edges that curve tighter than this (px) get oil barrels, not bales.
+  const BARREL_RADIUS = 140;
+
+  function drawTyreStack(c, x, y, red) {
+    circle(c, x, y, 8);
+    fillStroke(c, '#2a2a2a', 2);
+    circle(c, x, y, 3.5);
+    c.fillStyle = red ? '#e2412f' : '#fff';
+    c.fill();
+  }
+
+  // Oil drum seen from above: coloured lid, rim and a filler cap.
+  function drawBarrel(c, x, y, n) {
+    const colors = ['#2f6fd0', '#e2412f', '#2e9a47'];
+    const col = colors[n % colors.length];
+    circle(c, x, y, 9);
+    fillStroke(c, col, 2);
+    c.strokeStyle = 'rgba(255,255,255,0.45)';
+    c.lineWidth = 1.5;
+    circle(c, x, y, 6);
+    c.stroke();
+    circle(c, x + 3, y - 3, 1.8);
+    c.fillStyle = '#d9d9d9';
+    c.fill();
   }
 
   function onSurface(t, x, y, within) {
