@@ -1529,6 +1529,46 @@ kbd {
 }
 .paints { row-gap: 18px; }
 
+/* Cosmetics (Gold): a row each for decals, hats and trails. */
+.looks { display: grid; gap: 14px; margin: 4px 0 16px; }
+.look-row { display: grid; gap: 4px; }
+.look-label { font-weight: 800; font-size: 13px; }
+.look-items { display: flex; flex-wrap: wrap; gap: 7px; row-gap: 18px; }
+.look {
+  position: relative;
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  border: 2px solid var(--ink);
+  background: #fff8e6;
+  box-shadow: 0 3px 0 var(--ink);
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+}
+.look.active { outline: 4px solid var(--straw); transform: translateY(-2px); }
+.look.locked { background: #efe3c4; }
+/* Upgrades: the Hay price first, Gold as the optional shortcut. */
+.u-buy { display: grid; gap: 4px; justify-items: stretch; }
+.btn-buy-gold {
+  padding: 4px 10px;
+  font-size: 13px;
+  background: #ffe9a8;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  box-shadow: 0 2px 0 var(--ink);
+  white-space: nowrap;
+}
+.spare-nitro {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 2px dashed #e3d6b4;
+}
+.spare-nitro .u-icon { font-size: 26px; text-align: center; }
+.arm-nitro { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 13px; font-weight: 800; }
+
 .btn-ad { margin-top: 6px; width: 100%; font-size: 15px; background: #2f6fe2; color: #fff; }
 .doubled { margin: 6px 0 0; text-align: center; font-weight: 800; color: var(--good); }
 

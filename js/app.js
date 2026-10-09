@@ -322,12 +322,14 @@
     x.fillStyle = '#8a5a2b';
     x.fillRect(0, h * 0.22 - 6, w, 6);
     x.fillRect(0, h * 0.78, w, 6);
-    const paint = root.TractorGarage.createGarage().paintHex();
+    const g = root.TractorGarage.createGarage();
+    const paint = g.paintHex();
     const draw = (px, py, color, s, vehicle) => {
       x.save();
       x.translate(px, py);
       x.scale(s, s);
-      root.TractorRender.drawTractor(x, { x: 0, y: 0, z: 0, heading: 0, steer: 0, color, vehicle, isPlayer: color === paint, bump: 0, progress: px, id: 0 }, 0);
+      const mine = color === paint;
+      root.TractorRender.drawTractor(x, { x: 0, y: 0, z: 0, heading: 0, steer: 0, color, vehicle, isPlayer: mine, bump: 0, progress: px, id: 0, look: mine ? g.look : null }, 0);
       x.restore();
     };
     const s = Math.min(2.6, Math.max(1.4, h / 90));

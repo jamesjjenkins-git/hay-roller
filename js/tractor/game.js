@@ -2,7 +2,8 @@
 (function (root) {
   const Sim = root.TractorSim;
   const { TRACKS, WORLD, buildTrack } = root.TractorTracks;
-  const { UPGRADES, PAINTS, TROPHIES, SERIES, MAX_LEVEL, createGarage } = root.TractorGarage;
+  const { UPGRADES, PAINTS, COSMETICS, TROPHIES, SERIES, MAX_LEVEL, SPARE_NITROS, createGarage } = root.TractorGarage;
+  const LOOK_LABELS = { decal: 'Decals', hat: 'Hats', trail: 'Trails' };
   const Badges = root.TractorBadges;
   const TROPHY_ICON = { gold: '🥇', silver: '🥈', bronze: '🥉' };
   const SELECTED_KEY = 'farmCasino.tractor.track';
@@ -355,6 +356,14 @@
         `<button class="paint ${st.paint === p.id ? 'active' : ''} ${garage.paintOwned(p.id) ? '' : 'locked'}" data-paint="${p.id}" style="--paint:${p.hex}"
           title="${p.name}${garage.paintOwned(p.id) ? '' : ` — 🪙${p.gold} Gold`}" aria-label="${p.name} paint${garage.paintOwned(p.id) ? '' : `, costs ${p.gold} Gold`}">${garage.paintOwned(p.id) ? '' : `<span class="paint-price">🪙${p.gold}</span>`}</button>`).join('');
 
+      // Cosmetics: decals, hats and trails (Gold, bought once, kept for every vehicle).
+      const look = garage.look;
+      $('#looks').innerHTML = Object.keys(COSMETICS).map((cat) => `
+        <div class="look-row"><span class="look-label">${LOOK_LABELS[cat]}</span><div class="look-items">${COSMETICS[cat].map((c) => {
+          const owned = garage.cosmeticOwned(cat, c.id);
+          return `<button class="look ${look[cat] === c.id ? 'active' : ''} ${owned ? '' : 'locked'}" data-look="${cat}:${c.id}" title="${c.name}${owned ? '' : ` — 🪙${c.gold} Gold`}" aria-label="${c.name}${owned ? '' : `, costs ${c.gold} Gold`}">${c.icon}${owned ? '' : `<span class="paint-price">🪙${c.gold}</span>`}</button>`;
+        }).join('')}</div></div>`).join('');
+
       // Series tabs: Tractor Cup → Quad Cup → Motorbike Cup.
       $('#series-tabs').innerHTML = SERIES.map((sr) => {
         const open = garage.seriesUnlocked(sr.id);
@@ -392,9 +401,16 @@
           <div class="u-info"><b>${u.name}</b><small>${u.desc}</small><div class="pips">${pips}</div></div>
           ${cost == null
             ? '<span class="u-max">MAX</span>'
-            : `<button class="btn btn-buy ${afford ? '' : 'cant'}" data-buy="${u.id}">🌾 ${fmt(cost)}</button>`}
+            : `<div class="u-buy"><button class="btn btn-buy ${afford ? '' : 'cant'}" data-buy="${u.id}">🌾 ${fmt(cost)}</button><button class="btn btn-buy-gold" data-buy-gold="${u.id}" title="Or skip the grind with Gold">or 🪙 ${fmt(garage.nextGoldCost(u.id))}</button></div>`}
         </div>`;
       }).join('');
+      // Spare nitros: an optional extra boost for one race at a time.
+      const spare = garage.spareNitros;
+      $('#spare-nitro').innerHTML = `
+        <div class="u-icon">🧯</div>
+        <div class="u-info"><b>Spare nitro</b><small>${spare ? `${spare} in the shed · one extra boost for a race` : 'One extra boost for a race'}</small>
+          ${spare ? `<label class="arm-nitro"><input type="checkbox" data-arm-nitro ${garage.armNitro ? 'checked' : ''}> Take one into the next race</label>` : ''}</div>
+        <button class="btn btn-buy-gold" data-spare-nitro>${SPARE_NITROS.count} for 🪙 ${SPARE_NITROS.gold}</button>`;
 
       // Track packs: the farm tracks, then the Ironman pack.
       const pack = selected.pack || 'farm';
@@ -454,7 +470,7 @@
       x.restore();
     }
 
-    function drawPreview() {
+    function drawPreview(lookOverride) {
       const c = $('#tractor-preview');
       const dpr = Math.min(root.devicePixelRatio || 1, 2);
       const w = c.clientWidth || 260;
@@ -464,7 +480,7 @@
       const x = c.getContext('2d');
       x.setTransform(dpr, 0, 0, dpr, 0, 0);
       x.clearRect(0, 0, w, h);
-      const fake = { x: 0, y: 0, z: 0, heading: -0.35, steer: 0.4, color: garage.paintHex(), isPlayer: true, bump: 0, progress: 0, id: 0, vehicle: garage.vehicle };
+      const fake = { x: 0, y: 0, z: 0, heading: -0.35, steer: 0.4, color: garage.paintHex(), isPlayer: true, bump: 0, progress: 0, id: 0, vehicle: garage.vehicle, look: lookOverride || garage.look };
       x.translate(w / 2, h / 2);
       x.scale(3.6, 3.6);
       x.fillStyle = 'rgba(0,0,0,0.2)';
@@ -477,6 +493,69 @@
     garageEl.addEventListener('click', (e) => {
       const buy = e.target.closest('[data-buy]');
       const paint = e.target.closest('[data-paint]');
+      const lookBtn = e.target.closest('[data-look]');
+      const buyGold = e.target.closest('[data-buy-gold]');
+      const spareBtn = e.target.closest('[data-spare-nitro]');
+      if (lookBtn) {
+        const [cat, id] = lookBtn.dataset.look.split(':');
+        const c = COSMETICS[cat].find((x) => x.id === id);
+        if (garage.cosmeticOwned(cat, id)) {
+          garage.equip(cat, id);
+          sound.chip();
+          renderGarage();
+          return;
+        }
+        // Try it on first, then ask.
+        drawPreview({ ...garage.look, [cat]: id });
+        setTimeout(() => {
+          if (gold && gold.canAfford(c.gold)) {
+            if (confirm(`Buy ${c.name} for 🪙${c.gold} Gold? It's yours for every vehicle.`)) {
+              garage.buyCosmetic(cat, id, gold);
+              sound.fanfare();
+              toast(`${c.name} — looking sharp!`, 'good');
+            }
+          } else {
+            sound.click();
+            toast(`${c.name} costs 🪙${c.gold} Gold. Get Gold in the store.`, 'info');
+            if (openWallet) openWallet('gold');
+          }
+          renderGarage();
+        }, 60);
+        return;
+      }
+      if (buyGold) {
+        const id = buyGold.dataset.buyGold;
+        const u = UPGRADES.find((x) => x.id === id);
+        const g = garage.nextGoldCost(id);
+        if (gold && gold.canAfford(g)) {
+          if (confirm(`Upgrade ${u.name} to level ${garage.upgrades[id] + 1} for 🪙${g} Gold?\n\n(Or win 🌾${fmt(garage.nextCost(id))} Hay racing and buy it with that.)`)) {
+            garage.buyWithGold(id, gold);
+            sound.coins();
+            toast(`${u.name} upgraded to level ${garage.upgrades[id]}!`, 'good');
+          }
+        } else {
+          sound.click();
+          toast(`That costs 🪙${g} Gold. Get Gold in the store, or win the Hay.`, 'info');
+          if (openWallet) openWallet('gold');
+        }
+        renderGarage();
+        return;
+      }
+      if (spareBtn) {
+        if (gold && gold.canAfford(SPARE_NITROS.gold)) {
+          if (confirm(`Buy ${SPARE_NITROS.count} spare nitros for 🪙${SPARE_NITROS.gold} Gold? Each gives you one extra boost in a race.`)) {
+            garage.buySpareNitros(gold);
+            sound.coins();
+            toast(`${SPARE_NITROS.count} spare nitros in the shed — one goes into your next race.`, 'good');
+          }
+        } else {
+          sound.click();
+          toast(`Spare nitros cost 🪙${SPARE_NITROS.gold} Gold. Get Gold in the store.`, 'info');
+          if (openWallet) openWallet('gold');
+        }
+        renderGarage();
+        return;
+      }
       const track = e.target.closest('[data-track]');
       const series = e.target.closest('[data-series]');
       const packTab = e.target.closest('[data-pack]');
@@ -543,6 +622,13 @@
       }
     });
 
+    garageEl.addEventListener('change', (e) => {
+      if (e.target.matches('[data-arm-nitro]')) {
+        garage.setArmNitro(e.target.checked);
+        sound.click();
+      }
+    });
+
     $('#unlock-all').addEventListener('change', (e) => {
       garage.setUnlockAll(e.target.checked);
       sound.click();
@@ -587,6 +673,8 @@
         playerLevel: garage.level,
         vehicle: garage.vehicle,
         frenzy: kind === 'frenzy',
+        playerLook: garage.look,
+        extraNitros: kind === 'race' ? garage.takeSpareNitro() : 0,
       });
       raceEl.classList.toggle('frenzy', kind === 'frenzy');
       phase = 'countdown';
