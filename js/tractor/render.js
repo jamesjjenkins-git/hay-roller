@@ -753,8 +753,15 @@
       for (let x = UI_KEEP_OUT.left; x <= W - w - UI_KEEP_OUT.left; x += 20) corners.push([x, y]);
     }
     const lifts = t.samples.map((_, i) => liftAt(t, i));
-    // Scenery footprints (a rough radius each), so the sign isn't stuck on a barn.
-    const SCENERY_R = { barn: 80, pen: 80, corn: 80, pond: 80, hay: 60, sheep: 40, silo: 40, windmill: 50, tree: 45 };
+    // What each piece of scenery covers on screen, from its base: [left,
+    // top, right, bottom]. Tall things reach well above their base (a
+    // windmill's sails, a tree's canopy), so a point-and-radius isn't enough.
+    const SCENERY_BOX = {
+      barn: [-64, -66, 72, 46], pen: [-76, -56, 80, 54], corn: [-76, -48, 82, 46], pond: [-80, -46, 80, 46],
+      hay: [-64, -44, 66, 38], sheep: [-38, -34, 40, 30], silo: [-30, -74, 46, 28], windmill: [-50, -100, 50, 20],
+      tree: [-36, -72, 48, 28],
+    };
+    const groundAt = (x, y) => (t.terrain ? root.TractorTracks.terrainHeight(t.terrain, x, y) * RAISE : 0);
     let best = null;
     for (const [x, y] of corners) {
       // How far the board is from the nearest road edge (walls included).
@@ -766,10 +773,11 @@
         clear = Math.min(clear, Math.hypot(dx, dy) - (t.halfWidth + 30));
       });
       for (const sc of t.scenery) {
-        const r = (SCENERY_R[sc.kind] || 50) * (sc.scale || 1);
-        const sdx = Math.max(x - sc.x, 0, sc.x - (x + w));
-        const sdy = Math.max(y - sc.y, 0, sc.y - (y + h));
-        clear = Math.min(clear, Math.hypot(sdx, sdy) - r);
+        const [l, tp, r, b] = (SCENERY_BOX[sc.kind] || [-50, -50, 50, 50]).map((v) => v * (sc.scale || 1));
+        const by = sc.y - groundAt(sc.x, sc.y);
+        const sdx = Math.max(sc.x + l - (x + w), 0, x - (sc.x + r));
+        const sdy = Math.max(by + tp - (y + h), 0, y - (by + b));
+        clear = Math.min(clear, Math.hypot(sdx, sdy) - 6);
       }
       // Keep clear of the flagman too.
       const fm = flagmanSpot(t);
