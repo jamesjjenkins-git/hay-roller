@@ -25,8 +25,8 @@ test('tracks keep separate stretches apart so walls never merge', () => {
         const along = Math.min(j - i, t.count - (j - i)) * Tracks.SAMPLE_STEP;
         if (along < 2 * t.width) continue;
         // A figure-of-8 declares where its halves are meant to cross.
-        const c = def.crossing;
-        const nearCross = (p) => c && Math.hypot(p.x - c.x, p.y - c.y) < c.r;
+        const cs = def.crossings || (def.crossing ? [def.crossing] : []);
+        const nearCross = (p) => cs.some((c) => Math.hypot(p.x - c.x, p.y - c.y) < c.r);
         if (nearCross(t.samples[i]) || nearCross(t.samples[j])) continue;
         const d = Math.hypot(t.samples[i].x - t.samples[j].x, t.samples[i].y - t.samples[j].y);
         assert.ok(d >= t.width + 24, `${def.id}: samples ${i}/${j} only ${d.toFixed(0)}px apart`);

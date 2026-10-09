@@ -29,6 +29,10 @@
     const modal = $('#race-modal');
     const renderer = root.TractorRender.createRenderer(canvas);
 
+    const PACKS = [
+      { id: 'farm', name: '🚜 Farm tracks' },
+      { id: 'ironman', name: '🏜️ Ironman pack' },
+    ];
     let selected = TRACKS.find((t) => t.id === localStorage.getItem(SELECTED_KEY)) || TRACKS[0];
     if (!garage.isUnlocked(selected)) selected = TRACKS[0];
 
@@ -391,7 +395,14 @@
         </div>`;
       }).join('');
 
-      $('#track-list').innerHTML = TRACKS.map((t) => {
+      // Track packs: the farm tracks, then the Ironman pack.
+      const pack = selected.pack || 'farm';
+      $('#pack-tabs').innerHTML = PACKS.map((pk) => {
+        const first = TRACKS.find((t) => (t.pack || 'farm') === pk.id);
+        const open = garage.isUnlocked(first);
+        return `<button class="pack-tab ${pack === pk.id ? 'active' : ''}" data-pack="${pk.id}" role="tab" aria-selected="${pack === pk.id}">${open ? '' : '🔒 '}${pk.name}</button>`;
+      }).join('');
+      $('#track-list').innerHTML = TRACKS.filter((t) => (t.pack || 'farm') === pack).map((t) => {
         const unlocked = garage.isUnlocked(t);
         const best = garage.bestFor(t.id);
         const aw = garage.awardsFor(t.id);
@@ -402,7 +413,7 @@
           <span class="t-info">
             <b>${unlocked ? '' : '🔒 '}${t.name}${t.bonus ? ' <span class="bonus-tag">BONUS</span>' : ''}</b>
             <small>${unlocked ? t.blurb : `Finish ${ordinal(t.unlock.place)} or better on ${need.name} to unlock`}</small>
-            <small class="t-meta">#${TRACKS.indexOf(t) + 1} · ${t.laps} laps · 1st pays 🌾${fmt(Sim.prizesFor(t, garage.vehicle)[0])}${best ? ` · Best: ${ordinal(best.place)}` : ''}${aw && aw.bestLap ? ` · Lap ${fmtLap(aw.bestLap)}` : ''}</small>
+            <small class="t-meta">#${TRACKS.filter((x) => (x.pack || 'farm') === pack).indexOf(t) + 1} · ${t.laps} laps · 1st pays 🌾${fmt(Sim.prizesFor(t, garage.vehicle)[0])}${best ? ` · Best: ${ordinal(best.place)}` : ''}${aw && aw.bestLap ? ` · Lap ${fmtLap(aw.bestLap)}` : ''}</small>
           </span>
           ${badge}
         </button>`;
@@ -467,6 +478,21 @@
       const paint = e.target.closest('[data-paint]');
       const track = e.target.closest('[data-track]');
       const series = e.target.closest('[data-series]');
+      const packTab = e.target.closest('[data-pack]');
+      if (packTab) {
+        // Jump to the first open track of that pack (or its first track, locked).
+        const inPack = TRACKS.filter((t) => (t.pack || 'farm') === packTab.dataset.pack);
+        const open = inPack.filter((t) => garage.isUnlocked(t));
+        if (open.length) selected = open[open.length - 1];
+        else {
+          const need = TRACKS.find((x) => x.id === inPack[0].unlock.track);
+          toast(`Finish ${ordinal(inPack[0].unlock.place)} or better on ${need.name} to open the ${PACKS.find((p) => p.id === packTab.dataset.pack).name}.`, 'info');
+          return;
+        }
+        sound.click();
+        renderGarage();
+        return;
+      }
       if (series && !series.disabled) {
         if (garage.setVehicle(series.dataset.series)) {
           sound.chip();
