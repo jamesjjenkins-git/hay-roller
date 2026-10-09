@@ -232,7 +232,7 @@ test('rivals are slower than a stock tractor on track 1 and match an upgraded on
   const last = Tracks.TRACKS.find((t) => t.id === 'harvest');
   const stock = Sim.statsFor({});
   assert.ok(Sim.aiStats(first, 0, 0).topSpeed < stock.topSpeed * 0.95);
-  assert.ok(Sim.aiStats(last, 0, 0).topSpeed > Sim.statsFor({ speed: 3 }).topSpeed);
+  assert.ok(Sim.aiStats(last, 0, 0).topSpeed > Sim.statsFor({ speed: 2 }).topSpeed);
 });
 
 test('rubber banding only helps the player when well behind the car ahead', () => {
@@ -318,4 +318,29 @@ test('straight-line assist lines the nose up when not steering, but never fights
   assert.ok(run(false, 0, 0.3) > 0.2, 'without assist it stays misaligned');
   assert.ok(run(true, 0, 1.2) > 1.0, 'large angles are left alone');
   assert.ok(run(true, 0.55, 0.3) > 0.3, 'no correction while the player is steering');
+});
+
+test('walls glance you off with a small speed loss instead of sticking', () => {
+  const s = Sim.createRace(Tracks.TRACKS[0], { seed: 1 });
+  for (const r of s.racers.slice(1)) {
+    r.stats.topSpeed = 1;
+    r.stats.accel = 0;
+  }
+  const me = s.racers[0];
+  const sm = s.track.samples[40];
+  me.idx = 40;
+  me.x = sm.x;
+  me.y = sm.y;
+  me.heading = sm.angle - 0.8; // ~45 degrees straight at the wall
+  me.vx = Math.cos(me.heading) * 160;
+  me.vy = Math.sin(me.heading) * 160;
+  let minSpeed = Infinity;
+  for (let i = 0; i < 120; i++) {
+    Sim.step(s, { 0: { steer: 0, throttle: 1, brake: 0, assist: true } });
+    minSpeed = Math.min(minSpeed, Math.hypot(me.vx, me.vy));
+  }
+  assert.ok(minSpeed > 60, `dropped to ${minSpeed.toFixed(0)}px/s — that's sticking, not glancing`);
+  assert.ok(Math.hypot(me.vx, me.vy) > 120, 'back up to speed within 2s');
+  const c = s.track.samples[me.idx];
+  assert.ok(Math.abs(Sim.angleDiff(Math.atan2(c.ty, c.tx), me.heading)) < 0.5, 'nose turned to run along the wall');
 });

@@ -75,11 +75,11 @@
       stickBase.classList.add('active');
       stickMove(x);
     }
-    // Horizontal slider with a fixed turn rate: once you're past a small dead
-    // zone it ramps up over a few pixels to one steady rate. Sliding further
+    // Horizontal slider with a capped turn rate: past a small dead zone the
+    // turn builds gently over ~20px to one steady rate. Sliding further
     // doesn't turn harder — it just keeps the turn going.
-    const SLIDE_DEAD = 14; // a thumb wobble's worth: resting thumb = straight
-    const SLIDE_RAMP = 10;
+    const SLIDE_DEAD = 8; // a resting thumb's wobble = straight ahead
+    const SLIDE_RAMP = 20; // small moves give small, immediate turns
     const SLIDE_MAX = 48; // how far the knob can travel visually
     const SLIDER_STEER = 0.55; // fraction of the tractor's full turn rate
     function stickMove(x) {

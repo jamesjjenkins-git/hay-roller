@@ -28,8 +28,8 @@
   // `pace` scales their speed: on the first track they are clearly slower than
   // a stock tractor (they drive cleaner lines than a thumb can), reaching full
   // pace (a touch above a stock tractor's) by the last track.
-  const AI_PACE_MIN = 0.91;
-  const AI_PACE_MAX = 0.99;
+  const AI_PACE_MIN = 0.89;
+  const AI_PACE_MAX = 0.96;
   function aiStats(track, playerLevel, index) {
     const skill = track.aiSkill + Math.min(0.5, playerLevel * 0.025);
     const spread = [1.0, 0.96, 0.92][index % 3];
@@ -42,6 +42,12 @@
     st.accel *= pace;
     return st;
   }
+
+  // Walls: glance off rather than stick. bounce = fraction of the inward
+  // speed reflected; align = how much the nose turns along the wall per
+  // contact frame; loss = speed lost on a head-on knock; scrape = friction
+  // per second while sliding along.
+  const WALL = { bounce: 0.2, align: 0.35, loss: 0.18, scrape: 0.35 };
 
   // Straight-line assist for touch steering (radians, radians/second).
   const ASSIST = { maxAngle: 0.5, rate: 1.4 };
@@ -276,7 +282,7 @@
       const dir = vf < -5 ? -1 : 1;
       // Ease into a turn, but stop turning straight away when the input
       // returns to centre, so there's no carry-over that causes overshoot.
-      const easing = Math.abs(input.steer) < Math.abs(r.steer) ? 45 : 20;
+      const easing = Math.abs(input.steer) < Math.abs(r.steer) ? 45 : 32;
       r.steer += (input.steer - r.steer) * Math.min(1, easing * DT);
       r.heading += r.steer * st.turnRate * turnFactor * dir * DT;
 
@@ -338,13 +344,30 @@
       r.y -= c.ny * (lat - side * limit);
       const vn = r.vx * c.nx + r.vy * c.ny;
       if (vn * side > 0) {
-        r.vx -= c.nx * vn * 1.4;
-        r.vy -= c.ny * vn * 1.4;
-        r.vx *= 0.88;
-        r.vy *= 0.88;
-        if (Math.abs(vn) > 40 && r.wallHit <= 0) {
-          r.wallHit = 0.25;
-          s.events.push({ type: 'wall', id: r.id, x: r.x + c.nx * side * RADIUS, y: r.y + c.ny * side * RADIUS, power: Math.abs(vn) });
+        // Glance off: keep the speed along the wall, a small bounce outward.
+        const speed = Math.hypot(r.vx, r.vy) || 1;
+        const headOn = Math.min(1, Math.abs(vn) / speed); // 0 = grazing, 1 = straight in
+        r.vx -= c.nx * vn * (1 + WALL.bounce);
+        r.vy -= c.ny * vn * (1 + WALL.bounce);
+        // Steer the nose along the wall so the throttle doesn't keep pushing
+        // you back into it.
+        const along = Math.atan2(c.ty, c.tx);
+        const tangent = Math.abs(angleDiff(along, r.heading)) < Math.PI / 2 ? along : along + Math.PI;
+        const intoWall = (Math.cos(r.heading) * c.nx + Math.sin(r.heading) * c.ny) * side > 0;
+        if (intoWall) r.heading += angleDiff(tangent, r.heading) * WALL.align;
+        // One small speed penalty per knock, bigger the more head-on it was.
+        if (r.wallHit <= 0) {
+          const keep = 1 - WALL.loss * (0.35 + 0.65 * headOn);
+          r.vx *= keep;
+          r.vy *= keep;
+          r.wallHit = 0.3;
+          if (Math.abs(vn) > 40) {
+            s.events.push({ type: 'wall', id: r.id, x: r.x + c.nx * side * RADIUS, y: r.y + c.ny * side * RADIUS, power: Math.abs(vn) });
+          }
+        } else {
+          // Scraping along: a little friction, never a dead stop.
+          r.vx *= 1 - WALL.scrape * DT;
+          r.vy *= 1 - WALL.scrape * DT;
         }
       }
     }
@@ -523,7 +546,7 @@
     };
   }
 
-  const api = { DT, RADIUS, MAX_TIME, DRIVERS, CATCHUP, ASSIST, catchUpBoost, aiStats, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
+  const api = { DT, RADIUS, MAX_TIME, DRIVERS, CATCHUP, ASSIST, WALL, catchUpBoost, aiStats, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
   root.TractorSim = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

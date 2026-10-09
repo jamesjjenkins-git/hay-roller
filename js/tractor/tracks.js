@@ -278,7 +278,7 @@
       blurb: 'The championship: every hazard, the fastest rivals, the biggest prize.',
       laps: 4,
       width: 90,
-      aiSkill: 0.8,
+      aiSkill: 0.62,
       reward: [1400, 740, 370, 140],
       unlock: { track: 'orchard', place: 3 },
       points: [
