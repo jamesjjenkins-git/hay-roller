@@ -123,7 +123,9 @@
     return { popped, in30, total: s.frenzy.total, rate, per: FRENZY.per, base, sweep, bonus, hay: base + bonus, timeLeft: Math.max(0, s.frenzy.timeLeft) };
   }
 
-  function createRace(trackDef, { seed = 1, playerUpgrades = {}, playerColor, playerLevel = 0, laps, frenzy = false, vehicle = 'tractor' } = {}) {
+  // `playerLook`: the player's cosmetics ({ decal, hat, trail }), drawn only.
+  // `extraNitros`: spare nitros the player brought (not in Farmyard Frenzy).
+  function createRace(trackDef, { seed = 1, playerUpgrades = {}, playerColor, playerLevel = 0, laps, frenzy = false, vehicle = 'tractor', playerLook = null, extraNitros = 0 } = {}) {
     const track = trackDef.samples ? trackDef : Tracks.buildTrack(trackDef);
     const rng = FarmRng.mulberry32(seed);
     const start = track.samples[0];
@@ -159,6 +161,7 @@
         vehicle,
         color: colors[i],
         isPlayer,
+        look: isPlayer ? playerLook : null,
         stats,
         x,
         y,
@@ -180,7 +183,7 @@
         finished: false,
         finishTime: null,
         place: null,
-        nitros: stats.nitros,
+        nitros: stats.nitros + (isPlayer && !frenzy ? extraNitros : 0),
         nitroTime: 0,
         z: 0,
         vz: 0,
