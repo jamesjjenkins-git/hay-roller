@@ -15,6 +15,13 @@
   --radius: 18px;
   --font-display: 'Lilita One', 'Arial Black', system-ui, sans-serif;
   --font-body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* iPhone notch / Dynamic Island / home bar (zero elsewhere). The page
+     runs edge to edge (viewport-fit=cover), so anything pinned to an edge
+     keeps clear of these. */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
 }
 
 * { box-sizing: border-box; }
@@ -104,7 +111,7 @@ button:disabled { cursor: not-allowed; }
 .wallet-pill.bump { animation: bump 0.35s ease; }
 @keyframes bump { 50% { transform: scale(1.08); } }
 
-main { max-width: 1400px; margin: 0 auto; padding: 20px 16px 48px; }
+main { max-width: 1400px; margin: 0 auto; padding: 20px max(16px, var(--safe-r)) calc(48px + var(--safe-b)) max(16px, var(--safe-l)); }
 
 /* ---------- Buttons ---------- */
 
@@ -260,7 +267,7 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px 16px 48px; }
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s;
-  padding: 12px;
+  padding: max(12px, var(--safe-t)) max(12px, var(--safe-r)) max(12px, var(--safe-b)) max(12px, var(--safe-l));
 }
 .race-overlay.show { opacity: 1; pointer-events: auto; }
 
@@ -408,7 +415,7 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px 16px 48px; }
   flex-direction: column;
   gap: 14px;
   position: sticky;
-  top: 86px;
+  top: calc(76px + max(10px, var(--safe-t)));
 }
 .panel-block h3 { font-size: 18px; margin-bottom: 8px; }
 
@@ -463,8 +470,8 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px 16px 48px; }
   border: none;
   padding: 0;
   background: transparent;
-  width: min(480px, calc(100vw - 32px));
-  max-height: calc(100vh - 40px);
+  width: min(480px, calc(100vw - 32px - var(--safe-l) - var(--safe-r)));
+  max-height: calc(100vh - 40px - var(--safe-t) - var(--safe-b));
 }
 .modal::backdrop { background: rgba(30, 20, 5, 0.55); }
 .modal-inner {
@@ -529,13 +536,13 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px 16px 48px; }
 
 .toasts {
   position: fixed;
-  bottom: 20px;
+  bottom: calc(20px + var(--safe-b));
   left: 50%;
   transform: translateX(-50%);
   display: grid;
   gap: 8px;
   z-index: 100;
-  width: min(440px, calc(100vw - 32px));
+  width: min(440px, calc(100vw - 32px - var(--safe-l) - var(--safe-r)));
 }
 .toast {
   padding: 12px 16px;
@@ -691,13 +698,13 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px 16px 48px; }
   display: grid;
   place-items: center;
   background: rgba(30, 20, 5, 0.55);
-  padding: 16px;
+  padding: max(16px, var(--safe-t)) max(16px, var(--safe-r)) max(16px, var(--safe-b)) max(16px, var(--safe-l));
 }
 .cabinet.hidden { display: none; }
 .cabinet-card {
   position: relative;
   width: min(720px, 100%);
-  max-height: calc(100vh - 32px);
+  max-height: calc(100vh - max(16px, var(--safe-t)) - max(16px, var(--safe-b)));
   overflow: auto;
   background: var(--cream);
   border: 2.5px solid var(--ink);
@@ -980,6 +987,7 @@ body.in-race .topbar { display: none; }
   font-family: var(--font-display);
   font-size: 26px;
   line-height: 1.5;
+  padding: max(16px, var(--safe-t)) max(16px, var(--safe-r)) max(16px, var(--safe-b)) max(16px, var(--safe-l));
 }
 .race-screen.portrait .rotate-hint { display: grid; }
 
@@ -990,7 +998,7 @@ body.in-race .topbar { display: none; }
   display: grid;
   place-items: center;
   background: rgba(30, 20, 5, 0.5);
-  padding: 12px;
+  padding: max(12px, var(--safe-t)) max(12px, var(--safe-r)) max(12px, var(--safe-b)) max(12px, var(--safe-l));
 }
 .race-modal.hidden { display: none; }
 .rmodal-card {
@@ -1140,7 +1148,7 @@ kbd {
     display: flex;
     gap: 12px;
     align-items: center;
-    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    padding: 10px max(16px, var(--safe-r)) calc(10px + var(--safe-b)) max(16px, var(--safe-l));
     background: var(--cream);
     border-top: 2.5px solid var(--ink);
     box-shadow: 0 -4px 0 rgba(0,0,0,0.12);
@@ -1164,7 +1172,7 @@ kbd {
 /* Landscape phones: keep the race bar to one slim line. */
 @media (max-width: 1000px) and (max-height: 500px) {
   .garage { padding-bottom: 64px; }
-  .race-dock { padding: 6px 16px calc(6px + env(safe-area-inset-bottom)); }
+  .race-dock { padding: 6px max(16px, var(--safe-r)) calc(6px + var(--safe-b)) max(16px, var(--safe-l)); }
   .dock-track { display: flex; align-items: baseline; gap: 8px; padding: 4px 10px; }
   .dock-track b { font-size: 16px; }
   .race-dock .btn-big { font-size: 18px; padding: 6px 18px; }
@@ -1396,7 +1404,7 @@ kbd {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  padding: 10px max(16px, var(--safe-r)) calc(10px + var(--safe-b)) max(16px, var(--safe-l));
   background: var(--cream);
   border-top: 2.5px solid var(--ink);
   box-shadow: 0 -4px 0 rgba(0,0,0,0.12);
@@ -1500,14 +1508,14 @@ kbd {
   z-index: 15;
   display: flex;
   justify-content: center;
-  padding: 6px 12px calc(6px + env(safe-area-inset-bottom));
+  padding: 6px max(12px, var(--safe-r)) calc(6px + var(--safe-b)) max(12px, var(--safe-l));
   background: rgba(59, 42, 20, 0.92);
 }
 .ad-banner.hidden { display: none; }
 /* In the app the real banner is a native view laid over this strip, which
    just keeps its space (the height is set to the ad's). */
 .ad-banner.ad-native { padding: 0; min-height: 50px; box-sizing: content-box; padding-bottom: env(safe-area-inset-bottom); }
-body.has-banner main { padding-bottom: 96px; }
+body.has-banner main { padding-bottom: calc(96px + var(--safe-b)); }
 .ad-label {
   align-self: flex-start;
   margin-right: 6px;
@@ -1542,7 +1550,7 @@ body.has-banner main { padding-bottom: 96px; }
   display: grid;
   place-items: center;
   background: rgba(0, 0, 0, 0.85);
-  padding: 16px;
+  padding: max(16px, var(--safe-t)) max(16px, var(--safe-r)) max(16px, var(--safe-b)) max(16px, var(--safe-l));
 }
 .ad-video {
   position: relative;
@@ -1586,7 +1594,7 @@ body.has-banner main { padding-bottom: 96px; }
 }
 
 @media (max-width: 560px) {
-  main { padding: 14px 12px 40px; }
+  main { padding: 14px max(12px, var(--safe-r)) calc(40px + var(--safe-b)) max(12px, var(--safe-l)); }
   .topbar { padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left)); }
   .logo-text { font-size: 20px; }
   .logo-icon { font-size: 26px; }
@@ -1630,7 +1638,7 @@ body.has-banner main { padding-bottom: 96px; }
   left: 50%;
   transform: translateX(-50%);
   z-index: 200;
-  max-width: calc(100vw - 24px);
+  max-width: calc(100vw - 24px - var(--safe-l) - var(--safe-r));
   padding: 10px 18px;
   border-radius: 999px;
   border: 2px solid var(--ink);

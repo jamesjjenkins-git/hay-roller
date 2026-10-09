@@ -2,14 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Farmyard Rally – Privacy policy</title>
   <meta name="description" content="How Farmyard Rally handles your data: game progress stays on your device; ads are served by Google AdMob; purchases go through Apple.">
   <style>
     :root { --ink: #3b2a14; --paper: #fff8e6; --accent: #d8432f; --muted: #6b5a44; }
     @media (prefers-color-scheme: dark) { :root { --ink: #f3e7cf; --paper: #231a0f; --accent: #ff7a64; --muted: #c9b89c; } }
     html { background: var(--paper); color: var(--ink); }
-    body { font: 17px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+    body { font: 17px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 720px; margin: 0 auto;
+      /* Clear of the iPhone notch / Dynamic Island and home bar. */
+      padding: 0 max(16px, env(safe-area-inset-right)) calc(48px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+    /* Back to the game: in the app there's no browser back button. */
+    .back-bar { position: sticky; top: 0; z-index: 1; margin: 0 -16px 16px; padding: max(10px, env(safe-area-inset-top)) 16px 10px; background: var(--paper); border-bottom: 1px solid color-mix(in srgb, var(--ink) 20%, transparent); }
+    .back { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 700; text-decoration: none; }
     h1 { font-size: 28px; margin: 0 0 4px; }
     h2 { font-size: 20px; margin: 28px 0 6px; }
     .updated { color: var(--muted); margin: 0 0 20px; }
@@ -18,6 +23,7 @@
   </style>
 </head>
 <body>
+  <nav class="back-bar"><a class="back" id="back" href="index.html">← Back to the game</a></nav>
   <h1>Farmyard Rally – Privacy policy</h1>
   <p class="updated">Last updated 9 October 2026</p>
 
@@ -66,5 +72,20 @@
 
   <h2>Changes</h2>
   <p>If this policy changes, the new version will be posted here with a new date.</p>
+  <p><a class="back" href="index.html" data-back>← Back to the game</a></p>
+  <script>
+    // Opened from the game: go back to where you were (keeps your place).
+    // Opened directly (e.g. from the App Store listing): the link goes home.
+    for (const a of document.querySelectorAll('#back, [data-back]')) {
+      a.addEventListener('click', (e) => {
+        let fromGame = false;
+        try { fromGame = !!document.referrer && new URL(document.referrer).origin === location.origin; } catch (err) {}
+        if (fromGame && history.length > 1) {
+          e.preventDefault();
+          history.back();
+        }
+      });
+    }
+  </script>
 </body>
 </html>

@@ -354,10 +354,15 @@
       const cw = canvas.width;
       const ch = canvas.height;
       if (mode === 'full') {
-        const k = Math.min(cw / W, ch / H);
+        // The whole track, centred in the part of the screen clear of the
+        // notch / Dynamic Island and the home bar.
+        const sf = safeInsets();
+        const aw = cw - sf.l - sf.r;
+        const ah = ch - sf.t - sf.b;
+        const k = Math.min(aw / W, ah / H);
         const rw = cw / k;
         const rh = ch / k;
-        return { k, rx: (W - rw) / 2, ry: (H - rh) / 2, rw, rh };
+        return { k, rx: -(sf.l + (aw - W * k) / 2) / k, ry: -(sf.t + (ah - H * k) / 2) / k, rw, rh };
       }
       const k = ch / CHASE_VIEW_H;
       const rw = cw / k;
@@ -528,8 +533,14 @@
       const cw = canvas.width;
       const ch = canvas.height;
       const pad = 26 * (canvas.height / 400);
-      const cx = cw / 2;
-      const cy = ch / 2;
+      // Kept inside the safe area, clear of the notch / Dynamic Island.
+      const safe = safeInsets();
+      const L = safe.l + pad;
+      const R = cw - safe.r - pad;
+      const T = safe.t + pad;
+      const B = ch - safe.b - pad;
+      const cx = (L + R) / 2;
+      const cy = (T + B) / 2;
       for (const r of sim.racers) {
         if (r.isPlayer) continue;
         const sx = (r.x - v.rx) * v.k;
@@ -537,7 +548,7 @@
         if (sx > 0 && sx < cw && sy > 0 && sy < ch) continue;
         const dx = sx - cx;
         const dy = sy - cy;
-        const t = Math.min((cw / 2 - pad) / Math.abs(dx || 1e-6), (ch / 2 - pad) / Math.abs(dy || 1e-6));
+        const t = Math.min((R - L) / 2 / Math.abs(dx || 1e-6), (B - T) / 2 / Math.abs(dy || 1e-6));
         const ax = cx + dx * t;
         const ay = cy + dy * t;
         const size = 11 * (canvas.height / 400);
@@ -559,6 +570,21 @@
       }
     }
 
+    // The iPhone's safe-area insets (notch, Dynamic Island, home bar) in
+    // canvas pixels, read from CSS through a hidden probe.
+    let probe = null;
+    function safeInsets() {
+      if (typeof document === 'undefined' || !canvas.clientWidth) return { t: 0, r: 0, b: 0, l: 0 };
+      if (!probe) {
+        probe = document.createElement('div');
+        probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)';
+        document.body.appendChild(probe);
+      }
+      const cs = getComputedStyle(probe);
+      const k = canvas.width / canvas.clientWidth;
+      return { t: parseFloat(cs.paddingTop) * k, r: parseFloat(cs.paddingRight) * k, b: parseFloat(cs.paddingBottom) * k, l: parseFloat(cs.paddingLeft) * k };
+    }
+
     // Small whole-track map, bottom centre, with every tractor as a dot.
     function drawMinimap(sim) {
       const t = sim.track;
@@ -566,7 +592,7 @@
       const ms = mw / W;
       const mh = H * ms;
       const x0 = (canvas.width - mw) / 2;
-      const y0 = canvas.height - mh - 10 * (canvas.height / 400);
+      const y0 = canvas.height - mh - 10 * (canvas.height / 400) - safeInsets().b;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalAlpha = 0.75;
       ctx.fillStyle = 'rgba(40, 70, 30, 0.5)';
