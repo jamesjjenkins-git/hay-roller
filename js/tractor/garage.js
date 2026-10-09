@@ -31,9 +31,18 @@
     { id: 'bronze', icon: '🥉', name: 'Bronze trophy' },
   ];
 
-  function upgradeCost(id, level) {
+  // Race series, one per vehicle. Each has its own upgrades and results;
+  // finish in the top 3 on the last main track of a series to unlock the next.
+  const SERIES = [
+    { id: 'tractor', name: 'Tractor Cup', vehicle: 'Tractor', icon: '🚜', costMul: 1 },
+    { id: 'quad', name: 'Quad Cup', vehicle: 'Quad Bike', icon: '🏁', costMul: 2, unlock: { series: 'tractor', track: 'harvest', place: 3 } },
+    { id: 'motorbike', name: 'Motorbike Cup', vehicle: 'Motorbike', icon: '🏍️', costMul: 3.5, unlock: { series: 'quad', track: 'harvest', place: 3 } },
+  ];
+  const ZERO = { accel: 0, speed: 0, handling: 0, boost: 0 };
+
+  function upgradeCost(id, level, costMul = 1) {
     const u = UPGRADES.find((x) => x.id === id);
-    return Math.round((u.base * Math.pow(level + 1, 1.5)) / 10) * 10;
+    return Math.round((u.base * Math.pow(level + 1, 1.5) * costMul) / 10) * 10;
   }
 
   function defaults() {
@@ -47,6 +56,9 @@
       awards: {},
       races: 0,
       wins: 0,
+      vehicle: 'tractor', // the series you're racing in
+      // Upgrades for the other vehicles (the tractor's are `upgrades`).
+      series: { quad: { upgrades: { ...ZERO } }, motorbike: { upgrades: { ...ZERO } } },
     };
   }
 
@@ -89,13 +101,28 @@
           const d = defaults();
           const p = JSON.parse(raw);
           const upgrades = migrateUpgrades(p, d.upgrades); // may add p.refund
-          return { ...d, ...p, upgrades, best: p.best || {}, awards: p.awards || {}, ownedPaints: p.ownedPaints || [] };
+          const series = { ...d.series };
+          for (const k of Object.keys(series)) {
+            series[k] = { upgrades: { ...ZERO, ...((p.series && p.series[k] && p.series[k].upgrades) || {}) } };
+          }
+          return { ...d, ...p, upgrades, series, best: p.best || {}, awards: p.awards || {}, ownedPaints: p.ownedPaints || [] };
         }
       } catch (e) {
         // Corrupt save: fall back to a fresh garage.
       }
       return defaults();
     }
+
+    // Upgrades of the current vehicle.
+    function cur() {
+      return state.vehicle === 'tractor' || !state.series[state.vehicle] ? state.upgrades : state.series[state.vehicle].upgrades;
+    }
+    // Results are stored per series; the Tractor Cup keeps the plain track ids
+    // so older saves carry straight over.
+    function key(trackId, series = state.vehicle) {
+      return series === 'tractor' ? trackId : `${series}:${trackId}`;
+    }
+    const seriesDef = (id) => SERIES.find((x) => x.id === id) || SERIES[0];
 
     function save() {
       try {
@@ -110,22 +137,50 @@
         return state;
       },
       get level() {
-        return Object.values(state.upgrades).reduce((a, b) => a + b, 0);
+        return Object.values(cur()).reduce((a, b) => a + b, 0);
+      },
+      get upgrades() {
+        return cur();
+      },
+      get vehicle() {
+        return state.vehicle || 'tractor';
+      },
+      get series() {
+        return seriesDef(state.vehicle);
+      },
+      seriesUnlocked(id) {
+        const sd = seriesDef(id);
+        if (!sd.unlock || state.unlockAll) return true;
+        const b = state.best[key(sd.unlock.track, sd.unlock.series)];
+        return !!b && b.place <= sd.unlock.place;
+      },
+      setVehicle(id) {
+        if (!SERIES.some((x) => x.id === id) || !this.seriesUnlocked(id)) return false;
+        state.vehicle = id;
+        save();
+        return true;
+      },
+      bestFor(trackId) {
+        return state.best[key(trackId)];
+      },
+      awardsFor(trackId) {
+        return state.awards[key(trackId)];
       },
       paintHex() {
         return (PAINTS.find((p) => p.id === state.paint) || PAINTS[0]).hex;
       },
       nextCost(id) {
-        const lvl = state.upgrades[id];
-        return lvl >= MAX_LEVEL ? null : upgradeCost(id, lvl);
+        const lvl = cur()[id];
+        return lvl >= MAX_LEVEL ? null : upgradeCost(id, lvl, seriesDef(state.vehicle).costMul);
       },
       // Charges the wallet and levels up. Returns false if unaffordable/maxed.
       buy(id, wallet) {
         const cost = this.nextCost(id);
         if (cost == null || !wallet.canAfford(cost)) return false;
         const u = UPGRADES.find((x) => x.id === id);
-        wallet.spend(cost, `Tractor upgrade: ${u.name} level ${state.upgrades[id] + 1}`);
-        state.upgrades[id]++;
+        const up = cur();
+        wallet.spend(cost, `${seriesDef(state.vehicle).vehicle} upgrade: ${u.name} level ${up[id] + 1}`);
+        up[id]++;
         save();
         return true;
       },
@@ -170,13 +225,15 @@
         save();
       },
       isUnlocked(track) {
+        if (!this.seriesUnlocked(state.vehicle)) return false;
         if (!track.unlock || state.unlockAll) return true;
-        const b = state.best[track.unlock.track];
+        const b = state.best[key(track.unlock.track)];
         return !!b && b.place <= track.unlock.place;
       },
       // Records a finished race. `extra` carries { fastestLap, bestLap }.
       // Returns what's new so the results screen can celebrate it.
-      recordResult(trackId, place, time, extra = {}) {
+      recordResult(id, place, time, extra = {}) {
+        const trackId = key(id);
         state.races++;
         if (place === 1) state.wins++;
         const b = state.best[trackId];
@@ -200,15 +257,16 @@
         };
       },
       // Best Farmyard Frenzy score per track; returns true for a new best.
-      recordFrenzy(trackId, popped) {
+      recordFrenzy(id, popped) {
+        const trackId = key(id);
         const best = (state.frenzyBest = state.frenzyBest || {});
         const isBest = popped > (best[trackId] || 0);
         if (isBest) best[trackId] = popped;
         save();
         return isBest;
       },
-      frenzyBest(trackId) {
-        return (state.frenzyBest && state.frenzyBest[trackId]) || 0;
+      frenzyBest(id) {
+        return (state.frenzyBest && state.frenzyBest[key(id)]) || 0;
       },
       // Totals across every track for the cabinet header.
       awardTotals() {
@@ -225,7 +283,7 @@
     };
   }
 
-  const api = { UPGRADES, PAINTS, TROPHIES, MAX_LEVEL, upgradeCost, createGarage };
+  const api = { UPGRADES, PAINTS, TROPHIES, SERIES, MAX_LEVEL, upgradeCost, createGarage };
   root.TractorGarage = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

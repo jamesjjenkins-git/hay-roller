@@ -10,17 +10,40 @@
 
   // Base tractor. Four upgrades (0..5 each) improve it:
   // accel, speed (top speed), handling (tighter turns + grip), boost (nitros).
-  function statsFor(upgrades) {
+  // Each vehicle has its own series. Multipliers are on the tractor's
+  // stats: `turn`/`grip` shape the feel (quads are twitchy and slidey,
+  // motorbikes lean hard into turns), `steerEase` how fast steering responds,
+  // `driftKick` how big the drift button's slide is, `knock` how hard walls
+  // and animals knock you about, `prize` and `cost` scale the economy.
+  const VEHICLES = {
+    tractor: { id: 'tractor', name: 'Tractor', series: 'Tractor Cup', icon: '🚜', speed: 1, accel: 1, turn: 1, grip: 1, steerEase: 1, driftKick: 1, rough: 0.35, knock: 1, prize: 1, cost: 1 },
+    quad: { id: 'quad', name: 'Quad Bike', series: 'Quad Cup', icon: '🏁', speed: 1.25, accel: 1.3, turn: 1.22, grip: 0.8, steerEase: 1.3, driftKick: 1.25, rough: 0.5, knock: 1.1, prize: 1.6, cost: 2 },
+    motorbike: { id: 'motorbike', name: 'Motorbike', series: 'Motorbike Cup', icon: '🏍️', speed: 1.5, accel: 1.55, turn: 1.42, grip: 0.72, steerEase: 1.2, driftKick: 0.8, rough: 0.25, knock: 1.45, prize: 2.4, cost: 3.5 },
+  };
+  const VEHICLE_ORDER = ['tractor', 'quad', 'motorbike'];
+
+  function statsFor(upgrades, vehicle = 'tractor') {
     const u = { accel: 0, speed: 0, handling: 0, boost: 0, ...upgrades };
+    const v = VEHICLES[vehicle] || VEHICLES.tractor;
     return {
-      topSpeed: 165 + u.speed * 17,
-      accel: 150 + u.accel * 26,
-      grip: 6.5 + u.handling * 1.3,
-      turnRate: 3.5 + u.handling * 0.33,
+      vehicle: v.id,
+      topSpeed: (165 + u.speed * 17) * v.speed,
+      accel: (150 + u.accel * 26) * v.accel,
+      grip: (6.5 + u.handling * 1.3) * v.grip,
+      turnRate: (3.5 + u.handling * 0.33) * v.turn,
       // How well it copes with mud and water (0 = badly, 1 = barely notices).
-      rough: 0.35,
+      rough: v.rough,
+      steerEase: v.steerEase,
+      driftKick: v.driftKick,
+      knock: v.knock,
       nitros: 2 + u.boost,
     };
+  }
+
+  // Prize money for a track in a given series.
+  function prizesFor(track, vehicle = 'tractor') {
+    const k = (VEHICLES[vehicle] || VEHICLES.tractor).prize;
+    return track.reward.map((r) => Math.round((r * k) / 10) * 10);
   }
 
   // AI rivals get tougher on later tracks and as the player upgrades.
@@ -30,11 +53,11 @@
   // pace (a touch above a stock tractor's) by the last track.
   const AI_PACE_MIN = 0.89;
   const AI_PACE_MAX = 0.96;
-  function aiStats(track, playerLevel, index) {
+  function aiStats(track, playerLevel, index, vehicle = 'tractor') {
     const skill = track.aiSkill + Math.min(0.5, playerLevel * 0.025);
     const spread = [1.0, 0.96, 0.92][index % 3];
     const lv = Math.max(0, Math.min(5, skill * 5 * spread));
-    const st = statsFor({ accel: lv, speed: lv, handling: lv, boost: Math.round(lv / 2) });
+    const st = statsFor({ accel: lv, speed: lv, handling: lv, boost: Math.round(lv / 2) }, vehicle);
     // Pace keeps rising a little past skill 1 so late tracks stay a fight
     // for a well-upgraded tractor.
     const pace = (AI_PACE_MIN + (AI_PACE_MAX - AI_PACE_MIN) * Math.min(1.3, skill)) * (0.98 + spread * 0.02);
@@ -84,20 +107,20 @@
   // and a clean sweep adds a quarter on top.
   const FRENZY = { animals: 100, time: 60, per: 5, share: 0.05, sweepBonus: 0.25, fleeRange: 100, fleeSpeed: 95 };
 
-  function frenzyRate(track) {
-    return Math.max(5, Math.round((track.reward[0] * FRENZY.share) / 5) * 5);
+  function frenzyRate(track, vehicle = 'tractor') {
+    return Math.max(5, Math.round((prizesFor(track, vehicle)[0] * FRENZY.share) / 5) * 5);
   }
 
   function frenzyEarnings(s) {
     const popped = s.frenzy.popped;
-    const rate = frenzyRate(s.track);
+    const rate = frenzyRate(s.track, s.vehicle);
     const base = Math.floor(popped / FRENZY.per) * rate;
     const sweep = popped >= s.frenzy.total;
     const bonus = sweep ? Math.round((s.frenzy.total / FRENZY.per) * rate * FRENZY.sweepBonus) : 0;
     return { popped, total: s.frenzy.total, rate, per: FRENZY.per, base, sweep, bonus, hay: base + bonus, timeLeft: Math.max(0, s.frenzy.timeLeft) };
   }
 
-  function createRace(trackDef, { seed = 1, playerUpgrades = {}, playerColor, playerLevel = 0, laps, frenzy = false } = {}) {
+  function createRace(trackDef, { seed = 1, playerUpgrades = {}, playerColor, playerLevel = 0, laps, frenzy = false, vehicle = 'tractor' } = {}) {
     const track = trackDef.samples ? trackDef : Tracks.buildTrack(trackDef);
     const rng = FarmRng.mulberry32(seed);
     const start = track.samples[0];
@@ -122,10 +145,11 @@
       const x = start.x - start.tx * back + start.nx * side;
       const y = start.y - start.ty * back + start.ny * side;
       const isPlayer = i === 0;
-      const stats = isPlayer ? statsFor(playerUpgrades) : aiStats(track, playerLevel, i - 1);
+      const stats = isPlayer ? statsFor(playerUpgrades, vehicle) : aiStats(track, playerLevel, i - 1, vehicle);
       return {
         id: i,
         name: d.name,
+        vehicle,
         color: colors[i],
         isPlayer,
         stats,
@@ -167,6 +191,7 @@
     return {
       track,
       rng,
+      vehicle,
       t: 0,
       laps: totalLaps,
       racers,
@@ -333,7 +358,7 @@
       const dir = vf < -5 ? -1 : 1;
       // Ease in and out of turns over a few frames so steering feels smooth,
       // but unwind a little quicker than it winds on to avoid overshoot.
-      const easing = Math.abs(input.steer) < Math.abs(r.steer) ? 20 : 15;
+      const easing = (Math.abs(input.steer) < Math.abs(r.steer) ? 20 : 15) * (st.steerEase || 1);
       r.steer += (input.steer - r.steer) * Math.min(1, easing * DT);
       const turn = r.steer * st.turnRate * turnFactor * dir * DT * (r.drifting ? DRIFT.turnBoost : 1);
       r.heading += turn;
@@ -347,7 +372,7 @@
         : r.steer * DRIFT.swing * Math.min(1, Math.max(0, vf) / st.topSpeed) * (1.4 - 0.4 * gripMul);
       if (r.drifting) {
         // Properly sideways: the tail out, a little more the harder you turn.
-        wantDrift = r.driftSide * (DRIFT.kick + DRIFT.kickSteer * Math.abs(r.steer)) * Math.min(1, vf / 120);
+        wantDrift = r.driftSide * (DRIFT.kick + DRIFT.kickSteer * Math.abs(r.steer)) * (st.driftKick || 1) * Math.min(1, vf / 120);
       }
       r.drift += (wantDrift - r.drift) * Math.min(1, (r.drifting || wasDrifting ? DRIFT.slideEase : DRIFT.ease) * DT);
 
@@ -427,7 +452,7 @@
         }
         // One small speed penalty per knock, bigger the more head-on it was.
         if (r.wallHit <= 0) {
-          const keep = 1 - WALL.loss * (0.6 + 0.4 * headOn);
+          const keep = 1 - Math.min(0.6, WALL.loss * (st.knock || 1) * (0.6 + 0.4 * headOn));
           r.vx *= keep;
           r.vy *= keep;
           r.wallHit = 0.3;
@@ -700,8 +725,9 @@
         a.hitCooldown = ANIMAL.cooldown;
         a.x = r.x + nx * (RADIUS + a.r);
         a.y = r.y + ny * (RADIUS + a.r);
-        r.vx *= 1 - ANIMAL.slow;
-        r.vy *= 1 - ANIMAL.slow;
+        const slow = Math.min(0.7, ANIMAL.slow * (r.stats.knock || 1));
+        r.vx *= 1 - slow;
+        r.vy *= 1 - slow;
         r.bump = Math.max(r.bump, 0.6);
         s.events.push({ type: 'animal', id: r.id, kind: a.kind, x: a.x, y: a.y, power: speed });
         break;
@@ -841,11 +867,12 @@
   // Credits and awards for the player at the end of a race.
   function earnings(s) {
     const p = s.racers[0];
-    const placeReward = s.track.reward[p.place - 1] || 0;
+    const prizes = prizesFor(s.track, s.vehicle);
+    const placeReward = prizes[p.place - 1] || 0;
     const fl = fastestLap(s);
     const fastest = !!fl && fl.id === 0;
     // Fastest lap is worth a tenth of the winner's prize.
-    const lapBonus = fastest ? Math.round(s.track.reward[0] / 100) * 10 : 0;
+    const lapBonus = fastest ? Math.round(prizes[0] / 100) * 10 : 0;
     const bestLap = p.lapTimes.length ? Math.min(...p.lapTimes) : null;
     const trophy = p.place <= 3 ? ['gold', 'silver', 'bronze'][p.place - 1] : null;
     return {
@@ -861,7 +888,7 @@
     };
   }
 
-  const api = { DT, RADIUS, MAX_TIME, DRIVERS, CATCHUP, ASSIST, WALL, ANIMAL, BUMPS, DRIFT, FRENZY, frenzyRate, frenzyEarnings, animalCount, catchUpBoost, aiStats, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
+  const api = { VEHICLES, VEHICLE_ORDER, prizesFor, DT, RADIUS, MAX_TIME, DRIVERS, CATCHUP, ASSIST, WALL, ANIMAL, BUMPS, DRIFT, FRENZY, frenzyRate, frenzyEarnings, animalCount, catchUpBoost, aiStats, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
   root.TractorSim = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

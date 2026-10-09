@@ -1642,3 +1642,19 @@ body.in-race .update-banner { display: none; }
 .hud-lap.hurry { background: #e2412f; color: #fff; animation: pulse 0.6s ease-in-out infinite alternate; }
 @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.08); } }
 .frenzy-results .place small { font-size: 0.5em; opacity: 0.7; }
+
+/* Race series tabs (Tractor Cup / Quad Cup / Motorbike Cup) */
+.series-tabs { display: flex; gap: 8px; margin: 0 0 12px; overflow-x: auto; }
+.series-tab {
+  flex: 1 0 auto; display: flex; align-items: center; gap: 8px; text-align: left;
+  padding: 8px 14px; border: 3px solid var(--ink); border-radius: 14px;
+  background: var(--cream); box-shadow: 0 3px 0 var(--ink); font: inherit; color: var(--ink); cursor: pointer;
+}
+.series-tab .s-icon { font-size: 24px; }
+.series-tab b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 17px; }
+.series-tab small { display: block; font-size: 12px; opacity: 0.75; }
+.series-tab.active { background: var(--straw); }
+.series-tab.locked { opacity: 0.55; cursor: default; }
+.cabinet-card h2 small { font-size: 0.6em; opacity: 0.7; }
+.race-screen.modal-open .rotate-hint { display: none !important; }
+.rbtn-drift.on { box-shadow: 0 0 0 5px #e3c8ff, 0 0 22px 8px rgba(160, 90, 255, 0.8); opacity: 1; }

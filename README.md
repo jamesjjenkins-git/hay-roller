@@ -17,6 +17,7 @@ bumps.
   the pause menu: slide left or right anywhere on the left half to steer at a steady rate; hold
   still for a moment and it's just like lifting your thumb.
   Gas is automatic. **DRIFT** (hold to slide sideways — tighter turns that keep your speed, steer the other way to switch sides; you can drift a whole lap), **NITRO** and **BRAKE** (hold to reverse) sit bottom-right. Keyboard: Shift or X to drift. Play in landscape.
+- **Three race series**: 🚜 **Tractor Cup** → 🏁 **Quad Cup** → 🏍️ **Motorbike Cup**. Each runs the same 11 tracks against rivals on the same vehicle, with its own upgrades (2× and 3.5× the price) and bigger prizes (1.6× and 2.4×). Finish top 3 at the Harvest Grand Prix to unlock the next series. Quads are 25% faster, twitchy and slidey with bigger drifts; motorbikes are 50% faster, lean hard into turns and get knocked about more by walls and animals.
 - **🎈 Farmyard Frenzy bonus round** after every race: just you, 100 escaped animals and one minute. They pop like balloons when you hit them (and scatter when you bear down on them). Every 5 popped pays 5% of that track's winning prize (🌾15 per 5 on Muddy Meadow up to 🌾75 per 5 on the bonus track), so popping all 100 is worth a race win, plus a 25% clean-sweep bonus. Best score per track is remembered.
 - **Two camera views**, switchable any time with the 📷 camera button at the top of the race screen, the **V**
   key, or the pause menu (the choice is remembered):

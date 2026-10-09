@@ -991,7 +991,8 @@
     ctx.translate(r.x + 4 + r.z * 0.35, r.y + 5 + r.z * 0.6);
     ctx.rotate(r.heading + (r.drift || 0));
     ctx.globalAlpha = Math.max(0.12, 0.3 - r.z / 300);
-    roundRect(ctx, -18 * s, -13 * s, 36 * s, 26 * s, 8);
+    const [sw, sh] = r.vehicle === 'motorbike' ? [34, 12] : r.vehicle === 'quad' ? [32, 24] : [36, 26];
+    roundRect(ctx, (-sw / 2) * s, (-sh / 2) * s, sw * s, sh * s, Math.min(8, sh / 2));
     ctx.fillStyle = '#000';
     ctx.fill();
     ctx.restore();
@@ -1011,6 +1012,11 @@
     ctx.translate(r.x, r.y - r.z * 0.4 + shake);
     ctx.rotate(r.heading + (r.drift || 0));
     ctx.scale(s, s);
+    if (r.vehicle === 'quad' || r.vehicle === 'motorbike') {
+      (r.vehicle === 'quad' ? drawQuadBody : drawBikeBody)(ctx, r);
+      ctx.restore();
+      return;
+    }
 
     // Rear wheels with tread.
     for (const side of [-1, 1]) {
@@ -1061,6 +1067,110 @@
     ctx.fillStyle = r.isPlayer ? '#ffd23f' : 'rgba(0,0,0,0.12)';
     ctx.fillRect(-14, -2, 9, 4);
     ctx.restore();
+  }
+
+  function tyre(ctx, x, y, w, h, angle, r) {
+    ctx.save();
+    ctx.translate(x, y);
+    if (angle) ctx.rotate(angle);
+    roundRect(ctx, -w / 2, -h / 2, w, h, Math.min(w, h) / 2.5);
+    fillStroke(ctx, '#262626', 1.8);
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1.2;
+    const spin = ((r.progress || 0) / 2.5) % 3;
+    for (let i = -w / 2 + spin; i < w / 2; i += 3) {
+      ctx.beginPath();
+      ctx.moveTo(i, -h / 2 + 1);
+      ctx.lineTo(i, h / 2 - 1);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function rider(ctx, r, x, lean) {
+    // Shoulders and arms reaching to the bars, then a helmet with a visor.
+    ctx.save();
+    ctx.translate(x, lean);
+    ctx.beginPath();
+    ctx.ellipse(-1, 0, 5, 7.5, 0, 0, Math.PI * 2);
+    fillStroke(ctx, r.isPlayer ? '#2f6fd0' : '#4a4a4a', 1.8);
+    ctx.strokeStyle = OUTLINE;
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(1, -5);
+    ctx.lineTo(9, -6.5 - lean * 0.3);
+    ctx.moveTo(1, 5);
+    ctx.lineTo(9, 6.5 - lean * 0.3);
+    ctx.stroke();
+    circle(ctx, 0, 0, 5);
+    fillStroke(ctx, r.isPlayer ? '#ffd23f' : r.color, 2);
+    ctx.fillStyle = '#263238';
+    ctx.fillRect(2.2, -3.2, 2.6, 6.4);
+    ctx.restore();
+  }
+
+  // Quad bike, facing +x: four fat tyres, a chunky body and racks.
+  function drawQuadBody(ctx, r) {
+    tyre(ctx, -9, -10, 10, 6, 0, r);
+    tyre(ctx, -9, 10, 10, 6, 0, r);
+    tyre(ctx, 11, -9.5, 9, 5.5, r.steer * 0.45, r);
+    tyre(ctx, 11, 9.5, 9, 5.5, r.steer * 0.45, r);
+    // Rear rack, body and front rack.
+    roundRect(ctx, -17, -7, 7, 14, 2);
+    fillStroke(ctx, '#555', 1.6);
+    roundRect(ctx, -12, -8, 26, 16, 6);
+    fillStroke(ctx, r.color, 2.2);
+    ctx.fillStyle = shade(r.color, 0.18);
+    ctx.fillRect(4, -5, 8, 3);
+    roundRect(ctx, 13, -6, 5, 12, 2);
+    fillStroke(ctx, '#555', 1.6);
+    // Seat.
+    roundRect(ctx, -9, -4, 10, 8, 3);
+    fillStroke(ctx, '#2b2b2b', 1.5);
+    // Handlebars turn with the steering.
+    ctx.save();
+    ctx.translate(8, 0);
+    ctx.rotate(r.steer * 0.3);
+    ctx.strokeStyle = OUTLINE;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(0, -8);
+    ctx.lineTo(0, 8);
+    ctx.stroke();
+    ctx.restore();
+    rider(ctx, r, -3, r.steer * 1.5);
+  }
+
+  // Motorbike, facing +x: two wheels in line, a slim body, and a rider who
+  // leans into the turn.
+  function drawBikeBody(ctx, r) {
+    const lean = r.steer * 4 + (r.drift || 0) * 3;
+    tyre(ctx, -13, 0, 13, 5, 0, r);
+    tyre(ctx, 14, 0, 12, 4.5, r.steer * 0.35, r);
+    // Swingarm, exhaust and frame.
+    ctx.fillStyle = '#555';
+    ctx.fillRect(-13, -1.2, 10, 2.4);
+    roundRect(ctx, -16, 3, 12, 3, 1.5);
+    fillStroke(ctx, '#c9c9c9', 1.2);
+    roundRect(ctx, -8, -4.5, 20, 9, 4);
+    fillStroke(ctx, r.color, 2);
+    // Tank stripe and number plate.
+    ctx.fillStyle = shade(r.color, 0.2);
+    ctx.fillRect(2, -2.5, 7, 5);
+    roundRect(ctx, 9, -3.5, 5, 7, 2);
+    fillStroke(ctx, '#fff', 1.4);
+    // Bars.
+    ctx.save();
+    ctx.translate(10, 0);
+    ctx.rotate(r.steer * 0.35);
+    ctx.strokeStyle = OUTLINE;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(0, -8);
+    ctx.lineTo(0, 8);
+    ctx.stroke();
+    ctx.restore();
+    rider(ctx, r, -2, lean);
   }
 
   function drawFlagman(ctx, sim, view, now) {

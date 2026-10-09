@@ -2,7 +2,7 @@
 (function (root) {
   const Sim = root.TractorSim;
   const { TRACKS, WORLD, buildTrack } = root.TractorTracks;
-  const { UPGRADES, PAINTS, TROPHIES, MAX_LEVEL, createGarage } = root.TractorGarage;
+  const { UPGRADES, PAINTS, TROPHIES, SERIES, MAX_LEVEL, createGarage } = root.TractorGarage;
   const TROPHY_ICON = { gold: '🥇', silver: '🥈', bronze: '🥉' };
   const SELECTED_KEY = 'farmCasino.tractor.track';
   const VIEW_KEY = 'farmCasino.tractor.view';
@@ -350,8 +350,22 @@
         `<button class="paint ${st.paint === p.id ? 'active' : ''} ${garage.paintOwned(p.id) ? '' : 'locked'}" data-paint="${p.id}" style="--paint:${p.hex}"
           title="${p.name}${garage.paintOwned(p.id) ? '' : ` — 🪙${p.gold} Gold`}" aria-label="${p.name} paint${garage.paintOwned(p.id) ? '' : `, costs ${p.gold} Gold`}">${garage.paintOwned(p.id) ? '' : `<span class="paint-price">🪙${p.gold}</span>`}</button>`).join('');
 
-      const stats = Sim.statsFor(st.upgrades);
-      const max = Sim.statsFor({ accel: 5, speed: 5, handling: 5, boost: 5 });
+      // Series tabs: Tractor Cup → Quad Cup → Motorbike Cup.
+      $('#series-tabs').innerHTML = SERIES.map((sr) => {
+        const open = garage.seriesUnlocked(sr.id);
+        const need = sr.unlock && SERIES.find((x) => x.id === sr.unlock.series);
+        const needTrack = sr.unlock && TRACKS.find((x) => x.id === sr.unlock.track);
+        return `<button class="series-tab ${garage.vehicle === sr.id ? 'active' : ''} ${open ? '' : 'locked'}" data-series="${sr.id}" role="tab" aria-selected="${garage.vehicle === sr.id}" ${open ? '' : 'disabled'}>
+          <span class="s-icon">${open ? sr.icon : '🔒'}</span>
+          <span><b>${sr.name}</b><small>${open ? sr.vehicle : `Top 3 at ${needTrack.name} in the ${need.name}`}</small></span>
+        </button>`;
+      }).join('');
+      $('.g-upgrades h2').textContent = `${garage.series.vehicle} upgrades`;
+
+      // Bars run from a stock tractor to a maxed motorbike, so faster
+      // vehicles visibly fill them further.
+      const stats = Sim.statsFor(garage.upgrades, garage.vehicle);
+      const max = Sim.statsFor({ accel: 5, speed: 5, handling: 5, boost: 5 }, 'motorbike');
       const base = Sim.statsFor({});
       const bar = (label, v, lo, hi) => {
         const pct = Math.round(15 + ((v - lo) / (hi - lo)) * 85);
@@ -364,7 +378,7 @@
         `<div class="sbar"><span>Boosts</span><b>${'🔥'.repeat(stats.nitros)}</b></div>`;
 
       $('#upgrade-list').innerHTML = UPGRADES.map((u) => {
-        const lvl = st.upgrades[u.id];
+        const lvl = garage.upgrades[u.id];
         const cost = garage.nextCost(u.id);
         const afford = cost != null && wallet.canAfford(cost);
         const pips = Array.from({ length: MAX_LEVEL }, (_, i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('');
@@ -379,8 +393,8 @@
 
       $('#track-list').innerHTML = TRACKS.map((t) => {
         const unlocked = garage.isUnlocked(t);
-        const best = st.best[t.id];
-        const aw = st.awards[t.id];
+        const best = garage.bestFor(t.id);
+        const aw = garage.awardsFor(t.id);
         const need = t.unlock && TRACKS.find((x) => x.id === t.unlock.track);
         const badge = best && best.place <= 3 ? `<span class="t-trophy" title="Best finish: ${ordinal(best.place)}">${TROPHY_ICON[TROPHIES[best.place - 1].id]}</span>` : '';
         return `<button class="track ${selected.id === t.id ? 'active' : ''} ${unlocked ? '' : 'locked'}" data-track="${t.id}" ${unlocked ? '' : 'disabled'}>
@@ -388,7 +402,7 @@
           <span class="t-info">
             <b>${unlocked ? '' : '🔒 '}${t.name}${t.bonus ? ' <span class="bonus-tag">BONUS</span>' : ''}</b>
             <small>${unlocked ? t.blurb : `Finish ${ordinal(t.unlock.place)} or better on ${need.name} to unlock`}</small>
-            <small class="t-meta">#${TRACKS.indexOf(t) + 1} · ${t.laps} laps · 1st pays 🌾${fmt(t.reward[0])}${best ? ` · Best: ${ordinal(best.place)}` : ''}${aw && aw.bestLap ? ` · Lap ${fmtLap(aw.bestLap)}` : ''}</small>
+            <small class="t-meta">#${TRACKS.indexOf(t) + 1} · ${t.laps} laps · 1st pays 🌾${fmt(Sim.prizesFor(t, garage.vehicle)[0])}${best ? ` · Best: ${ordinal(best.place)}` : ''}${aw && aw.bestLap ? ` · Lap ${fmtLap(aw.bestLap)}` : ''}</small>
           </span>
           ${badge}
         </button>`;
@@ -438,7 +452,7 @@
       const x = c.getContext('2d');
       x.setTransform(dpr, 0, 0, dpr, 0, 0);
       x.clearRect(0, 0, w, h);
-      const fake = { x: 0, y: 0, z: 0, heading: -0.35, steer: 0.4, color: garage.paintHex(), isPlayer: true, bump: 0, progress: 0, id: 0 };
+      const fake = { x: 0, y: 0, z: 0, heading: -0.35, steer: 0.4, color: garage.paintHex(), isPlayer: true, bump: 0, progress: 0, id: 0, vehicle: garage.vehicle };
       x.translate(w / 2, h / 2);
       x.scale(3.6, 3.6);
       x.fillStyle = 'rgba(0,0,0,0.2)';
@@ -452,12 +466,21 @@
       const buy = e.target.closest('[data-buy]');
       const paint = e.target.closest('[data-paint]');
       const track = e.target.closest('[data-track]');
+      const series = e.target.closest('[data-series]');
+      if (series && !series.disabled) {
+        if (garage.setVehicle(series.dataset.series)) {
+          sound.chip();
+          if (!garage.isUnlocked(selected)) selected = TRACKS[0];
+          renderGarage();
+        }
+        return;
+      }
       if (buy) {
         const id = buy.dataset.buy;
         const cost = garage.nextCost(id);
         if (garage.buy(id, wallet)) {
           sound.coins();
-          toast(`${UPGRADES.find((u) => u.id === id).name} upgraded to level ${garage.state.upgrades[id]}!`, 'good');
+          toast(`${UPGRADES.find((u) => u.id === id).name} upgraded to level ${garage.upgrades[id]}!`, 'good');
         } else {
           sound.click();
           toast(`You need 🌾${fmt(cost - wallet.balance)} more Hay. Win races, try the mini games, or get free Hay in your wallet.`, 'warn');
@@ -532,9 +555,10 @@
       const track = getTrack(selected);
       sim = Sim.createRace(track, {
         seed: root.FarmRng.randomSeed(),
-        playerUpgrades: garage.state.upgrades,
+        playerUpgrades: garage.upgrades,
         playerColor: garage.paintHex(),
         playerLevel: garage.level,
+        vehicle: garage.vehicle,
         frenzy: kind === 'frenzy',
       });
       raceEl.classList.toggle('frenzy', kind === 'frenzy');
@@ -725,7 +749,9 @@
       const e = Sim.earnings(sim);
       const me = sim.racers[0];
       lastEarnings = e;
+      const seriesBefore = SERIES.filter((sr) => garage.seriesUnlocked(sr.id)).length;
       const award = garage.recordResult(selected.id, e.place, me.finishTime, { fastestLap: e.fastestLap, bestLap: e.bestLap });
+      const newSeries = SERIES.filter((sr) => garage.seriesUnlocked(sr.id)).slice(seriesBefore);
       const extras = [e.cash ? `+${e.cash} cash bags` : '', e.fastestLap ? `+${e.lapBonus} fastest lap` : ''].filter(Boolean).join(', ');
       if (e.total > 0) wallet.credit(e.total, `Tractor Rally — ${ordinal(e.place)} at ${selected.name}${extras ? ` (${extras})` : ''}`);
       if (e.place === 1) sound.fanfare();
@@ -738,7 +764,7 @@
         modal.innerHTML = `
           <div class="rmodal-card results">
             <div class="place place-${e.place}">${ordinal(e.place)}</div>
-            <div class="r-sub">${selected.name}${me.finishTime ? ` · ${fmtTime(me.finishTime)}` : ''}</div>
+            <div class="r-sub">${garage.series.name} · ${selected.name}${me.finishTime ? ` · ${fmtTime(me.finishTime)}` : ''}</div>
             <ol class="r-order">${order.map((id) => {
               const r = sim.racers[id];
               return `<li class="${r.isPlayer ? 'me' : ''}"><span class="dot" style="background:${r.color}"></span>${r.name}</li>`;
@@ -753,6 +779,7 @@
                 : ''}
             </div>
             ${awardsHtml(e, award, newlyUnlocked)}
+            ${newSeries.map((sr) => `<div class="awards"><div class="award unlocked"><span class="a-icon">${sr.icon}</span><span><b>${sr.name} unlocked!</b><small>Pick it in the garage to race the ${sr.vehicle}</small></span></div></div>`).join('')}
             <div class="r-actions three">
               <button class="btn btn-ghost" data-act="garage">Garage</button>
               <button class="btn btn-ghost" data-act="again">Race again</button>
@@ -826,7 +853,7 @@
       cabinet.innerHTML = `
         <div class="cabinet-card" role="dialog" aria-label="Trophy cabinet">
           <button class="modal-close" data-close aria-label="Close">✕</button>
-          <h2>🏆 Trophy Cabinet</h2>
+          <h2>🏆 Trophy Cabinet <small>${garage.series.name}</small></h2>
           <div class="cab-totals">
             <div><span>🥇</span><b>${tot.gold}</b><small>Gold</small></div>
             <div><span>🥈</span><b>${tot.silver}</b><small>Silver</small></div>
@@ -837,8 +864,8 @@
           <div class="cab-rows">
             <div class="cab-row head"><span>Track</span><span>Best</span><span>🥇</span><span>🥈</span><span>🥉</span><span>⏱️</span><span>Best lap</span></div>
             ${TRACKS.map((t, i) => {
-              const a = st.awards[t.id] || {};
-              const b = st.best[t.id];
+              const a = garage.awardsFor(t.id) || {};
+              const b = garage.bestFor(t.id);
               const unlocked = garage.isUnlocked(t);
               const bestIcon = b && b.place <= 3 ? TROPHY_ICON[TROPHIES[b.place - 1].id] : b ? ordinal(b.place) : '—';
               return `<div class="cab-row ${unlocked ? '' : 'locked'}">
@@ -874,6 +901,7 @@
         $('#hud-nitro').textContent = me.nitros ? '🔥'.repeat(Math.min(me.nitros, 6)) : '—';
         $('#hud-cash').textContent = `🌾 ${fmt(Math.floor(f.popped / Sim.FRENZY.per) * rate)}`;
         $('#btn-nitro').classList.toggle('empty', me.nitros === 0);
+        $('#btn-drift').classList.toggle('on', !!me.drifting);
         return;
       }
       $('#hud-lap').classList.remove('hurry');
@@ -893,6 +921,7 @@
         timeEl.classList.remove('flash');
       }
       $('#btn-nitro').classList.toggle('empty', me.nitros === 0);
+      $('#btn-drift').classList.toggle('on', !!me.drifting);
     }
 
     function frame(now) {
@@ -904,6 +933,8 @@
 
       // Phones must be sideways to race: hold the countdown until rotated,
       // and pause if the phone is turned upright mid-race.
+      // The "turn your phone sideways" hint is only for racing, not menus.
+      raceEl.classList.toggle('modal-open', !modal.classList.contains('hidden'));
       const needsRotate = raceEl.classList.contains('portrait') && matchMedia('(pointer: coarse)').matches;
       if (needsRotate && phase === 'racing') togglePause();
       if (phase === 'countdown' && needsRotate) {

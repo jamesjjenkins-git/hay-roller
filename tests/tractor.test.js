@@ -506,3 +506,36 @@ test('Farmyard Frenzy pays 5% of the winning prize per 5 popped, plus a clean sw
   const last = Sim.createRace(Tracks.TRACKS[Tracks.TRACKS.length - 1], { seed: 1, frenzy: true });
   assert.equal(Sim.frenzyRate(last.track), 75);
 });
+
+test('vehicles: quads are faster than tractors, motorbikes faster still, and pay more', () => {
+  const t = Sim.statsFor({}, 'tractor');
+  const q = Sim.statsFor({}, 'quad');
+  const m = Sim.statsFor({}, 'motorbike');
+  assert.ok(q.topSpeed > t.topSpeed && m.topSpeed > q.topSpeed);
+  assert.ok(q.accel > t.accel && m.accel > q.accel);
+  const track = Tracks.buildTrack(Tracks.TRACKS[0]);
+  const [pt, pq, pm] = ['tractor', 'quad', 'motorbike'].map((v) => Sim.prizesFor(track, v)[0]);
+  assert.ok(pq > pt && pm > pq);
+  const s = Sim.createRace(Tracks.TRACKS[0], { seed: 1, vehicle: 'motorbike' });
+  assert.ok(s.racers.every((r) => r.vehicle === 'motorbike' && r.stats.vehicle === 'motorbike'));
+});
+
+test('series: Quad Cup unlocks with a top 3 at the Harvest Grand Prix, with its own upgrades and results', () => {
+  const g = Garage.createGarage(memStore());
+  assert.equal(g.vehicle, 'tractor');
+  assert.ok(!g.seriesUnlocked('quad'));
+  assert.ok(!g.setVehicle('quad'));
+  g.recordResult('harvest', 3, 100);
+  assert.ok(g.seriesUnlocked('quad'));
+  assert.ok(!g.seriesUnlocked('motorbike'));
+  assert.ok(g.setVehicle('quad'));
+  // Fresh upgrades and track progress in the new series, at a higher price.
+  assert.equal(g.level, 0);
+  assert.ok(g.nextCost('speed') > Garage.upgradeCost('speed', 0));
+  assert.equal(g.bestFor('harvest'), undefined);
+  assert.ok(!g.isUnlocked(Tracks.TRACKS.find((t) => t.id === 'barnyard')));
+  g.recordResult('harvest', 1, 90);
+  assert.ok(g.seriesUnlocked('motorbike'));
+  g.setVehicle('tractor');
+  assert.equal(g.bestFor('harvest').place, 3);
+});
