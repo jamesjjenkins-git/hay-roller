@@ -421,9 +421,26 @@
       const x1 = v.rx + v.rw + 30;
       const y0 = v.ry - 30;
       const y1 = v.ry + v.rh + 60;
+      // Where the road runs up or down the screen, a wall piece beside a
+      // vehicle (rather than ahead of or behind it) is drawn before it, so
+      // the vehicle rubs along the wall instead of alternately going over
+      // and under the pieces it passes.
+      const besideKey = (w) => {
+        let key = w.gy;
+        const s = w.si != null ? track.samples[w.si] : null;
+        if (!s || Math.abs(s.ny) > 0.6) return key;
+        for (const r of sim.racers) {
+          const dx = w.x - r.x;
+          const dy = w.gy - r.y;
+          const along = dx * s.tx + dy * s.ty;
+          const across = dx * s.nx + dy * s.ny;
+          if (Math.abs(along) < 40 && Math.abs(across) < 36 && Math.abs(dx) > Math.abs(dy) * 0.7) key = Math.min(key, r.y - 0.5);
+        }
+        return key;
+      };
       for (const w of track.wallItems || []) {
         if (w.x < x0 || w.x > x1 || w.y < y0 || w.y > y1) continue;
-        items.push(upOn({ y: w.gy, w }, w.si));
+        items.push(upOn({ y: besideKey(w), w }, w.si));
       }
       for (const a of sim.animals || []) items.push(upOn({ y: a.y, a }, a.idx));
       for (const p of sim.pickups) items.push(upOn({ y: p.y, p }, p.idx));
