@@ -1,11 +1,12 @@
-# Publishes the game to GitHub Pages on every push to the main branch.
+# Publishes the game to GitHub Pages on every push to master.
 # One-off setup in the repo: Settings → Pages → Build and deployment →
 # Source: "GitHub Actions". (Free accounts need the repo to be public.)
 name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [claude/farm-casino-hay-races-jjno0j]
+    # The old branch stays listed only until it's deleted after the switch to master.
+    branches: [master, claude/farm-casino-hay-races-jjno0j]
   workflow_dispatch:
 
 permissions:
