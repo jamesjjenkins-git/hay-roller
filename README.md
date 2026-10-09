@@ -40,6 +40,11 @@ bumps.
   Barnyard Bend, Pig Pen Pass, Duck Pond Dash, Cornfield Chase, Sheep Dip Slalom, Haystack Hill,
   Windmill Way, Orchard Run and the Harvest Grand Prix. Rivals get faster and prizes get bigger
   (300 → 1,400 credits for a win) as you go, and rivals also scale a little with your upgrades.
+- **Bonus track 11: Figure-8 Frenzy** — a figure of eight with a real crossroads in the middle
+  where tractors cross paths (and can T-bone each other). Unlocks after a top-3 finish at the
+  Harvest Grand Prix.
+- **Unlock all tracks (testing):** a switch under the track list in the garage opens every track
+  regardless of results; switch it off to go back to normal unlocks.
 
 - **Awards:** finish 1st, 2nd or 3rd for a 🥇🥈🥉 trophy on that track. Set the quickest lap of
   the race for the ⏱️ **Fastest Lap** award and a bonus (a tenth of the track's winning prize).

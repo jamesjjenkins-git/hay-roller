@@ -161,8 +161,16 @@
           save();
         }
       },
+      // Testing switch: every track is open regardless of results.
+      get unlockAll() {
+        return !!state.unlockAll;
+      },
+      setUnlockAll(on) {
+        state.unlockAll = !!on;
+        save();
+      },
       isUnlocked(track) {
-        if (!track.unlock) return true;
+        if (!track.unlock || state.unlockAll) return true;
         const b = state.best[track.unlock.track];
         return !!b && b.place <= track.unlock.place;
       },

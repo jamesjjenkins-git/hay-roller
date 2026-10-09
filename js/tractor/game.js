@@ -262,7 +262,7 @@
         return `<button class="track ${selected.id === t.id ? 'active' : ''} ${unlocked ? '' : 'locked'}" data-track="${t.id}" ${unlocked ? '' : 'disabled'}>
           <canvas class="track-thumb" data-thumb="${t.id}" width="240" height="136"></canvas>
           <span class="t-info">
-            <b>${unlocked ? '' : '🔒 '}${t.name}</b>
+            <b>${unlocked ? '' : '🔒 '}${t.name}${t.bonus ? ' <span class="bonus-tag">BONUS</span>' : ''}</b>
             <small>${unlocked ? t.blurb : `Finish ${ordinal(t.unlock.place)} or better on ${need.name} to unlock`}</small>
             <small class="t-meta">#${TRACKS.indexOf(t) + 1} · ${t.laps} laps · 1st pays 🌾${fmt(t.reward[0])}${best ? ` · Best: ${ordinal(best.place)}` : ''}${aw && aw.bestLap ? ` · Lap ${fmtLap(aw.bestLap)}` : ''}</small>
           </span>
@@ -279,6 +279,7 @@
         list.scrollTop = Math.max(0, active.offsetTop - list.offsetTop - 8);
       }
       $('#dock-track-name').textContent = selected.name;
+      $('#unlock-all').checked = garage.unlockAll;
 
       drawPreview();
     }
@@ -366,6 +367,14 @@
         sound.click();
         renderGarage();
       }
+    });
+
+    $('#unlock-all').addEventListener('change', (e) => {
+      garage.setUnlockAll(e.target.checked);
+      sound.click();
+      toast(e.target.checked ? 'All tracks unlocked for testing' : 'Track unlocks back to normal', 'info');
+      if (!garage.isUnlocked(selected)) selected = TRACKS[0];
+      renderGarage();
     });
 
     $('#race-btn').addEventListener('click', () => {

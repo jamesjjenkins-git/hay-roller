@@ -304,6 +304,41 @@
         { kind: 'hay', x: 538, y: 406 },
       ],
     },
+    {
+      id: 'figure8',
+      name: 'Figure-8 Frenzy',
+      blurb: 'Bonus track! A figure of eight — mind the crossroads in the middle.',
+      bonus: true,
+      laps: 4,
+      width: 92,
+      aiSkill: 0.7,
+      reward: [1500, 800, 400, 150],
+      unlock: { track: 'harvest', place: 3 },
+      // The two halves cross here on purpose; walls belong to each stretch
+      // of road, so tractors drive straight through (and into each other).
+      crossing: { x: 600, y: 365, r: 120 },
+      points: [
+        [859, 584], [748, 511], [625, 391], [500, 264], [384, 168], [284, 135],
+        [211, 175], [169, 275], [162, 404], [190, 521], [252, 587], [341, 584],
+        [452, 511], [575, 391], [700, 264], [816, 168], [916, 135], [989, 175],
+        [1031, 275], [1038, 404], [1010, 521], [948, 587],
+      ],
+      features: [
+        { type: 'jump', at: 0.18 },
+        { type: 'mud', at: 0.36, off: 0, len: 80 },
+        { type: 'bumps', at: 0.5, len: 60 },
+        { type: 'jump', at: 0.68 },
+        { type: 'water', at: 0.86, off: 0, len: 80 },
+      ],
+      scenery: [
+        { kind: 'pond', x: 300, y: 370 },
+        { kind: 'barn', x: 900, y: 370 },
+        { kind: 'tree', x: 600, y: 120 },
+        { kind: 'tree', x: 600, y: 615 },
+        { kind: 'hay', x: 100, y: 600 },
+        { kind: 'hay', x: 1100, y: 130 },
+      ],
+    },
   ];
 
   function catmullRom(p0, p1, p2, p3, t) {

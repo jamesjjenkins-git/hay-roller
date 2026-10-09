@@ -24,6 +24,10 @@ test('tracks keep separate stretches apart so walls never merge', () => {
       for (let j = i + 1; j < t.count; j += 2) {
         const along = Math.min(j - i, t.count - (j - i)) * Tracks.SAMPLE_STEP;
         if (along < 2 * t.width) continue;
+        // A figure-of-8 declares where its halves are meant to cross.
+        const c = def.crossing;
+        const nearCross = (p) => c && Math.hypot(p.x - c.x, p.y - c.y) < c.r;
+        if (nearCross(t.samples[i]) || nearCross(t.samples[j])) continue;
         const d = Math.hypot(t.samples[i].x - t.samples[j].x, t.samples[i].y - t.samples[j].y);
         assert.ok(d >= t.width + 24, `${def.id}: samples ${i}/${j} only ${d.toFixed(0)}px apart`);
       }
@@ -225,7 +229,7 @@ test('the first track is winnable with a stock tractor', () => {
 
 test('rivals are slower than a stock tractor on track 1 and match an upgraded one on the last', () => {
   const first = Tracks.TRACKS[0];
-  const last = Tracks.TRACKS[Tracks.TRACKS.length - 1];
+  const last = Tracks.TRACKS.find((t) => t.id === 'harvest');
   const stock = Sim.statsFor({});
   assert.ok(Sim.aiStats(first, 0, 0).topSpeed < stock.topSpeed * 0.95);
   assert.ok(Sim.aiStats(last, 0, 0).topSpeed > Sim.statsFor({ speed: 3 }).topSpeed);
@@ -269,4 +273,28 @@ test('after a crash the player claws back towards the pack', () => {
   const withBand = gapLater(0.16);
   const without = gapLater(0);
   assert.ok(withBand < without - 60, `gap with banding ${withBand.toFixed(0)} vs without ${without.toFixed(0)}`);
+});
+
+test('the figure-of-8 bonus track really crosses itself and is drivable', () => {
+  const def = Tracks.TRACKS.find((t) => t.id === 'figure8');
+  const t = Tracks.buildTrack(def);
+  const near = t.samples.filter((p) => Math.hypot(p.x - def.crossing.x, p.y - def.crossing.y) < 20).map((p) => p.dist);
+  const spread = Math.max(...near) - Math.min(...near);
+  assert.ok(spread > t.length / 3, 'two separate stretches pass through the crossroads');
+  const s = Sim.createRace(def, { seed: 2 });
+  while (!s.done) {
+    Sim.step(s, { 0: stickDriver(s) });
+    s.events.length = 0;
+  }
+  assert.ok(s.racers[0].progress >= def.laps * s.track.length, 'laps count correctly through the crossing');
+});
+
+test('unlock-all opens every track and can be switched off', () => {
+  const g = Garage.createGarage(memStore());
+  const locked = Tracks.TRACKS.filter((t) => !g.isUnlocked(t));
+  assert.ok(locked.length >= 9);
+  g.setUnlockAll(true);
+  assert.ok(Tracks.TRACKS.every((t) => g.isUnlocked(t)));
+  g.setUnlockAll(false);
+  assert.strictEqual(Tracks.TRACKS.filter((t) => !g.isUnlocked(t)).length, locked.length);
 });

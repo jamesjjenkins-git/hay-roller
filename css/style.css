@@ -671,6 +671,10 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px 16px 48px; }
 .t-info small { display: block; font-size: 12px; opacity: 0.75; }
 .t-info .t-meta { opacity: 1; font-weight: 800; margin-top: 2px; }
 .race-btn { width: 100%; font-size: 26px; }
+.unlock-all { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 8px 10px; border: 2px dashed #b9a77a; border-radius: 10px; font-weight: 800; font-size: 14px; cursor: pointer; }
+.unlock-all input { width: 20px; height: 20px; accent-color: var(--good); }
+.unlock-all small { opacity: 0.6; }
+.bonus-tag { display: inline-block; padding: 0 6px; border-radius: 6px; background: #8e44c9; color: #fff; font-family: var(--font-body); font-weight: 800; font-size: 11px; vertical-align: middle; }
 
 /* ---------- Awards ---------- */
 
