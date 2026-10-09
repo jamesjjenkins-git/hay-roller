@@ -712,7 +712,6 @@
       corners.push([x, H - h - 6], [W - w - x, H - h - 6]);
     }
     for (let y = UI_KEEP_OUT.top; y <= H - UI_KEEP_OUT.bottom - h; y += 30) corners.push([14, y], [W - w - 14, y]);
-    corners.push([W - w - 14, H - h - 6], [14, H - h - 6]);
     const lifts = t.samples.map((_, i) => liftAt(t, i));
     let best = null;
     for (const [x, y] of corners) {
