@@ -114,6 +114,16 @@ the 🪙 pill to jump to the Gold store. Balances, purchases and history are sto
 Bets are taken from the wallet when the race starts. If you leave the page or reload mid-race, the
 race is replayed from its seed and settled, so a bet is never lost or left hanging.
 
+## Playing on your phone (GitHub Pages)
+`.github/workflows/pages.yml` publishes the game on every push (after the tests pass) to
+**https://jamesjjenkins-git.github.io/hay-roller/**. One-off setup:
+1. The repo must be public on a free GitHub plan (Settings → General → Danger Zone → Change
+   visibility), or you need GitHub Pro for Pages on a private repo.
+2. Settings → Pages → Build and deployment → Source: **GitHub Actions**.
+3. Actions tab → *Deploy to GitHub Pages* → **Run workflow** (or just push).
+
+Then on the iPhone open the link in Safari → Share → **Add to Home Screen**.
+
 ## Running it
 No build step and no dependencies. Either open `index.html` directly in a browser, or serve the
 folder:
