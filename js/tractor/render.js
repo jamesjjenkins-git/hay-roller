@@ -737,7 +737,7 @@
   // World px kept clear of the sign for the race HUD (top) and the touch
   // controls (bottom corners).
   const UI_KEEP_OUT = { top: 70, bottom: 190, left: 250 };
-  function placeSignAt(t, w0, k) {
+  function placeSignAt(t, w0, k, overScenery) {
     const w = w0 * k;
     const h = (SIGN.h + SIGN.post) * k;
     // Along the bottom edge between the controls, then down either side
@@ -772,7 +772,7 @@
         const dy = Math.max(y - sy, 0, sy - (y + h));
         clear = Math.min(clear, Math.hypot(dx, dy) - (t.halfWidth + 30));
       });
-      for (const sc of t.scenery) {
+      for (const sc of overScenery ? [] : t.scenery) {
         const [l, tp, r, b] = (SCENERY_BOX[sc.kind] || [-50, -50, 50, 50]).map((v) => v * (sc.scale || 1));
         const by = sc.y - groundAt(sc.x, sc.y);
         const sdx = Math.max(sc.x + l - (x + w), 0, x - (sc.x + r));
@@ -789,16 +789,14 @@
     }
     return best;
   }
-  // Full size where there's room; on crowded tracks a smaller board that
-  // fits clear of the road beats a big one over the walls.
+  // Always full size, so the name stays readable on a phone. Clear of road,
+  // scenery and the flagman where there's room; on crowded tracks it may
+  // stand over scenery, but never over the road or walls.
   function placeSign(t, w) {
-    let best = null;
-    for (const k of [1, 0.8, 0.65]) {
-      const at = placeSignAt(t, w, k);
-      if (at.clear >= 0) return at;
-      if (!best || at.clear > best.clear) best = at;
-    }
-    return best;
+    const at = placeSignAt(t, w, 1, false);
+    if (at.clear >= 0) return at;
+    const over = placeSignAt(t, w, 1, true);
+    return over.clear > at.clear ? over : at;
   }
 
 
