@@ -592,6 +592,7 @@
 
   function animalCount(track) {
     if (track.animals != null) return track.animals;
+    if (track.pack === 'ironman') return 3; // the late-game pack
     const skill = track.aiSkill || 0;
     return skill < 0.3 ? 1 : skill < 0.5 ? 2 : 3;
   }
