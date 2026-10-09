@@ -42,3 +42,27 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return config
     }
 }
+
+// The game's view: no home indicator over the controls, and swipes from the
+// screen edges go to the game first (a second swipe still reaches iOS), so
+// steering near the edge doesn't pull down Control Center or go home.
+// Capacitor's view controller doesn't let subclasses change these, so it
+// runs inside this one.
+class GameViewController: UIViewController {
+    private let bridge = CAPBridgeViewController()
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        addChild(bridge)
+        bridge.view.frame = view.bounds
+        bridge.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.addSubview(bridge.view)
+        bridge.didMove(toParent: self)
+    }
+
+    override var prefersHomeIndicatorAutoHidden: Bool { true }
+    override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge { .all }
+    override var prefersStatusBarHidden: Bool { true }
+    override var childForHomeIndicatorAutoHidden: UIViewController? { nil }
+    override var childForScreenEdgesDeferringSystemGestures: UIViewController? { nil }
+}
