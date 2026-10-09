@@ -68,22 +68,22 @@
             <span class="btn btn-primary">Play now</span>
           </div>
         </a>
-        <div class="game-card soon">
-          <div class="game-art art-pig">🐖🎰</div>
+        <a class="game-card playable" href="#/slots">
+          <div class="game-art art-pig"><span class="art-reels">🍄🐷🥕</span></div>
           <div class="game-body">
             <h2>Piggy Bank Slots</h2>
-            <p>Spin the reels for corn, carrots and golden truffles.</p>
-            <span class="badge">Coming soon</span>
+            <p>Spin the reels for corn, carrots and golden truffles. The pig is wild!</p>
+            <span class="btn btn-primary">Play now</span>
           </div>
-        </div>
-        <div class="game-card soon">
-          <div class="game-art art-egg">🥚🎡</div>
+        </a>
+        <a class="game-card playable" href="#/egg-roulette">
+          <div class="game-art art-egg"><span class="art-hen">🐔</span><span class="art-eggs">🥚🥚🥚</span></div>
           <div class="game-body">
             <h2>Egg Roulette</h2>
-            <p>Which nest will the hen lay in? Place your chips on the coop.</p>
-            <span class="badge">Coming soon</span>
+            <p>Which nest will the hen lay in? Bet on a nest, a colour or a coop.</p>
+            <span class="btn btn-primary">Play now</span>
           </div>
-        </div>
+        </a>
       </div>
       <p class="disclaimer">Credits are free in-game currency with no cash value. Nothing can be bought, sold or withdrawn.</p>
     </section>
@@ -94,7 +94,7 @@
         <div class="game-header">
           <a class="btn btn-ghost" href="#/">← Home</a>
           <h1>The Garage</h1>
-          <span class="race-no" id="garage-record"></span>
+          <button class="race-no trophy-btn" id="garage-record" title="Trophy cabinet"></button>
         </div>
         <div class="garage-grid">
           <div class="g-card g-tractor">
@@ -115,12 +115,15 @@
         </div>
       </div>
 
+      <div class="cabinet hidden" id="cabinet"></div>
+
       <div class="race-screen hidden" id="race-screen">
         <canvas id="tractor-canvas" aria-label="Tractor race track"></canvas>
         <div class="hud">
           <div class="hud-left">
             <div class="hud-pos" id="hud-pos">1<small>st</small></div>
             <div class="hud-lap" id="hud-lap">LAP 1/4</div>
+            <div class="hud-chip hud-time" id="hud-time">⏱ —</div>
           </div>
           <div class="hud-right">
             <div class="hud-chip" id="hud-cash">🌾 0</div>
@@ -138,6 +141,72 @@
         </div>
         <div class="rotate-hint">📱↻<br>Turn your phone sideways to race</div>
         <div class="race-modal hidden" id="race-modal"></div>
+      </div>
+    </section>
+
+    <!-- Piggy Bank Slots -->
+    <section class="view hidden" id="view-slots">
+      <div class="game-header">
+        <a class="btn btn-ghost" href="#/">← Home</a>
+        <h1>Piggy Bank Slots</h1>
+      </div>
+      <div class="slots-layout">
+        <div class="slot-machine">
+          <div class="slot-top"><span class="slot-ear l"></span><span class="slot-ear r"></span><span class="slot-title">🐷 PIGGY BANK 🐷</span></div>
+          <div class="reels">
+            <div class="reel"><div class="reel-strip"></div></div>
+            <div class="reel"><div class="reel-strip"></div></div>
+            <div class="reel"><div class="reel-strip"></div></div>
+            <div class="payline"></div>
+          </div>
+          <div class="slot-readout">
+            <div><small>Win</small><b id="slots-win">—</b></div>
+            <p id="slots-msg" aria-live="polite">Pick a bet and spin!</p>
+          </div>
+          <div class="slot-controls">
+            <div class="bet-stepper">
+              <button class="btn btn-ghost" id="slots-bet-down" aria-label="Lower bet">−</button>
+              <div><small>Bet</small><b id="slots-bet">10</b></div>
+              <button class="btn btn-ghost" id="slots-bet-up" aria-label="Raise bet">+</button>
+            </div>
+            <button class="btn btn-primary btn-big" id="slots-spin">SPIN</button>
+          </div>
+          <div class="coin-layer" id="slots-coins"></div>
+        </div>
+        <aside class="g-card paytable">
+          <h2>Paytable</h2>
+          <div id="slots-paytable"></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Egg Roulette -->
+    <section class="view hidden" id="view-egg-roulette">
+      <div class="game-header">
+        <a class="btn btn-ghost" href="#/">← Home</a>
+        <h1>Egg Roulette</h1>
+      </div>
+      <div class="egg-layout">
+        <div class="egg-wheel">
+          <canvas id="egg-canvas" aria-label="Hen running round thirteen nests"></canvas>
+          <p class="egg-msg" id="egg-msg" aria-live="polite">Place your bets, then let the hen loose.</p>
+          <div class="egg-history"><small>Last eggs</small><div id="egg-history"></div></div>
+        </div>
+        <div class="egg-side">
+          <div class="g-card">
+            <div id="egg-board"></div>
+          </div>
+          <div class="g-card egg-controls">
+            <div class="chip-row" id="egg-chips"></div>
+            <div class="egg-actions">
+              <div class="egg-total"><small>Total bet</small><b id="egg-total">0</b></div>
+              <button class="btn btn-ghost" id="egg-undo">Undo</button>
+              <button class="btn btn-ghost" id="egg-clear">Clear</button>
+            </div>
+            <button class="btn btn-primary btn-big" id="egg-lay">Place a bet</button>
+            <p class="small-print">Single nest pays 12× · Coops pay 3× · Colours, odd/even and halves pay 2×. The golden nest 0 is the farm's edge.</p>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -211,7 +280,12 @@
   <script src="js/sound.js"></script>
   <script src="js/race-sim.js"></script>
   <script src="js/race-render.js"></script>
+  <script src="js/pending.js"></script>
   <script src="js/hay-derby.js"></script>
+  <script src="js/slots/slots-logic.js"></script>
+  <script src="js/slots/slots.js"></script>
+  <script src="js/eggs/egg-logic.js"></script>
+  <script src="js/eggs/egg-roulette.js"></script>
   <script src="js/tractor/tracks.js"></script>
   <script src="js/tractor/sim.js"></script>
   <script src="js/tractor/garage.js"></script>

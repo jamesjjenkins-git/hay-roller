@@ -2,11 +2,13 @@
 (function (root) {
   const Sim = root.TractorSim;
   const { TRACKS, WORLD, buildTrack } = root.TractorTracks;
-  const { UPGRADES, PAINTS, MAX_LEVEL, createGarage } = root.TractorGarage;
+  const { UPGRADES, PAINTS, TROPHIES, MAX_LEVEL, createGarage } = root.TractorGarage;
+  const TROPHY_ICON = { gold: '🥇', silver: '🥈', bronze: '🥉' };
   const SELECTED_KEY = 'farmCasino.tractor.track';
 
   const ordinal = (n) => n + (['th', 'st', 'nd', 'rd'][n % 100 > 10 && n % 100 < 14 ? 0 : n % 10] || 'th');
   const fmt = (n) => n.toLocaleString('en-GB');
+  const fmtLap = (t) => (t == null ? '—' : t < 60 ? `${t.toFixed(2)}s` : fmtTime(t));
   const fmtTime = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;
 
   function createTractorRally({ el, wallet, sound, toast }) {
@@ -35,6 +37,7 @@
     let lastNow = 0;
     let banner = null;
     let finalLapShown = false;
+    let lapFlash = null;
     let mounted = false;
 
     // ---------- Input ----------
@@ -175,7 +178,8 @@
 
     function renderGarage() {
       const st = garage.state;
-      $('#garage-record').textContent = `${st.wins} win${st.wins === 1 ? '' : 's'} · ${st.races} race${st.races === 1 ? '' : 's'}`;
+      const tot = garage.awardTotals();
+      $('#garage-record').innerHTML = `🏆 <span>🥇${tot.gold} 🥈${tot.silver} 🥉${tot.bronze} ⏱️${tot.fastest}</span>`;
 
       $('#paints').innerHTML = PAINTS.map((p) =>
         `<button class="paint ${st.paint === p.id ? 'active' : ''}" data-paint="${p.id}" style="--paint:${p.hex}" title="${p.name}" aria-label="${p.name} paint"></button>`).join('');
@@ -210,14 +214,17 @@
       $('#track-list').innerHTML = TRACKS.map((t) => {
         const unlocked = garage.isUnlocked(t);
         const best = st.best[t.id];
+        const aw = st.awards[t.id];
         const need = t.unlock && TRACKS.find((x) => x.id === t.unlock.track);
+        const badge = best && best.place <= 3 ? `<span class="t-trophy" title="Best finish: ${ordinal(best.place)}">${TROPHY_ICON[TROPHIES[best.place - 1].id]}</span>` : '';
         return `<button class="track ${selected.id === t.id ? 'active' : ''} ${unlocked ? '' : 'locked'}" data-track="${t.id}" ${unlocked ? '' : 'disabled'}>
           <canvas class="track-thumb" data-thumb="${t.id}" width="120" height="68"></canvas>
           <span class="t-info">
             <b>${unlocked ? '' : '🔒 '}${t.name}</b>
             <small>${unlocked ? t.blurb : `Finish ${ordinal(t.unlock.place)} or better on ${need.name} to unlock`}</small>
-            <small class="t-meta">#${TRACKS.indexOf(t) + 1} · ${t.laps} laps · 1st pays 🌾${fmt(t.reward[0])}${best ? ` · Best: ${ordinal(best.place)}${best.time ? ` in ${fmtTime(best.time)}` : ''}` : ''}</small>
+            <small class="t-meta">#${TRACKS.indexOf(t) + 1} · ${t.laps} laps · 1st pays 🌾${fmt(t.reward[0])}${best ? ` · Best: ${ordinal(best.place)}` : ''}${aw && aw.bestLap ? ` · Lap ${fmtLap(aw.bestLap)}` : ''}</small>
           </span>
+          ${badge}
         </button>`;
       }).join('');
       el.querySelectorAll('[data-thumb]').forEach((c) => drawThumb(c, getTrack(TRACKS.find((t) => t.id === c.dataset.thumb))));
@@ -325,6 +332,7 @@
       acc = 0;
       banner = null;
       finalLapShown = false;
+      lapFlash = null;
       modal.classList.add('hidden');
       showRaceScreen(true);
       layout();
@@ -460,8 +468,9 @@
       sound.engineStop();
       const e = Sim.earnings(sim);
       const me = sim.racers[0];
-      garage.recordResult(selected.id, e.place, me.finishTime);
-      if (e.total > 0) wallet.credit(e.total, `Tractor Rally — ${ordinal(e.place)} at ${selected.name}${e.cash ? ` (+${e.cash} cash bags)` : ''}`);
+      const award = garage.recordResult(selected.id, e.place, me.finishTime, { fastestLap: e.fastestLap, bestLap: e.bestLap });
+      const extras = [e.cash ? `+${e.cash} cash bags` : '', e.fastestLap ? `+${e.lapBonus} fastest lap` : ''].filter(Boolean).join(', ');
+      if (e.total > 0) wallet.credit(e.total, `Tractor Rally — ${ordinal(e.place)} at ${selected.name}${extras ? ` (${extras})` : ''}`);
       if (e.place === 1) sound.fanfare();
       else sound.coins();
 
@@ -480,9 +489,10 @@
             <div class="r-money">
               <div><span>${ordinal(e.place)} place prize</span><b>🌾 ${fmt(e.placeReward)}</b></div>
               <div><span>Cash bags</span><b>🌾 ${fmt(e.cash)}</b></div>
+              ${e.fastestLap ? `<div><span>Fastest lap bonus</span><b>🌾 ${fmt(e.lapBonus)}</b></div>` : ''}
               <div class="total"><span>Total earned</span><b>🌾 ${fmt(e.total)}</b></div>
             </div>
-            ${newlyUnlocked.length ? `<p class="unlock">🔓 Unlocked: ${newlyUnlocked.map((t) => t.name).join(', ')}</p>` : ''}
+            ${awardsHtml(e, award, newlyUnlocked)}
             <div class="r-actions">
               <button class="btn btn-ghost" data-act="garage">Garage</button>
               <button class="btn btn-primary btn-big" data-act="again">Race again</button>
@@ -492,6 +502,69 @@
       }, 1500);
     }
 
+    function awardsHtml(e, award, unlocked = []) {
+      const items = [];
+      if (award.trophy) {
+        items.push(`<div class="award ${award.trophy.id}"><span class="a-icon">${TROPHY_ICON[award.trophy.id]}</span><span><b>${award.trophy.name}</b><small>${award.newBestTrophy ? 'New best on this track!' : 'Added to your cabinet'}</small></span></div>`);
+      }
+      if (e.fastestLap) {
+        items.push(`<div class="award fastest"><span class="a-icon">⏱️</span><span><b>Fastest lap</b><small>${fmtLap(e.raceFastestLap.time)} — quickest in the race</small></span></div>`);
+      } else if (e.raceFastestLap) {
+        const who = sim.racers[e.raceFastestLap.id].name;
+        items.push(`<div class="award miss"><span class="a-icon">⏱️</span><span><b>Fastest lap: ${who}</b><small>${fmtLap(e.raceFastestLap.time)} · yours ${fmtLap(e.bestLap)}</small></span></div>`);
+      }
+      if (award.lapRecord) {
+        items.push(`<div class="award record"><span class="a-icon">📈</span><span><b>Personal best lap</b><small>${fmtLap(e.bestLap)} on ${selected.name}</small></span></div>`);
+      }
+      for (const t of unlocked) {
+        items.push(`<div class="award unlocked"><span class="a-icon">🔓</span><span><b>Track unlocked</b><small>${t.name}</small></span></div>`);
+      }
+      return items.length ? `<div class="awards">${items.join('')}</div>` : '';
+    }
+
+    // ---------- Trophy cabinet ----------
+
+    const cabinet = $('#cabinet');
+    function openCabinet() {
+      const st = garage.state;
+      const tot = garage.awardTotals();
+      cabinet.innerHTML = `
+        <div class="cabinet-card" role="dialog" aria-label="Trophy cabinet">
+          <button class="modal-close" data-close aria-label="Close">✕</button>
+          <h2>🏆 Trophy Cabinet</h2>
+          <div class="cab-totals">
+            <div><span>🥇</span><b>${tot.gold}</b><small>Gold</small></div>
+            <div><span>🥈</span><b>${tot.silver}</b><small>Silver</small></div>
+            <div><span>🥉</span><b>${tot.bronze}</b><small>Bronze</small></div>
+            <div><span>⏱️</span><b>${tot.fastest}</b><small>Fastest laps</small></div>
+          </div>
+          <p class="cab-sub">${st.races} race${st.races === 1 ? '' : 's'} · ${st.wins} win${st.wins === 1 ? '' : 's'}</p>
+          <div class="cab-rows">
+            <div class="cab-row head"><span>Track</span><span>Best</span><span>🥇</span><span>🥈</span><span>🥉</span><span>⏱️</span><span>Best lap</span></div>
+            ${TRACKS.map((t, i) => {
+              const a = st.awards[t.id] || {};
+              const b = st.best[t.id];
+              const unlocked = garage.isUnlocked(t);
+              const bestIcon = b && b.place <= 3 ? TROPHY_ICON[TROPHIES[b.place - 1].id] : b ? ordinal(b.place) : '—';
+              return `<div class="cab-row ${unlocked ? '' : 'locked'}">
+                <span class="cab-name">${unlocked ? '' : '🔒 '}${i + 1}. ${t.name}</span>
+                <span class="cab-best">${bestIcon}</span>
+                <span>${a.gold || 0}</span><span>${a.silver || 0}</span><span>${a.bronze || 0}</span><span>${a.fastest || 0}</span>
+                <span>${fmtLap(a.bestLap)}</span>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      cabinet.classList.remove('hidden');
+    }
+    $('#garage-record').addEventListener('click', () => {
+      sound.click();
+      openCabinet();
+    });
+    cabinet.addEventListener('click', (e) => {
+      if (e.target === cabinet || e.target.closest('[data-close]')) cabinet.classList.add('hidden');
+    });
+
     function updateHud() {
       if (!sim) return;
       const me = sim.racers[0];
@@ -500,6 +573,16 @@
       $('#hud-lap').textContent = `LAP ${Math.max(1, Math.min(sim.laps, me.lap))}/${sim.laps}`;
       $('#hud-nitro').textContent = me.nitros ? '🔥'.repeat(Math.min(me.nitros, 6)) + (me.nitros > 6 ? `+${me.nitros - 6}` : '') : '—';
       $('#hud-cash').textContent = `🌾 ${fmt(me.cash)}`;
+      const running = me.lapStart != null && !me.finished ? sim.t - me.lapStart : null;
+      const best = me.lapTimes.length ? Math.min(...me.lapTimes) : null;
+      const timeEl = $('#hud-time');
+      if (lapFlash && sim.t - lapFlash.at < 2.5) {
+        timeEl.textContent = `⏱ ${fmtLap(lapFlash.time)}${lapFlash.best ? ' BEST!' : ''}`;
+        timeEl.classList.toggle('flash', lapFlash.best);
+      } else {
+        timeEl.textContent = `⏱ ${running == null ? '—' : running.toFixed(1)}${best ? ` · best ${fmtLap(best)}` : ''}`;
+        timeEl.classList.remove('flash');
+      }
       $('#btn-nitro').classList.toggle('empty', me.nitros === 0);
     }
 
@@ -562,6 +645,10 @@
         else if (e.type === 'nitro' && mine) sound.whoosh();
         else if (e.type === 'jump' && mine) sound.boing();
         else if (e.type === 'lap' && mine) {
+          if (e.time != null) {
+            const me = sim.racers[0];
+            lapFlash = { time: e.time, at: sim.t, best: e.time <= Math.min(...me.lapTimes) && me.lapTimes.length > 1 };
+          }
           if (e.lap === sim.laps - 1 && !finalLapShown) {
             finalLapShown = true;
             banner = { text: 'FINAL LAP!', t: 1.4 };

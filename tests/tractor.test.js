@@ -75,7 +75,40 @@ test('earnings pay the place prize plus cash bags', () => {
   const s = Sim.createRace(Tracks.TRACKS[0], { seed: 1 });
   s.racers[0].place = 2;
   s.racers[0].cash = 75;
-  assert.deepStrictEqual(Sim.earnings(s), { place: 2, placeReward: Tracks.TRACKS[0].reward[1], cash: 75, total: Tracks.TRACKS[0].reward[1] + 75 });
+  const e = Sim.earnings(s);
+  assert.strictEqual(e.placeReward, Tracks.TRACKS[0].reward[1]);
+  assert.strictEqual(e.trophy, 'silver');
+  assert.strictEqual(e.fastestLap, false);
+  assert.strictEqual(e.total, Tracks.TRACKS[0].reward[1] + 75);
+});
+
+test('every completed lap is timed and the fastest lap earns a bonus', () => {
+  const def = Tracks.TRACKS[0];
+  const s = Sim.createRace(def, { seed: 4, playerUpgrades: { accel: 5, speed: 5, handling: 5 } });
+  while (!s.done) {
+    Sim.step(s, { 0: stickDriver(s) });
+    s.events.length = 0;
+  }
+  const me = s.racers[0];
+  assert.strictEqual(me.lapTimes.length, def.laps);
+  for (const t of me.lapTimes) assert.ok(t > 5 && t < 60, `lap time ${t}`);
+  const e = Sim.earnings(s);
+  const fl = Sim.fastestLap(s);
+  assert.ok(fl);
+  assert.strictEqual(e.fastestLap, fl.id === 0);
+  assert.strictEqual(e.lapBonus, e.fastestLap ? def.reward[0] / 10 : 0);
+  assert.strictEqual(e.bestLap, Math.min(...me.lapTimes));
+  assert.strictEqual(e.total, e.placeReward + e.cash + e.lapBonus);
+});
+
+test('fastest lap goes to whoever set the quickest time', () => {
+  const s = Sim.createRace(Tracks.TRACKS[0], { seed: 1 });
+  s.racers[0].lapTimes = [15.2, 14.9];
+  s.racers[2].lapTimes = [14.5];
+  assert.deepStrictEqual(Sim.fastestLap(s), { id: 2, time: 14.5 });
+  s.racers[0].place = 1;
+  assert.strictEqual(Sim.earnings(s).fastestLap, false);
+  assert.strictEqual(Sim.earnings(s).trophy, 'gold');
 });
 
 test('garage buys upgrades with wallet credits and caps at max level', () => {
@@ -130,4 +163,32 @@ test('old saves carry levels across and refund suspension', () => {
   assert.strictEqual(credited, 420);
   assert.strictEqual(g.payRefund(wallet), 0, 'refund is paid once');
   assert.strictEqual(Garage.createGarage(store).state.refund, 0);
+});
+
+test('trophies and fastest-lap awards are counted per track', () => {
+  const g = Garage.createGarage(memStore());
+  let r = g.recordResult('meadow', 2, 60, { fastestLap: true, bestLap: 14.2 });
+  assert.strictEqual(r.trophy.id, 'silver');
+  assert.strictEqual(r.newBestTrophy, true);
+  assert.strictEqual(r.firstLapTime, true);
+  r = g.recordResult('meadow', 1, 58, { fastestLap: false, bestLap: 13.9 });
+  assert.strictEqual(r.trophy.id, 'gold');
+  assert.strictEqual(r.lapRecord, true);
+  r = g.recordResult('meadow', 1, 59, { bestLap: 14.5 });
+  assert.strictEqual(r.newBestTrophy, false, 'gold again is not a better trophy');
+  assert.strictEqual(r.lapRecord, false);
+  r = g.recordResult('meadow', 4, 70, {});
+  assert.strictEqual(r.trophy, null);
+  assert.deepStrictEqual(g.state.awards.meadow, { gold: 2, silver: 1, bronze: 0, fastest: 1, bestLap: 13.9 });
+  g.recordResult('barnyard', 3, 80, { fastestLap: true, bestLap: 18 });
+  assert.deepStrictEqual(g.awardTotals(), { gold: 2, silver: 1, bronze: 1, fastest: 2 });
+});
+
+test('rivals never share a colour with the player', () => {
+  for (const color of ['#2f6fe2', '#2e9e3e', '#e2412f', '#f07c1b']) {
+    const s = Sim.createRace(Tracks.TRACKS[0], { seed: 1, playerColor: color });
+    const colors = s.racers.map((r) => r.color);
+    assert.strictEqual(new Set(colors).size, 4);
+    assert.strictEqual(colors[0], color);
+  }
 });

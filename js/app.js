@@ -128,6 +128,8 @@
       sound,
       toast,
     }),
+    slots: root.SlotsGame.createSlots({ el: $('#view-slots'), wallet, sound, toast }),
+    'egg-roulette': root.EggRouletteGame.createEggRoulette({ el: $('#view-egg-roulette'), wallet, sound, toast }),
     'hay-derby': root.HayDerby.createHayDerby({
       el: $('#view-hay-derby'),
       wallet,

@@ -44,6 +44,18 @@
     const start = track.samples[0];
     const totalLaps = laps || track.laps;
 
+    // Rivals keep their colours unless one is too close to the player's paint.
+    const colors = DRIVERS.map((d) => d.color);
+    if (playerColor) {
+      colors[0] = playerColor;
+      const spare = ['#e2412f', '#8e44c9', '#f07c1b', '#2fae4a', '#f4c20d', '#2f7de2', '#ffffff'];
+      for (let i = 1; i < colors.length; i++) {
+        if (colorDistance(colors[i], playerColor) < 90) {
+          colors[i] = spare.find((c) => colors.every((u) => colorDistance(u, c) >= 90));
+        }
+      }
+    }
+
     // 2x2 grid behind the start line.
     const racers = DRIVERS.map((d, i) => {
       const back = 34 + Math.floor(i / 2) * 44;
@@ -55,7 +67,7 @@
       return {
         id: i,
         name: d.name,
-        color: isPlayer && playerColor ? playerColor : d.color,
+        color: colors[i],
         isPlayer,
         stats,
         x,
@@ -67,6 +79,8 @@
         idx: Tracks.nearestGlobal(track, x, y),
         progress: 0,
         lap: 0,
+        lapStart: null,
+        lapTimes: [],
         finished: false,
         finishTime: null,
         place: null,
@@ -101,6 +115,12 @@
       events: [],
       done: false,
     };
+  }
+
+  function colorDistance(a, b) {
+    const n = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const [x, y] = [n(a), n(b)];
+    return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
   }
 
   function signedBehind(track, r) {
@@ -358,7 +378,15 @@
     const lap = Math.floor(r.progress / s.track.length) + 1;
     if (lap > r.lap && r.progress > 0) {
       r.lap = lap;
-      if (lap > 1) s.events.push({ type: 'lap', id: r.id, lap: lap - 1 });
+      // Laps are timed from crossing the start line, so lap 1 isn't a standing start.
+      if (lap > 1 && r.lapStart != null) {
+        const time = s.t - r.lapStart;
+        r.lapTimes.push(time);
+        s.events.push({ type: 'lap', id: r.id, lap: lap - 1, time });
+      } else if (lap > 1) {
+        s.events.push({ type: 'lap', id: r.id, lap: lap - 1 });
+      }
+      r.lapStart = s.t;
     }
     if (!r.finished && r.progress >= s.laps * s.track.length) {
       r.finished = true;
@@ -412,14 +440,41 @@
     return s;
   }
 
-  // Credits earned by the player for a finished race.
+  // Quickest completed lap of the race: { id, time } or null.
+  function fastestLap(s) {
+    let best = null;
+    for (const r of s.racers) {
+      for (const time of r.lapTimes) {
+        if (!best || time < best.time) best = { id: r.id, time };
+      }
+    }
+    return best;
+  }
+
+  // Credits and awards for the player at the end of a race.
   function earnings(s) {
     const p = s.racers[0];
     const placeReward = s.track.reward[p.place - 1] || 0;
-    return { place: p.place, placeReward, cash: p.cash, total: placeReward + p.cash };
+    const fl = fastestLap(s);
+    const fastest = !!fl && fl.id === 0;
+    // Fastest lap is worth a tenth of the winner's prize.
+    const lapBonus = fastest ? Math.round(s.track.reward[0] / 100) * 10 : 0;
+    const bestLap = p.lapTimes.length ? Math.min(...p.lapTimes) : null;
+    const trophy = p.place <= 3 ? ['gold', 'silver', 'bronze'][p.place - 1] : null;
+    return {
+      place: p.place,
+      placeReward,
+      cash: p.cash,
+      trophy,
+      fastestLap: fastest,
+      raceFastestLap: fl,
+      lapBonus,
+      bestLap,
+      total: placeReward + p.cash + lapBonus,
+    };
   }
 
-  const api = { DT, RADIUS, MAX_TIME, DRIVERS, statsFor, createRace, step, standings, earnings, angleDiff };
+  const api = { DT, RADIUS, MAX_TIME, DRIVERS, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
   root.TractorSim = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

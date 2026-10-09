@@ -19,6 +19,12 @@
     { id: 'black', hex: '#3a3a3a', name: 'Midnight' },
   ];
 
+  const TROPHIES = [
+    { id: 'gold', icon: '🥇', name: 'Gold trophy' },
+    { id: 'silver', icon: '🥈', name: 'Silver trophy' },
+    { id: 'bronze', icon: '🥉', name: 'Bronze trophy' },
+  ];
+
   function upgradeCost(id, level) {
     const u = UPGRADES.find((x) => x.id === id);
     return Math.round((u.base * Math.pow(level + 1, 1.5)) / 10) * 10;
@@ -30,6 +36,8 @@
       refund: 0, // credits owed back from retired upgrades, paid by the game
       paint: 'red',
       best: {}, // trackId -> { place, time }
+      // trackId -> { gold, silver, bronze, fastest, bestLap }
+      awards: {},
       races: 0,
       wins: 0,
     };
@@ -74,7 +82,7 @@
           const d = defaults();
           const p = JSON.parse(raw);
           const upgrades = migrateUpgrades(p, d.upgrades); // may add p.refund
-          return { ...d, ...p, upgrades, best: p.best || {} };
+          return { ...d, ...p, upgrades, best: p.best || {}, awards: p.awards || {} };
         }
       } catch (e) {
         // Corrupt save: fall back to a fresh garage.
@@ -135,14 +143,38 @@
         const b = state.best[track.unlock.track];
         return !!b && b.place <= track.unlock.place;
       },
-      recordResult(trackId, place, time) {
+      // Records a finished race. `extra` carries { fastestLap, bestLap }.
+      // Returns what's new so the results screen can celebrate it.
+      recordResult(trackId, place, time, extra = {}) {
         state.races++;
         if (place === 1) state.wins++;
         const b = state.best[trackId];
-        if (!b || place < b.place || (place === b.place && time != null && (b.time == null || time < b.time))) {
+        const betterPlace = !b || place < b.place;
+        if (betterPlace || (place === b.place && time != null && (b.time == null || time < b.time))) {
           state.best[trackId] = { place, time };
         }
+        const a = (state.awards[trackId] = { gold: 0, silver: 0, bronze: 0, fastest: 0, bestLap: null, ...state.awards[trackId] });
+        const trophy = TROPHIES[place - 1];
+        if (trophy) a[trophy.id]++;
+        if (extra.fastestLap) a.fastest++;
+        const lapRecord = extra.bestLap != null && (a.bestLap == null || extra.bestLap < a.bestLap);
+        const hadLap = a.bestLap != null;
+        if (lapRecord) a.bestLap = extra.bestLap;
         save();
+        return {
+          trophy: trophy || null,
+          newBestTrophy: !!trophy && betterPlace,
+          lapRecord: lapRecord && hadLap,
+          firstLapTime: lapRecord && !hadLap,
+        };
+      },
+      // Totals across every track for the cabinet header.
+      awardTotals() {
+        const t = { gold: 0, silver: 0, bronze: 0, fastest: 0 };
+        for (const a of Object.values(state.awards)) {
+          for (const k of Object.keys(t)) t[k] += a[k] || 0;
+        }
+        return t;
       },
       reset() {
         state = defaults();
@@ -151,7 +183,7 @@
     };
   }
 
-  const api = { UPGRADES, PAINTS, MAX_LEVEL, upgradeCost, createGarage };
+  const api = { UPGRADES, PAINTS, TROPHIES, MAX_LEVEL, upgradeCost, createGarage };
   root.TractorGarage = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
