@@ -103,7 +103,7 @@
     $('#store-packs').innerHTML = store.PRODUCTS.filter((p) => p.kind === 'gold').map((p) => `
       <button type="button" class="pack gold-pack" data-buy="${p.id}"${off}>
         ${p.tag ? `<span class="pack-tag">${p.tag}</span>` : ''}
-        <b>🪙 ${fmt(p.gold)}</b><small>${p.name}</small><span class="price">${store.price(p.id)}</span>
+        <span class="pack-coin">🪙</span><b>${fmt(p.gold)}</b><small>${p.name}</small><span class="price">${store.price(p.id)}</span>
       </button>`).join('');
     const ra = store.PRODUCTS.find((p) => p.id === 'remove_ads');
     $('#store-extras').innerHTML = store.owns('remove_ads')

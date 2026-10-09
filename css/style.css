@@ -1480,7 +1480,11 @@ kbd {
 .test-mode { margin: 0 0 10px; padding: 8px 10px; background: #e5f0ff; border: 2px dashed #2f6fe2; border-radius: 10px; font-size: 13px; }
 #store-packs { grid-template-columns: repeat(3, 1fr); }
 .gold-pack { position: relative; background: #ffe9a8; }
-.gold-pack b { font-size: 20px; }
+.gold-pack b { font-size: 20px; white-space: nowrap; }
+/* Coin above the amount on every card, and the price pinned to the bottom,
+   so the three cards line up however their names wrap. */
+.gold-pack .pack-coin { font-size: 22px; line-height: 1; }
+.gold-pack .price { margin-top: auto; padding-top: 6px; }
 .pack-tag {
   position: absolute;
   top: -10px;
