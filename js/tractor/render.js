@@ -677,12 +677,16 @@
   const SIGN = { h: 30, post: 7, pad: 8 };
   function placeSign(t, w) {
     const h = SIGN.h + SIGN.post;
+    // The corners first, then anywhere along the bottom or top edge (the
+    // top only either side of the grandstand).
     const corners = [
       [W - w - 14, H - h - 6],
       [14, H - h - 6],
       [W - w - 14, 8],
       [14, 8],
     ];
+    for (let x = W - w - 54; x > 14; x -= 40) corners.push([x, H - h - 6]);
+    for (let x = W - w - 54; x > 14; x -= 40) if (x + w < 290 || x > 910) corners.push([x, 8]);
     const lifts = t.samples.map((_, i) => liftAt(t, i));
     let best = null;
     for (const [x, y] of corners) {
@@ -692,7 +696,7 @@
         const sy = s.y - lifts[i];
         const dx = Math.max(x - s.x, 0, s.x - (x + w));
         const dy = Math.max(y - sy, 0, sy - (y + h));
-        clear = Math.min(clear, Math.hypot(dx, dy) - (t.halfWidth + 22));
+        clear = Math.min(clear, Math.hypot(dx, dy) - (t.halfWidth + 30));
       });
       if (clear >= 0) return { x, y, w, label: t.name.toUpperCase() };
       if (!best || clear > best.clear) best = { x, y, w, clear, label: t.name.toUpperCase() };
