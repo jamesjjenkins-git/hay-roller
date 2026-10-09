@@ -971,7 +971,7 @@
       ctx.translate(0, -a.z);
     }
     ctx.scale(ANIMAL_SCALE, ANIMAL_SCALE);
-    art(ctx, { ...a, x: 0, y: 0, r: a.r / ANIMAL_SCALE, id: a.id + 1 }, now);
+    art(ctx, { ...a, mode: a.mode === 'flee' ? 'walk' : a.mode, x: 0, y: 0, r: a.r / ANIMAL_SCALE, id: a.id + 1 }, now);
     if (a.startle > 0 && a.mode !== 'tumble') {
       // Little dizzy stars after being knocked flying.
       for (let i = 0; i < 3; i++) {

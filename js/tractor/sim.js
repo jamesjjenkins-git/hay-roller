@@ -105,7 +105,7 @@
   // animals and a minute to pop as many as you can. Every `per` popped pays
   // 5% of the track's winning prize, so popping all 100 matches a race win,
   // and a clean sweep adds a quarter on top.
-  const FRENZY = { animals: 100, time: 60, per: 5, share: 0.05, sweepBonus: 0.25, fleeRange: 100, fleeSpeed: 95 };
+  const FRENZY = { animals: 100, time: 60, per: 5, share: 0.05, sweepBonus: 0.25, fleeRange: 90, fleeSpeed: 55, notice: 0.45 };
 
   function frenzyRate(track, vehicle = 'tractor') {
     return Math.max(5, Math.round((prizesFor(track, vehicle)[0] * FRENZY.share) / 5) * 5);
@@ -620,26 +620,36 @@
       a.hitCooldown = Math.max(0, a.hitCooldown - DT);
       a.startle = Math.max(0, a.startle - DT);
       if (s.frenzy && a.mode !== 'tumble') {
-        // They know what's coming: bolt sideways off the racing line when a
-        // tractor bears down on them.
+        // Some of them notice a tractor bearing down and make a clumsy dash:
+        // roughly away, never quite cleanly, for a moment, then they go back
+        // to bumbling about. Plenty don't notice at all.
+        a.fleeCool = Math.max(0, (a.fleeCool || 0) - DT);
+        if (a.fleeT > 0) {
+          a.fleeT -= DT;
+          a.heading += angleDiff(a.fleeDir, a.heading) * Math.min(1, 6 * DT);
+          a.x += Math.cos(a.heading) * FRENZY.fleeSpeed * DT;
+          a.y += Math.sin(a.heading) * FRENZY.fleeSpeed * DT;
+          a.walkPhase += DT * 14;
+          keepOnTrack(track, a);
+          if (a.fleeT <= 0) {
+            a.mode = 'pause';
+            a.timer = 0.4 + rng() * 0.8;
+            a.fleeCool = 1.5 + rng() * 1.5;
+          }
+        }
         const r = s.racers[0];
         const dx = a.x - r.x;
         const dy = a.y - r.y;
         const d = Math.hypot(dx, dy);
         const ahead = (dx * Math.cos(r.heading) + dy * Math.sin(r.heading)) > 0;
-        if (d < FRENZY.fleeRange && ahead && Math.hypot(r.vx, r.vy) > 40) {
-          const c = track.samples[a.idx];
-          const lat = (a.x - c.x) * c.nx + (a.y - c.y) * c.ny;
-          const rlat = (r.x - c.x) * c.nx + (r.y - c.y) * c.ny;
-          const away = lat >= rlat ? 1 : -1;
-          a.heading = Math.atan2(c.ny * away, c.nx * away);
-          a.x += c.nx * away * FRENZY.fleeSpeed * DT;
-          a.y += c.ny * away * FRENZY.fleeSpeed * DT;
-          a.walkPhase += DT * 16;
-          a.mode = 'walk';
-          a.target = { x: a.x + c.nx * away * 30, y: a.y + c.ny * away * 30 };
-          a.timer = 0.6;
-          keepOnTrack(track, a);
+        if (!a.fleeCool && d < FRENZY.fleeRange && ahead && Math.hypot(r.vx, r.vy) > 40) {
+          if (rng() < FRENZY.notice) {
+            a.fleeT = 0.35 + rng() * 0.35;
+            a.fleeDir = Math.atan2(dy, dx) + (rng() - 0.5) * 2.2;
+            a.mode = 'flee';
+          } else {
+            a.fleeCool = 2; // didn't notice this time
+          }
         }
       }
       if (a.mode === 'tumble') {
@@ -665,13 +675,17 @@
           a.home = a.idx;
           a.vx = a.vy = 0;
         }
+      } else if (a.mode === 'flee') {
+        // Moved above.
       } else if (a.mode === 'pause') {
         a.timer -= DT;
         if (a.timer <= 0) {
           // Amble towards a random spot on the road near where it lives.
           const idx = (a.home + Math.floor((rng() - 0.5) * 16) + track.count) % track.count;
           const c = track.samples[idx];
-          const lat = (rng() - 0.5) * (track.halfWidth - a.r) * 1.6;
+          // In the Frenzy they mill about the middle of the road rather than
+          // hugging the walls.
+          const lat = (rng() - 0.5) * (track.halfWidth - a.r) * (s.frenzy ? 1.1 : 1.6);
           a.target = { x: c.x + c.nx * lat, y: c.y + c.ny * lat };
           a.mode = 'walk';
           a.timer = 2 + rng() * 3;
@@ -683,10 +697,11 @@
         a.timer -= DT;
         if (d < 4 || a.timer <= 0) {
           a.mode = 'pause';
-          a.timer = 1 + rng() * 2.5;
+          a.timer = s.frenzy ? 0.3 + rng() * 1.2 : 1 + rng() * 2.5;
         } else {
           const want = Math.atan2(dy, dx);
           a.heading += angleDiff(want, a.heading) * Math.min(1, 4 * DT);
+          if (s.frenzy) a.heading += (rng() - 0.5) * 0.25; // bumbling, not marching
           a.x += Math.cos(a.heading) * ANIMAL.walk * DT;
           a.y += Math.sin(a.heading) * ANIMAL.walk * DT;
           a.walkPhase += DT * 9;
