@@ -11,7 +11,7 @@
   const fmtLap = (t) => (t == null ? '—' : t < 60 ? `${t.toFixed(2)}s` : fmtTime(t));
   const fmtTime = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;
 
-  function createTractorRally({ el, wallet, sound, toast }) {
+  function createTractorRally({ el, wallet, gold, sound, toast, rewards, watchAdFor, openWallet }) {
     const $ = (sel) => el.querySelector(sel);
     const garage = createGarage();
     const built = new Map();
@@ -38,6 +38,7 @@
     let banner = null;
     let finalLapShown = false;
     let lapFlash = null;
+    let lastEarnings = null;
     let mounted = false;
 
     // ---------- Input ----------
@@ -182,7 +183,8 @@
       $('#garage-record').innerHTML = `🏆 <span>🥇${tot.gold} 🥈${tot.silver} 🥉${tot.bronze} ⏱️${tot.fastest}</span>`;
 
       $('#paints').innerHTML = PAINTS.map((p) =>
-        `<button class="paint ${st.paint === p.id ? 'active' : ''}" data-paint="${p.id}" style="--paint:${p.hex}" title="${p.name}" aria-label="${p.name} paint"></button>`).join('');
+        `<button class="paint ${st.paint === p.id ? 'active' : ''} ${garage.paintOwned(p.id) ? '' : 'locked'}" data-paint="${p.id}" style="--paint:${p.hex}"
+          title="${p.name}${garage.paintOwned(p.id) ? '' : ` — 🪙${p.gold} Gold`}" aria-label="${p.name} paint${garage.paintOwned(p.id) ? '' : `, costs ${p.gold} Gold`}">${garage.paintOwned(p.id) ? '' : `<span class="paint-price">🪙${p.gold}</span>`}</button>`).join('');
 
       const stats = Sim.statsFor(st.upgrades);
       const max = Sim.statsFor({ accel: 5, speed: 5, handling: 5, boost: 5 });
@@ -287,12 +289,26 @@
           toast(`${UPGRADES.find((u) => u.id === id).name} upgraded to level ${garage.state.upgrades[id]}!`, 'good');
         } else {
           sound.click();
-          toast(`You need 🌾${fmt(cost - wallet.balance)} more credits. Try the Hay Bale Derby!`, 'warn');
+          toast(`You need 🌾${fmt(cost - wallet.balance)} more Hay. Win races, try the mini games, or get free Hay in your wallet.`, 'warn');
         }
         renderGarage();
       } else if (paint) {
-        garage.setPaint(paint.dataset.paint);
-        sound.chip();
+        const id = paint.dataset.paint;
+        const p = PAINTS.find((x) => x.id === id);
+        if (garage.paintOwned(id)) {
+          garage.setPaint(id);
+          sound.chip();
+        } else if (gold && gold.canAfford(p.gold)) {
+          if (confirm(`Buy the ${p.name} paint job for 🪙${p.gold} Gold?`)) {
+            garage.buyPaint(id, gold);
+            sound.fanfare();
+            toast(`${p.name} paint applied — looking sharp!`, 'good');
+          }
+        } else {
+          sound.click();
+          toast(`${p.name} costs 🪙${p.gold} Gold. Get Gold in the store.`, 'info');
+          if (openWallet) openWallet('gold');
+        }
         renderGarage();
       } else if (track && !track.disabled) {
         selected = TRACKS.find((t) => t.id === track.dataset.track);
@@ -440,11 +456,25 @@
       }
     }
 
-    modal.addEventListener('click', (e) => {
+    modal.addEventListener('click', async (e) => {
       const b = e.target.closest('[data-act]');
       if (!b) return;
       sound.click();
       const act = b.dataset.act;
+      if (act === 'double') {
+        // Opt-in only: the player chose to watch, and is paid only if they finish it.
+        b.disabled = true;
+        const extra = lastEarnings ? lastEarnings.total : 0;
+        const got = extra ? await watchAdFor('double', extra) : 0;
+        if (got) {
+          b.outerHTML = `<p class="doubled">✨ Doubled! +🌾${fmt(got)}</p>`;
+          $('#r-total').textContent = `🌾 ${fmt(lastEarnings.total + got)}`;
+          lastEarnings = null;
+        } else {
+          b.disabled = false;
+        }
+        return;
+      }
       if (act === 'resume') togglePause();
       else if (act === 'restart' || act === 'again') startRace();
       else if (act === 'quit' || act === 'garage') toGarage();
@@ -468,6 +498,7 @@
       sound.engineStop();
       const e = Sim.earnings(sim);
       const me = sim.racers[0];
+      lastEarnings = e;
       const award = garage.recordResult(selected.id, e.place, me.finishTime, { fastestLap: e.fastestLap, bestLap: e.bestLap });
       const extras = [e.cash ? `+${e.cash} cash bags` : '', e.fastestLap ? `+${e.lapBonus} fastest lap` : ''].filter(Boolean).join(', ');
       if (e.total > 0) wallet.credit(e.total, `Tractor Rally — ${ordinal(e.place)} at ${selected.name}${extras ? ` (${extras})` : ''}`);
@@ -490,7 +521,10 @@
               <div><span>${ordinal(e.place)} place prize</span><b>🌾 ${fmt(e.placeReward)}</b></div>
               <div><span>Cash bags</span><b>🌾 ${fmt(e.cash)}</b></div>
               ${e.fastestLap ? `<div><span>Fastest lap bonus</span><b>🌾 ${fmt(e.lapBonus)}</b></div>` : ''}
-              <div class="total"><span>Total earned</span><b>🌾 ${fmt(e.total)}</b></div>
+              <div class="total"><span>Total earned</span><b id="r-total">🌾 ${fmt(e.total)}</b></div>
+              ${e.total > 0 && rewards && rewards.adsRemaining() > 0
+                ? `<button class="btn btn-ad" data-act="double">📺 Watch an ad to double it (+${fmt(e.total)})</button>`
+                : ''}
             </div>
             ${awardsHtml(e, award, newlyUnlocked)}
             <div class="r-actions">

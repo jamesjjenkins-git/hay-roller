@@ -17,6 +17,12 @@
     { id: 'orange', hex: '#f07c1b', name: 'Pumpkin' },
     { id: 'pink', hex: '#f06aa6', name: 'Piggy Pink' },
     { id: 'black', hex: '#3a3a3a', name: 'Midnight' },
+    // Premium paints, bought once with Gold.
+    { id: 'mint', hex: '#3fd1b0', name: 'Mint Julep', gold: 60 },
+    { id: 'camo', hex: '#5b6b2f', name: 'Hedge Camo', gold: 80 },
+    { id: 'royal', hex: '#6a2fc9', name: 'Royal Show', gold: 100 },
+    { id: 'goldrush', hex: '#d9a521', name: 'Gold Rush', gold: 150 },
+    { id: 'chrome', hex: '#c3ccd6', name: 'Chrome', gold: 200 },
   ];
 
   const TROPHIES = [
@@ -35,6 +41,7 @@
       upgrades: { accel: 0, speed: 0, handling: 0, boost: 0 },
       refund: 0, // credits owed back from retired upgrades, paid by the game
       paint: 'red',
+      ownedPaints: [], // premium paints bought with Gold
       best: {}, // trackId -> { place, time }
       // trackId -> { gold, silver, bronze, fastest, bestLap }
       awards: {},
@@ -82,7 +89,7 @@
           const d = defaults();
           const p = JSON.parse(raw);
           const upgrades = migrateUpgrades(p, d.upgrades); // may add p.refund
-          return { ...d, ...p, upgrades, best: p.best || {}, awards: p.awards || {} };
+          return { ...d, ...p, upgrades, best: p.best || {}, awards: p.awards || {}, ownedPaints: p.ownedPaints || [] };
         }
       } catch (e) {
         // Corrupt save: fall back to a fresh garage.
@@ -132,8 +139,24 @@
         }
         return n;
       },
+      paintOwned(id) {
+        const p = PAINTS.find((x) => x.id === id);
+        return !!p && (!p.gold || state.ownedPaints.includes(id));
+      },
+      // Spends Gold on a premium paint and applies it. False if unaffordable.
+      buyPaint(id, goldWallet) {
+        const p = PAINTS.find((x) => x.id === id);
+        if (!p || !p.gold) return false;
+        if (state.ownedPaints.includes(id)) return true;
+        if (!goldWallet.canAfford(p.gold)) return false;
+        goldWallet.spend(p.gold, `Premium paint: ${p.name}`);
+        state.ownedPaints.push(id);
+        state.paint = id;
+        save();
+        return true;
+      },
       setPaint(id) {
-        if (PAINTS.some((p) => p.id === id)) {
+        if (this.paintOwned(id)) {
           state.paint = id;
           save();
         }

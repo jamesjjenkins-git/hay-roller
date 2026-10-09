@@ -1,8 +1,23 @@
 // Farmyard Rally shell: wallet UI, lobby and simple hash routing.
 (function (root) {
   const wallet = root.FarmWallet.createWallet();
+  const gold = root.FarmWallet.createWallet(undefined, { key: root.FarmWallet.GOLD_KEY });
   const sound = root.FarmSound;
-  const MAX_TOPUP = 100000;
+  const ads = root.FarmAds;
+  const DEV = /[?&]dev\b/.test(location.search);
+  let storage = null;
+  try {
+    storage = root.localStorage;
+  } catch (e) {
+    storage = null;
+  }
+  const rewards = root.FarmRewards.createRewards({ storage, wallet });
+  const store = root.FarmStore.createStore({
+    storage,
+    goldWallet: gold,
+    billing: root.FarmStore.testBilling(async (p) =>
+      confirm(`TEST MODE — no money will be taken.\n\nBuy "${p.name}" (${p.price} in the App Store)?`)),
+  });
 
   const $ = (sel) => document.querySelector(sel);
   const fmt = (n) => n.toLocaleString('en-GB');
@@ -21,17 +36,26 @@
     }, ms);
   }
 
-  // ---------- Wallet ----------
+  // ---------- Wallet & store ----------
 
   const modal = $('#wallet-modal');
+
+  function bump(el) {
+    el.classList.remove('bump');
+    void el.offsetWidth;
+    el.classList.add('bump');
+  }
 
   function renderBalance() {
     $('#balance').textContent = fmt(wallet.balance);
     $('#wallet-balance').textContent = fmt(wallet.balance);
-    const pill = $('#wallet-btn');
-    pill.classList.remove('bump');
-    void pill.offsetWidth;
-    pill.classList.add('bump');
+    bump($('#wallet-btn'));
+  }
+
+  function renderGold() {
+    $('#gold-balance').textContent = fmt(gold.balance);
+    $('#wallet-gold').textContent = fmt(gold.balance);
+    bump($('#gold-btn'));
   }
 
   function renderHistory() {
@@ -49,62 +73,138 @@
     return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   }
 
-  function openWallet() {
-    renderHistory();
-    renderBalance();
-    if (typeof modal.showModal === 'function') modal.showModal();
-    else modal.setAttribute('open', '');
+  function renderFreeHay() {
+    const daily = $('#daily-btn');
+    if (rewards.dailyAvailable()) {
+      daily.disabled = false;
+      daily.innerHTML = `<span class="f-icon">🎁</span><b>Daily bonus</b><small>Claim 🌾${fmt(rewards.AMOUNTS.daily)}</small>`;
+    } else {
+      const h = Math.ceil(rewards.msUntilDaily() / 3600000);
+      daily.disabled = true;
+      daily.innerHTML = `<span class="f-icon">✅</span><b>Daily bonus claimed</b><small>Back in about ${h} hour${h === 1 ? '' : 's'}</small>`;
+    }
+    const adBtn = $('#ad-btn');
+    const left = rewards.adsRemaining();
+    adBtn.disabled = left === 0;
+    adBtn.innerHTML = left
+      ? `<span class="f-icon">📺</span><b>Watch a short ad</b><small>Get 🌾${fmt(rewards.AMOUNTS.ad)} · ${left} left today</small>`
+      : '<span class="f-icon">📺</span><b>No more ads today</b><small>Come back tomorrow</small>';
   }
 
-  function addCredits(amount, note) {
-    wallet.deposit(amount, note);
-    sound.coins();
-    toast(`+${fmt(amount)} credits added`, 'good');
+  function renderStore() {
+    $('#test-mode-note').classList.toggle('hidden', !store.testMode);
+    $('#store-packs').innerHTML = store.PRODUCTS.filter((p) => p.kind === 'gold').map((p) => `
+      <button type="button" class="pack gold-pack" data-buy="${p.id}">
+        ${p.tag ? `<span class="pack-tag">${p.tag}</span>` : ''}
+        <b>🪙 ${fmt(p.gold)}</b><small>${p.name}</small><span class="price">${p.price}</span>
+      </button>`).join('');
+    const ra = store.PRODUCTS.find((p) => p.id === 'remove_ads');
+    $('#store-extras').innerHTML = store.owns('remove_ads')
+      ? `<div class="store-row owned"><span>🚫📢</span><span><b>Ads removed</b><small>Thanks for supporting the farm!</small></span><span class="price">Owned ✓</span></div>`
+      : `<button type="button" class="store-row" data-buy="remove_ads"><span>🚫📢</span><span><b>${ra.name}</b><small>${ra.desc}</small></span><span class="price">${ra.price}</span></button>`;
+  }
+
+  function openWallet(section) {
     renderHistory();
+    renderBalance();
+    renderGold();
+    renderFreeHay();
+    renderStore();
+    $('#dev-topup').classList.toggle('hidden', !DEV);
+    if (typeof modal.showModal === 'function') modal.showModal();
+    else modal.setAttribute('open', '');
+    if (section === 'gold') $('#w-gold').scrollIntoView({ block: 'start' });
+  }
+
+  // Shows a rewarded ad and pays out only if it was watched to the end.
+  async function watchAdFor(placement, amount) {
+    if (rewards.adsRemaining() <= 0) {
+      toast('No more reward ads today — come back tomorrow!', 'info');
+      return 0;
+    }
+    const watched = await ads.showRewarded();
+    if (!watched) {
+      toast('Ad closed early — no reward this time.', 'info');
+      return 0;
+    }
+    const got = rewards.grantAdReward(placement, amount);
+    if (got) {
+      sound.coins();
+      toast(`+🌾${fmt(got)} Hay — thanks for watching!`, 'good');
+    }
+    return got;
   }
 
   $('#wallet-btn').addEventListener('click', () => {
     sound.click();
     openWallet();
   });
-
-  $('#packs').addEventListener('click', (e) => {
-    const b = e.target.closest('[data-amount]');
-    if (!b) return;
-    addCredits(Number(b.dataset.amount), `Added ${b.querySelector('small').textContent.toLowerCase()}`);
+  $('#gold-btn').addEventListener('click', () => {
+    sound.click();
+    openWallet('gold');
   });
 
-  $('#custom-add-btn').addEventListener('click', () => {
-    const input = $('#custom-amount');
-    const n = Math.floor(Number(input.value));
-    if (!Number.isFinite(n) || n < 1 || n > MAX_TOPUP) {
-      toast(`Enter a whole number between 1 and ${fmt(MAX_TOPUP)}`, 'warn');
-      return;
+  $('#daily-btn').addEventListener('click', () => {
+    const got = rewards.claimDaily();
+    if (got) {
+      sound.coins();
+      toast(`+🌾${fmt(got)} daily bonus!`, 'good');
     }
-    addCredits(n, 'Custom top-up');
-    input.value = '';
+    renderFreeHay();
+    renderHistory();
   });
 
-  $('#custom-amount').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      $('#custom-add-btn').click();
+  $('#ad-btn').addEventListener('click', async () => {
+    // Close the wallet so the ad has the screen, then reopen it after.
+    modal.close();
+    await watchAdFor('wallet');
+    openWallet();
+  });
+
+  modal.addEventListener('click', async (e) => {
+    const buy = e.target.closest('[data-buy]');
+    const dev = e.target.closest('[data-dev]');
+    if (buy) {
+      const id = buy.dataset.buy;
+      const res = await store.buy(id);
+      if (res.ok && !res.already) {
+        sound.fanfare();
+        const p = store.PRODUCTS.find((x) => x.id === id);
+        toast(p.kind === 'gold' ? `+🪙${fmt(p.gold)} Gold added` : `${p.name} — done!`, 'good');
+      }
+      renderStore();
+      renderGold();
+    } else if (dev) {
+      wallet.deposit(Number(dev.dataset.dev), 'Developer top-up');
+      renderHistory();
+    } else if (e.target === modal) {
+      modal.close();
     }
   });
 
   $('#reset-wallet').addEventListener('click', () => {
-    if (!confirm('Reset your wallet to 0 credits and clear its history?')) return;
+    if (!confirm('Reset your Hay to 0 and clear its history? (Gold and purchases are kept.)')) return;
     wallet.reset();
     renderHistory();
     toast('Wallet reset', 'info');
   });
 
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) modal.close();
-  });
-
   wallet.subscribe(renderBalance);
   wallet.subscribe(() => games['tractor-rally'] && games['tractor-rally'].refresh());
+  gold.subscribe(renderGold);
+  gold.subscribe(() => games['tractor-rally'] && games['tractor-rally'].refresh());
+
+  // ---------- Home banner (the only place a banner ad ever appears) ----------
+
+  const banner = $('#home-banner');
+  function updateBanner(onHome) {
+    const show = onHome && !store.owns('remove_ads');
+    banner.classList.toggle('hidden', !show);
+    document.body.classList.toggle('has-banner', show);
+    if (show) ads.showBanner(banner);
+    else ads.hideBanner(banner);
+  }
+  store.subscribe(() => updateBanner(!current));
 
   // ---------- Sound toggle ----------
 
@@ -125,8 +225,12 @@
     'tractor-rally': root.TractorRally.createTractorRally({
       el: $('#view-tractor-rally'),
       wallet,
+      gold,
       sound,
       toast,
+      rewards,
+      watchAdFor,
+      openWallet,
     }),
     slots: root.SlotsGame.createSlots({ el: $('#view-slots'), wallet, sound, toast }),
     'egg-roulette': root.EggRouletteGame.createEggRoulette({ el: $('#view-egg-roulette'), wallet, sound, toast }),
@@ -152,6 +256,7 @@
       $('#view-lobby').classList.remove('hidden');
       drawLobbyArt();
     }
+    updateBanner(!game);
     current = game;
     root.scrollTo(0, 0);
   }
@@ -191,7 +296,7 @@
   renderBalance();
   route();
 
-  if (wallet.balance === 0 && wallet.history().length === 0) {
-    setTimeout(() => toast('Tap the credits at the top to top up your wallet!', 'info', 5000), 600);
-  }
+  renderGold();
+  const welcome = rewards.claimWelcome();
+  if (welcome) setTimeout(() => toast(`Welcome to the farm! Here's 🌾${fmt(welcome)} Hay to get you started.`, 'good', 5000), 600);
 })(typeof globalThis !== 'undefined' ? globalThis : this);

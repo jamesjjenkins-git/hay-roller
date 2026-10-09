@@ -1216,6 +1216,169 @@ kbd {
   .slot-machine { --cell: 64px; }
 }
 
+/* ---------- Monetisation: Gold, store, free Hay, ads ---------- */
+
+.gold-pill { background: #ffe9a8; padding: 6px 14px; }
+.wallet-pill.gold-pill .coin { font-size: 20px; }
+.w-section { padding: 12px 0; border-bottom: 2px dashed #e3d6b4; }
+.wallet-balance.gold { color: #a87600; }
+.free-hay { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.free-card {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 12px 8px;
+  border-radius: 14px;
+  border: 3px solid var(--ink);
+  background: #c9f2c4;
+  box-shadow: 0 4px 0 var(--ink);
+  text-align: center;
+}
+.free-card:disabled { background: #eee6d0; box-shadow: 0 2px 0 var(--ink); opacity: 0.8; }
+.free-card:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.free-card .f-icon { font-size: 28px; }
+.free-card b { font-family: var(--font-display); font-weight: 400; font-size: 17px; }
+.free-card small { font-weight: 800; font-size: 13px; opacity: 0.75; }
+.dev-topup { margin-top: 10px; padding: 8px; border: 2px dashed #aaa; border-radius: 10px; }
+.dev-topup small { display: block; margin-bottom: 6px; opacity: 0.7; }
+.test-mode { margin: 0 0 10px; padding: 8px 10px; background: #e5f0ff; border: 2px dashed #2f6fe2; border-radius: 10px; font-size: 13px; }
+#store-packs { grid-template-columns: repeat(3, 1fr); }
+.gold-pack { position: relative; background: #ffe9a8; }
+.gold-pack b { font-size: 20px; }
+.pack-tag {
+  position: absolute;
+  top: -10px;
+  right: -6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--good);
+  color: #fff;
+  border: 2px solid var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+}
+.price { font-family: var(--font-display); font-size: 16px; margin-top: 2px; }
+.store-row {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 3px solid var(--ink);
+  background: #fff;
+  box-shadow: 0 4px 0 var(--ink);
+  text-align: left;
+  font-size: 22px;
+}
+.store-row b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 17px; }
+.store-row small { display: block; font-size: 12px; font-weight: 800; opacity: 0.7; }
+.store-row.owned { background: #c9f2c4; box-shadow: none; }
+
+.paint { position: relative; }
+.paint.locked { opacity: 0.85; }
+.paint.locked::after { content: '🔒'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; }
+.paint-price {
+  position: absolute;
+  bottom: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 4px;
+  border-radius: 6px;
+  background: #ffe9a8;
+  border: 1.5px solid var(--ink);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.paints { row-gap: 18px; }
+
+.btn-ad { margin-top: 6px; width: 100%; font-size: 15px; background: #2f6fe2; color: #fff; }
+.doubled { margin: 6px 0 0; text-align: center; font-weight: 800; color: var(--good); }
+
+/* Home-page banner: pinned to the bottom of the lobby only. */
+.ad-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 15;
+  display: flex;
+  justify-content: center;
+  padding: 6px 12px calc(6px + env(safe-area-inset-bottom));
+  background: rgba(59, 42, 20, 0.92);
+}
+.ad-banner.hidden { display: none; }
+body.has-banner main { padding-bottom: 96px; }
+.ad-label {
+  align-self: flex-start;
+  margin-right: 6px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: #ffd23f;
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+.ad-house {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(728px, 100%);
+  height: 50px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--cream);
+  border: 2px solid #ffd23f;
+}
+.ad-icon { font-size: 28px; }
+.ad-house b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 16px; }
+.ad-house small { display: block; font-size: 12px; font-weight: 800; opacity: 0.7; }
+.ad-cta { margin-left: auto; padding: 4px 12px; border-radius: 999px; background: var(--good); color: #fff; font-weight: 800; border: 2px solid var(--ink); }
+
+.ad-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.85);
+  padding: 16px;
+}
+.ad-video {
+  position: relative;
+  width: min(560px, 100%);
+  background: #111;
+  color: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 3px solid #333;
+}
+.ad-video .ad-label { position: absolute; top: 8px; left: 8px; z-index: 1; }
+.ad-screen { aspect-ratio: 16 / 9; display: grid; place-items: center; align-content: center; gap: 8px; text-align: center; padding: 16px; background: linear-gradient(135deg, #2f6fe2, #2fae4a); }
+.ad-screen p { margin: 0; font-weight: 800; }
+.ad-tractor { font-size: 54px; animation: drive 1.2s ease-in-out infinite alternate; }
+@keyframes drive { from { transform: translateX(-30px); } to { transform: translateX(30px); } }
+.ad-bar { height: 5px; background: #333; }
+.ad-progress { height: 100%; width: 0; background: #ffd23f; }
+.ad-actions { display: flex; justify-content: space-between; gap: 10px; padding: 10px; }
+.ad-actions .btn-ghost { background: #333; color: #ddd; border-color: #555; box-shadow: none; }
+
+@media (max-width: 560px) {
+  .topbar-right { gap: 6px; }
+  .icon-btn { width: 38px; height: 38px; font-size: 17px; }
+  .wallet-pill .plus { width: 26px; height: 26px; }
+  .free-hay { grid-template-columns: 1fr; }
+  .wallet-pill.gold-pill { padding: 6px 10px; font-size: 16px; }
+  .ad-house small { display: none; }
+}
+@media (max-height: 500px) {
+  .ad-screen { aspect-ratio: auto; height: 150px; }
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 900px) {
@@ -1257,4 +1420,9 @@ kbd {
 
 @media (prefers-reduced-motion: reduce) {
   .art-bale, .art-critter { animation: none; }
+}
+
+/* Narrow phones: the two currency pills need the room more than the wordmark. */
+@media (max-width: 440px) {
+  .logo-text { display: none; }
 }

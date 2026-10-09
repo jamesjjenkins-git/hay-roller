@@ -24,14 +24,16 @@
     }
   }
 
-  function createWallet(storage) {
+  // options.key lets a second currency (Gold) reuse the same wallet logic.
+  function createWallet(storage, options = {}) {
     const store = safeStorage(storage);
+    const KEY = options.key || STORAGE_KEY;
     const listeners = new Set();
     let state = load();
 
     function load() {
       try {
-        const raw = store.getItem(STORAGE_KEY);
+        const raw = store.getItem(KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Number.isInteger(parsed.balance) && parsed.balance >= 0 && Array.isArray(parsed.history)) {
@@ -46,7 +48,7 @@
 
     function save() {
       try {
-        store.setItem(STORAGE_KEY, JSON.stringify(state));
+        store.setItem(KEY, JSON.stringify(state));
       } catch (e) {
         // Storage full or blocked; balance still works for this session.
       }
@@ -73,7 +75,7 @@
       canAfford(amount) {
         return amount <= state.balance;
       },
-      // Top up with free play credits.
+      // Add credits (rewards, purchases of Gold, dev top-ups).
       deposit(amount, note = 'Credits added') {
         assertAmount(amount);
         state.balance += amount;
@@ -103,7 +105,8 @@
     };
   }
 
-  const api = { createWallet, STORAGE_KEY };
+  const GOLD_KEY = 'farmCasino.gold.v1';
+  const api = { createWallet, STORAGE_KEY, GOLD_KEY };
   root.FarmWallet = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

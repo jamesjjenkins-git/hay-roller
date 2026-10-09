@@ -26,10 +26,14 @@
     </a>
     <div class="topbar-right">
       <button class="icon-btn" id="mute-btn" title="Sound on/off" aria-label="Toggle sound">🔊</button>
+      <button class="wallet-pill gold-pill" id="gold-btn" aria-label="Gold — open the store">
+        <span class="coin">🪙</span>
+        <span id="gold-balance">0</span>
+      </button>
       <button class="wallet-pill" id="wallet-btn" aria-label="Open wallet">
         <span class="coin">🌾</span>
         <span id="balance">0</span>
-        <span class="unit">credits</span>
+        <span class="unit">hay</span>
         <span class="plus">+</span>
       </button>
     </div>
@@ -40,7 +44,7 @@
     <section class="view" id="view-lobby">
       <div class="hero">
         <h1>Farmyard Rally</h1>
-        <p>Race your tractor, win credits, upgrade, repeat.</p>
+        <p>Race your tractor, win Hay, upgrade, repeat.</p>
       </div>
 
       <a class="feature-card" href="#/tractor-rally">
@@ -55,7 +59,7 @@
         </div>
       </a>
 
-      <h2 class="section-title">Earn more credits</h2>
+      <h2 class="section-title">Earn more Hay</h2>
       <div class="game-grid">
         <a class="game-card playable" href="#/hay-derby">
           <div class="game-art art-hay">
@@ -85,7 +89,8 @@
           </div>
         </a>
       </div>
-      <p class="disclaimer">Credits are free in-game currency with no cash value. Nothing can be bought, sold or withdrawn.</p>
+      <p class="disclaimer">Hay is free in-game currency with no cash value. It can't be bought, sold or withdrawn.</p>
+      <div class="ad-banner" id="home-banner" aria-label="Advertisement"></div>
     </section>
 
     <!-- Tractor Rally -->
@@ -105,7 +110,7 @@
           <div class="g-card g-upgrades">
             <h2>Upgrades</h2>
             <div id="upgrade-list"></div>
-            <a class="earn-link" href="#/hay-derby">Need credits? Try the Hay Bale Derby →</a>
+            <a class="earn-link" href="#/">Need more Hay? Play a mini game or grab free Hay in your wallet →</a>
           </div>
           <div class="g-card g-tracks">
             <h2>Pick a track</h2>
@@ -249,25 +254,37 @@
     </section>
   </main>
 
-  <!-- Wallet -->
+  <!-- Wallet & store -->
   <dialog class="modal" id="wallet-modal">
     <form method="dialog" class="modal-inner">
       <button class="modal-close" value="close" aria-label="Close">✕</button>
       <h2>Your Wallet</h2>
-      <div class="wallet-balance"><span class="coin">🌾</span><span id="wallet-balance">0</span> credits</div>
-      <p class="muted">Credits are free play money — top up whenever you like.</p>
-      <div class="packs" id="packs">
-        <button type="button" class="pack" data-amount="100"><b>100</b><small>Handful of seed</small></button>
-        <button type="button" class="pack" data-amount="500"><b>500</b><small>Sack of corn</small></button>
-        <button type="button" class="pack" data-amount="1000"><b>1,000</b><small>Cartload</small></button>
-        <button type="button" class="pack" data-amount="5000"><b>5,000</b><small>Whole harvest</small></button>
-      </div>
-      <div class="custom-add">
-        <label for="custom-amount">Custom amount</label>
-        <input id="custom-amount" type="number" min="1" max="100000" step="1" inputmode="numeric" placeholder="e.g. 250">
-        <button type="button" class="btn btn-primary" id="custom-add-btn">Add</button>
-      </div>
-      <h3>Recent activity</h3>
+
+      <section class="w-section" id="w-hay">
+        <div class="wallet-balance"><span class="coin">🌾</span><span id="wallet-balance">0</span> Hay</div>
+        <p class="muted">Hay is earned, never bought. Win it racing and in the mini games, or grab some free:</p>
+        <div class="free-hay">
+          <button type="button" class="free-card" id="daily-btn"></button>
+          <button type="button" class="free-card" id="ad-btn"></button>
+        </div>
+        <div class="dev-topup hidden" id="dev-topup">
+          <small>Developer top-up (only shown with <code>?dev</code>)</small>
+          <div class="packs">
+            <button type="button" class="pack" data-dev="1000"><b>+1,000</b></button>
+            <button type="button" class="pack" data-dev="10000"><b>+10,000</b></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="w-section" id="w-gold">
+        <div class="wallet-balance gold"><span class="coin">🪙</span><span id="wallet-gold">0</span> Gold</div>
+        <p class="muted">Gold buys premium paint jobs in the garage. It can't be used for bets or swapped for Hay.</p>
+        <p class="test-mode hidden" id="test-mode-note">🧪 <b>Test mode:</b> purchases are free and no money is taken. Prices show what they'll cost once the app is in the App Store.</p>
+        <div class="packs" id="store-packs"></div>
+        <div id="store-extras"></div>
+      </section>
+
+      <h3>Recent Hay activity</h3>
       <ul class="history" id="history"></ul>
       <button type="button" class="btn btn-ghost btn-small" id="reset-wallet">Reset wallet</button>
     </form>
@@ -291,6 +308,9 @@
   <script src="js/tractor/garage.js"></script>
   <script src="js/tractor/render.js"></script>
   <script src="js/tractor/game.js"></script>
+  <script src="js/monetize/rewards.js"></script>
+  <script src="js/monetize/store.js"></script>
+  <script src="js/monetize/ads.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

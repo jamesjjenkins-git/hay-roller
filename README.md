@@ -69,10 +69,35 @@ returns 12/13 ≈ 92.3%. Bets stay on the board between rounds, with Undo and Cl
 Both mini games decide the result before the animation and save any payout first, so closing
 the page mid-spin or mid-run still pays out the next time you open the game.
 
+## Currencies, ads and the store
+- **🌾 Hay** — the game currency, shared by every game. **Hay is never sold.** You get it from a
+  500 welcome gift, a 200 daily bonus (resets at local midnight), opt-in reward ads (150 each,
+  up to 10 a day), and winnings. After a race with prize money you can watch an ad to double it.
+- **🪙 Gold** — bought with real money, spent on premium paint jobs (60–200 Gold). Gold can't be
+  bet or turned into Hay, which keeps real money away from the casino-style games.
+- **Remove ads** — a one-off purchase that hides the home page banner. Reward ads stay
+  available because they're always the player's choice.
+- **Ads:** one banner pinned to the bottom of the **home page only** — never in a game, the
+  garage or a race — and opt-in reward videos that pay only if watched to the end.
+
+Everything runs behind adapters so going live doesn't touch game code:
+- `js/monetize/ads.js` — `FarmAds.setProvider({ showBanner, hideBanner, showRewarded })`. The
+  built-in provider shows labelled placeholders (a house-ad banner and a 5-second "ad" with a
+  Close-without-reward button). For the App Store build, wrap the app with Capacitor and back
+  this with AdMob (`@capacitor-community/admob`), including Apple's App Tracking Transparency
+  prompt before personalised ads.
+- `js/monetize/store.js` — purchases go through a `billing` adapter. The default is **test
+  mode**: it asks for confirmation and grants the item without taking money (clearly labelled
+  in the wallet). Replace it with Apple in-app purchases (e.g. RevenueCat or
+  `cordova-plugin-purchase`) using the product ids in `PRODUCTS`; Apple requires IAP for
+  digital goods.
+- `js/monetize/rewards.js` — welcome, daily and ad-reward rules and caps.
+
+For testing, add `?dev` to the URL to show a developer Hay top-up in the wallet.
+
 ## Wallet
-One wallet is shared by every game: win credits racing or at the Derby, spend them in the garage.
-Click the credits pill in the top bar to add free credits (preset packs or a custom amount up to
-100,000), see recent activity and reset the wallet. The balance and history are stored in
+Click the 🌾 pill in the top bar for free Hay (daily bonus, reward ads) and recent activity, or
+the 🪙 pill to jump to the Gold store. Balances, purchases and history are stored in
 `localStorage` in your browser.
 
 Bets are taken from the wallet when the race starts. If you leave the page or reload mid-race, the
@@ -88,7 +113,7 @@ npm start        # serves on http://localhost:8080
 
 ## Tests
 ```sh
-npm test         # Node 20+; covers the wallet, all three credit games and Tractor Rally
+npm test         # Node 20+; covers the wallet, rewards, store, all three credit games and Tractor Rally
 ```
 
 ## Code layout
@@ -101,6 +126,9 @@ npm test         # Node 20+; covers the wallet, all three credit games and Tract
 | `js/hay-derby.js` | Betting flow, race loop, results, crash recovery |
 | `js/sound.js` | Synthesized sound effects (WebAudio) |
 | `js/app.js` | Lobby, wallet modal, routing |
+| `js/monetize/rewards.js` | Welcome gift, daily bonus, reward-ad payouts and daily cap |
+| `js/monetize/store.js` | Gold packs and Remove ads; billing adapter (test mode by default) |
+| `js/monetize/ads.js` | Home banner and reward-video adapter with placeholder provider |
 | `js/pending.js` | Saves mini-game payouts until they're credited (crash-safe) |
 | `js/slots/slots-logic.js`, `js/slots/slots.js` | Piggy Bank Slots: reels, paytable, RTP maths; UI |
 | `js/eggs/egg-logic.js`, `js/eggs/egg-roulette.js` | Egg Roulette: bets and payouts; hen animation and board |

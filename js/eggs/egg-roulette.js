@@ -99,7 +99,7 @@
       const b = e.target.closest('[data-bet]');
       if (!b || busy) return;
       if (totalBet() + chip > wallet.balance) {
-        toast('Not enough credits for that chip — top up your wallet.', 'warn');
+        toast('Not enough Hay for that chip. Get free Hay in your wallet: daily bonus or a short ad.', 'warn');
         return;
       }
       const id = b.dataset.bet;

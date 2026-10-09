@@ -93,7 +93,7 @@
       } else {
         const total = totalBet();
         if (total + chip > wallet.balance) {
-          toast(wallet.balance - total > 0 ? `Only ${fmt(wallet.balance - total)} credits left to bet` : 'Not enough credits — top up your wallet!', 'warn');
+          toast(wallet.balance - total > 0 ? `Only ${fmt(wallet.balance - total)} credits left to bet` : 'Not enough Hay. Get free Hay in your wallet: daily bonus or a short ad.', 'warn');
           return;
         }
         bets[lane] += chip;

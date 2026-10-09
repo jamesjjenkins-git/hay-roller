@@ -91,7 +91,7 @@
       if (spinning) return;
       const bet = BETS[betIdx];
       if (!wallet.canAfford(bet)) {
-        toast('Not enough credits — top up your wallet or lower your bet.', 'warn');
+        toast('Not enough Hay — lower your bet or get free Hay in your wallet.', 'warn');
         return;
       }
       spinning = true;
