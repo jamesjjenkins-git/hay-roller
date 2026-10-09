@@ -58,9 +58,9 @@
       const brake = input.brake || k.has('ArrowDown') || k.has('s') ? 1 : 0;
       const nitro = input.nitro || k.has(' ') || k.has('Shift');
       input.nitro = false;
-      // While a thumb is on the slider, the angle you've turned to is held
-      // exactly; the straight-line assist only helps when you've let go.
-      return { steer, throttle: brake ? 0 : 1, brake, nitro, assist: stickTouch == null };
+      // While the thumb is sliding, the angle you've turned to is held exactly;
+      // the straight-line assist only helps once you've let go or gone still.
+      return { steer, throttle: brake ? 0 : 1, brake, nitro, assist: stickTouch == null || thumbResting };
     }
 
     const stickZone = $('#stick-zone');
@@ -70,13 +70,33 @@
     let stickOrigin = null;
 
     // The slider's centre follows the thumb: slide past the point where the
-    // turn is already at full rate and the centre is dragged along with you.
-    // So the turn you've dialled in is held for as long as you hold it, but
-    // there's never any extra travel stored up — reverse and the turn eases
-    // off straight away, from wherever your thumb happens to be.
+    // turn is already at full rate and the centre is dragged along with you,
+    // so no extra travel is ever stored up.
+    // Hold your thumb still for a moment and it's exactly as if you'd lifted
+    // it: the turn stops (the tractor keeps the direction it's pointing) and
+    // the slider re-centres under your thumb, ready for a fresh slide.
+    const RECENTER_MS = 180;
+    const STILL_PX = 3;
+    let thumbX = 0;
+    let stillSince = 0;
+    let thumbResting = false;
+
+    function recentreIfStill(now) {
+      if (stickTouch == null || thumbResting) return;
+      if (now - stillSince < RECENTER_MS) return;
+      thumbResting = true;
+      stickOrigin.x = thumbX;
+      stickBase.style.left = `${thumbX}px`;
+      stickKnob.style.transform = '';
+      input.slide = 0;
+    }
+
     function stickStart(id, x, y) {
       stickTouch = id;
       stickOrigin = { x, y };
+      thumbX = x;
+      stillSince = performance.now();
+      thumbResting = false;
       stickZone.classList.add('used');
       stickBase.style.left = `${x}px`;
       stickBase.style.top = `${y}px`;
@@ -88,8 +108,13 @@
     // doesn't turn harder — it just keeps the turn going.
     const SLIDE_DEAD = 8; // a resting thumb's wobble = straight ahead
     const SLIDE_RAMP = 20; // small moves give small, immediate turns
-    const SLIDER_STEER = 0.55; // fraction of the tractor's full turn rate
+    const SLIDER_STEER = 0.48; // fraction of the tractor's full turn rate
     function stickMove(x) {
+      if (Math.abs(x - thumbX) > STILL_PX) {
+        thumbX = x;
+        stillSince = performance.now();
+        thumbResting = false;
+      }
       applySlide(x);
     }
     function applySlide(x) {
@@ -470,7 +495,7 @@
       touch: {
         title: 'Phone controls',
         rows: [
-          ['👆', 'Steer', 'Put your thumb anywhere on the <b>left half</b> of the screen and slide <b>left or right</b> to turn. Hold your thumb still and the turn you\'ve dialled in is held. Sliding further doesn\'t store up extra turn, so sliding back eases off straight away. Lift your thumb to go straight.'],
+          ['👆', 'Steer', 'Put your thumb anywhere on the <b>left half</b> of the screen and slide <b>left or right</b> to turn. Hold your thumb still for a moment and it\'s just like lifting it: the tractor stops turning and keeps the direction it\'s pointing, and the slider re-centres under your thumb.'],
           ['🚜', 'Gas', 'Automatic — you’re always on the throttle.'],
           ['🔥', 'Nitro', 'Tap <b>NITRO</b> for a burst of speed. Counter at the top right.'],
           ['🛑', 'Brake', 'Hold <b>BRAKE</b> to slow down. Keep holding when stopped to reverse out of trouble.'],
@@ -712,6 +737,7 @@
     }
 
     function frame(now) {
+      recentreIfStill(now);
       rafId = requestAnimationFrame(frame);
       const dt = lastNow ? Math.min(0.1, (now - lastNow) / 1000) : 0;
       lastNow = now;
