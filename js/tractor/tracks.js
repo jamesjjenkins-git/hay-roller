@@ -356,285 +356,362 @@
       id: 'iron-fandango',
       pack: 'ironman',
       name: 'Fandango',
-      blurb: 'Two loops and an X through the middle — watch for traffic at the crossroads.',
+      blurb: 'High straights top and bottom, joined by two S-bends down through the low ground in the middle.',
       laps: 3,
       width: 88,
-      aiSkill: 0.27,
+      aiSkill: 0.22,
       reward: [1100, 580, 300, 110],
       unlock: { track: 'harvest', place: 3 },
-      crossings: [{ x: 600, y: 360, r: 175 }],
+      // Ground shapes read off the NES map's shading (see terrainHeight).
+      terrain: [
+        { type: 'plateau', fall: 120, poly: [[-9, 44], [1219, 44], [1219, 153], [-9, 153]], h: 28 },
+        { type: 'plateau', fall: 110, poly: [[47, 549], [1192, 549], [1192, 677], [47, 677]], h: 22 },
+      ],
       points: [
-        [600, 620], [420, 620], [250, 618], [140, 598], [95, 545], [130, 490],
-        [230, 478], [340, 455], [470, 410], [600, 360], [730, 310], [860, 265],
-        [970, 242], [1070, 210], [1105, 150], [1060, 100], [950, 95], [780, 95],
-        [600, 95], [420, 95], [250, 95], [140, 100], [95, 150], [130, 210],
-        [230, 242], [340, 265], [470, 310], [600, 360], [730, 410], [860, 455],
-        [970, 478], [1070, 490], [1105, 545], [1060, 598], [950, 618], [780, 620],
+        [606, 583], [654, 585], [702, 589], [749, 593], [797, 597], [845, 601],
+        [893, 604], [941, 605], [988, 597], [1027, 570], [1033, 524], [1004, 487],
+        [961, 465], [917, 447], [874, 425], [841, 390], [833, 344], [852, 301],
+        [888, 270], [930, 245], [970, 220], [1000, 183], [995, 137], [955, 111],
+        [908, 104], [860, 104], [812, 104], [764, 105], [716, 105], [668, 105],
+        [620, 105], [572, 105], [524, 104], [476, 103], [428, 103], [380, 102],
+        [332, 103], [284, 105], [237, 112], [195, 134], [180, 178], [209, 215],
+        [253, 234], [299, 247], [345, 261], [388, 282], [421, 315], [433, 361],
+        [415, 405], [378, 436], [335, 455], [289, 469], [243, 484], [203, 510],
+        [189, 554], [218, 590], [264, 602], [312, 601], [360, 596], [408, 590],
+        [456, 586], [504, 583], [551, 582], [599, 583],
       ],
       features: [
-        { type: 'hill', at: 0.062, len: 220 },
-        { type: 'hill', at: 0.936, len: 220 },
-        { type: 'hill', at: 0.687, len: 180 },
-        { type: 'hill', at: 0.812, len: 180 },
-        // Ramps just before each pass through the X: land in the middle of it.
-        { type: 'bumps', at: 0.15, len: 60 },
-        { type: 'jump', at: 0.224 },
-        { type: 'mud', at: 0.4, off: 0, len: 80 },
-        { type: 'water', at: 0.58, off: 0, len: 80 },
-        { type: 'jump', at: 0.723 },
-        { type: 'mud', at: 0.9, off: 0, len: 80 },
+        { type: 'jump', at: 0.1 },
+        { type: 'mud', at: 0.267, off: 0 },
+        { type: 'bumps', at: 0.433 },
+        { type: 'water', at: 0.6, off: 0 },
+        { type: 'jump', at: 0.795 },
+        { type: 'mud', at: 0.933, off: 0 },
       ],
       scenery: [
-        { kind: 'hay', x: 235, y: 359 },
-        { kind: 'hay', x: 965, y: 361 },
-        { kind: 'tree', x: 610, y: 191 },
-        { kind: 'tree', x: 590, y: 523 },
-        { kind: 'barn', x: 1100, y: 360 },
-        { kind: 'silo', x: 120, y: 360 },
+        { kind: 'barn', x: 600, y: 370 },
+        { kind: 'hay', x: 600, y: 220 },
+        { kind: 'tree', x: 594, y: 486 },
+        { kind: 'silo', x: 1080, y: 360 },
+        { kind: 'tree', x: 120, y: 360, scale: 0.6 },
       ],
     },
     {
       id: 'iron-sidewinder',
       pack: 'ironman',
       name: 'Sidewinder',
-      blurb: 'Back and forth across the hillside with hairpins at every end.',
+      blurb: 'A big C wrapped round a hairpin, over the ridge three times a lap.',
       laps: 3,
       width: 88,
       aiSkill: 0.36,
       reward: [1150, 610, 310, 120],
       unlock: { track: 'iron-fandango', place: 3 },
+      // Ground shapes read off the NES map's shading (see terrainHeight).
+      terrain: [
+        { type: 'ridge', fall: 60, a: [460, 792], b: [817, 58], w: 26, h: 26 },
+      ],
       points: [
-        [300, 610], [600, 610], [900, 610], [1040, 598], [1100, 545], [1060, 478],
-        [950, 455], [700, 452], [460, 452], [330, 440], [275, 385], [315, 322],
-        [430, 300], [700, 298], [950, 298], [1060, 282], [1100, 220], [1060, 140],
-        [950, 108], [700, 104], [450, 104], [220, 104], [120, 140], [92, 250],
-        [92, 400], [98, 530], [160, 600],
+        [230, 586], [278, 585], [326, 585], [374, 585], [422, 585], [470, 586],
+        [518, 588], [566, 591], [614, 594], [662, 597], [710, 601], [758, 605],
+        [806, 608], [853, 610], [901, 610], [949, 612], [997, 615], [1045, 616],
+        [1092, 605], [1125, 571], [1133, 524], [1105, 487], [1061, 469], [1014, 459],
+        [967, 451], [919, 443], [872, 437], [824, 433], [776, 432], [728, 432],
+        [680, 433], [632, 435], [584, 433], [537, 424], [498, 398], [489, 352],
+        [510, 310], [551, 286], [598, 283], [646, 287], [694, 292], [742, 295],
+        [790, 296], [838, 296], [886, 295], [933, 288], [977, 271], [1012, 237],
+        [1026, 193], [998, 156], [954, 136], [908, 122], [861, 113], [813, 108],
+        [765, 103], [718, 100], [670, 100], [622, 100], [574, 100], [526, 100],
+        [478, 100], [430, 100], [382, 101], [334, 105], [288, 119], [249, 147],
+        [216, 182], [188, 221], [162, 261], [138, 302], [115, 344], [96, 389],
+        [83, 435], [72, 481], [66, 529], [86, 570], [132, 582], [180, 585],
+        [228, 586],
       ],
       features: [
-        { type: 'hill', at: 0.297, len: 260 },
-        { type: 'hill', at: 0.505, len: 260 },
-        { type: 'bumps', at: 0.08, len: 70 },
-        { type: 'jump', at: 0.2 },
-        { type: 'mud', at: 0.38, off: 0, len: 80 },
-        { type: 'jump', at: 0.55 },
-        { type: 'water', at: 0.72, off: 0, len: 80 },
-        { type: 'bumps', at: 0.88, len: 60 },
+        { type: 'bumps', at: 0.1 },
+        { type: 'jump', at: 0.291 },
+        { type: 'mud', at: 0.433, off: 0 },
+        { type: 'water', at: 0.6, off: 0 },
+        { type: 'jump', at: 0.767 },
+        { type: 'bumps', at: 0.933 },
       ],
       scenery: [
-        { kind: 'tree', x: 672, y: 217, scale: 0.6 },
-        { kind: 'hay', x: 600, y: 210, scale: 0.5 },
-        { kind: 'tree', x: 1025, y: 381, scale: 0.6 },
-        { kind: 'tree', x: 525, y: 200 },
-        { kind: 'windmill', x: 201, y: 277 },
+        { kind: 'windmill', x: 232, y: 360 },
+        { kind: 'tree', x: 695, y: 210, scale: 0.6 },
+        { kind: 'hay', x: 750, y: 517, scale: 0.5 },
+        { kind: 'pond', x: 1109, y: 330 },
       ],
     },
     {
       id: 'iron-wipeout',
       pack: 'ironman',
       name: 'Wipeout',
-      blurb: 'A lightning-bolt zig-zag: fast diagonals into tight hairpins.',
+      blurb: 'A figure of eight: high ground across the top and a crossroads in the middle.',
       laps: 3,
       width: 88,
-      aiSkill: 0.38,
+      aiSkill: 0.32,
       reward: [1200, 640, 320, 120],
       unlock: { track: 'iron-sidewinder', place: 3 },
+      crossings: [{ x: 713, y: 323, r: 300 }],
+      // Ground shapes read off the NES map's shading (see terrainHeight).
+      terrain: [
+        { type: 'plateau', fall: 120, poly: [[41, 77], [1377, 77], [1377, 173], [41, 173]], h: 28 },
+        { type: 'mound', fall: 50, x: 882, y: 604, r: 22, h: 14 },
+        { type: 'mound', fall: 40, x: 155, y: 252, r: 18, h: -10 },
+      ],
       points: [
-        [450, 615], [700, 615], [900, 610], [1050, 590], [1090, 520], [1010, 470],
-        [780, 445], [520, 425], [350, 428], [255, 395], [268, 318], [385, 290],
-        [600, 252], [820, 220], [960, 228], [1075, 200], [1100, 130], [1000, 97],
-        [700, 95], [400, 95], [200, 100], [110, 140], [92, 250], [92, 400],
-        [98, 530], [160, 600], [300, 615],
+        [696, 612], [744, 608], [791, 600], [837, 586], [876, 560], [902, 519],
+        [905, 472], [888, 427], [858, 390], [820, 361], [776, 341], [730, 327],
+        [683, 318], [636, 311], [588, 305], [540, 299], [493, 294], [445, 288],
+        [397, 282], [350, 277], [302, 271], [255, 263], [208, 252], [167, 228],
+        [148, 185], [169, 143], [210, 120], [257, 109], [305, 104], [353, 102],
+        [401, 102], [449, 103], [497, 105], [544, 106], [592, 108], [640, 108],
+        [688, 109], [736, 109], [784, 110], [832, 110], [880, 109], [928, 108],
+        [976, 107], [1023, 118], [1051, 154], [1036, 198], [997, 226], [953, 245],
+        [908, 262], [863, 278], [817, 294], [772, 308], [725, 320], [679, 332],
+        [632, 344], [586, 355], [539, 367], [493, 379], [446, 391], [400, 403],
+        [353, 413], [306, 423], [259, 434], [213, 448], [170, 468], [137, 502],
+        [134, 549], [166, 583], [211, 600], [258, 606], [306, 609], [354, 611],
+        [402, 612], [450, 614], [498, 614], [546, 615], [594, 615], [642, 614],
+        [690, 612],
       ],
       features: [
-        { type: 'hill', at: 0.253, len: 260 },
-        { type: 'hill', at: 0.446, len: 240 },
-        { type: 'jump', at: 0.06 },
-        { type: 'bumps', at: 0.14, len: 60 },
-        { type: 'mud', at: 0.37, off: 0, len: 80 },
-        { type: 'jump', at: 0.5 },
-        { type: 'water', at: 0.68, off: 0, len: 80 },
-        { type: 'jump', at: 0.86 },
+        { type: 'jump', at: 0.228 },
+        { type: 'bumps', at: 0.32 },
+        { type: 'mud', at: 0.528, off: 0 },
+        { type: 'water', at: 0.752, off: 0 },
+        { type: 'jump', at: 0.92 },
       ],
       scenery: [
-        { kind: 'tree', x: 620, y: 530, scale: 0.6 },
-        { kind: 'hay', x: 658, y: 330, scale: 0.5 },
-        { kind: 'tree', x: 295, y: 518 },
-        { kind: 'hay', x: 838, y: 335 },
-        { kind: 'pond', x: 1110, y: 330 },
+        { kind: 'barn', x: 629, y: 480 },
+        { kind: 'tree', x: 320, y: 520, scale: 0.6 },
+        { kind: 'pond', x: 1050, y: 430 },
+        { kind: 'hay', x: 397, y: 187, scale: 0.5 },
       ],
     },
     {
       id: 'iron-bigdukes',
       pack: 'ironman',
       name: 'Big Dukes',
-      blurb: 'A big sweep round the outside, then the dukes: two long straights with a monster jump.',
+      blurb: 'Round the humps on the top, then down into the big pit — the two lines cross at the bottom of it.',
       laps: 3,
       width: 88,
-      aiSkill: 0.43,
+      aiSkill: 0.38,
       reward: [1250, 660, 340, 130],
       unlock: { track: 'iron-wipeout', place: 3 },
+      crossings: [{ x: 397, y: 428, r: 182 }],
+      // Ground shapes read off the NES map's shading (see terrainHeight).
+      terrain: [
+        { type: 'plateau', fall: 90, poly: [[340, 357], [678, 357], [661, 487], [356, 487]], h: -26 },
+        { type: 'mound', fall: 46, x: 404, y: 91, r: 14, h: 14 },
+        { type: 'mound', fall: 46, x: 726, y: 91, r: 14, h: 14 },
+        { type: 'mound', fall: 46, x: 1032, y: 91, r: 14, h: 14 },
+      ],
       points: [
-        [600, 615], [380, 615], [180, 612], [100, 560], [92, 420], [92, 250],
-        [110, 140], [200, 104], [450, 100], [750, 100], [1000, 104], [1090, 140],
-        [1100, 205], [1050, 252], [900, 262], [650, 262], [440, 262], [350, 290],
-        [330, 350], [380, 410], [520, 425], [750, 425], [960, 428], [1080, 460],
-        [1105, 540], [1060, 600], [900, 615],
+        [775, 614], [823, 613], [871, 612], [919, 611], [967, 610], [1015, 607],
+        [1062, 599], [1106, 580], [1132, 541], [1125, 495], [1089, 464], [1045, 444],
+        [998, 434], [951, 431], [903, 431], [855, 431], [807, 432], [759, 432],
+        [711, 431], [663, 431], [615, 430], [567, 430], [519, 430], [471, 430],
+        [423, 429], [375, 428], [327, 427], [279, 427], [231, 427], [183, 427],
+        [135, 423], [91, 405], [71, 362], [66, 314], [67, 266], [77, 220],
+        [110, 185], [154, 167], [201, 156], [248, 149], [296, 142], [343, 136],
+        [391, 131], [439, 125], [486, 118], [533, 111], [581, 105], [629, 103],
+        [677, 102], [725, 102], [773, 102], [821, 101], [869, 101], [917, 100],
+        [965, 100], [1013, 101], [1061, 106], [1102, 129], [1102, 175], [1076, 216],
+        [1035, 238], [987, 244], [939, 243], [891, 240], [843, 238], [796, 236],
+        [748, 234], [700, 232], [652, 232], [604, 236], [559, 252], [520, 280],
+        [488, 316], [458, 353], [428, 390], [397, 428], [370, 467], [353, 512],
+        [354, 559], [385, 595], [431, 607], [478, 613], [526, 615], [574, 616],
+        [622, 616], [670, 616], [718, 615], [766, 615],
       ],
       features: [
-        { type: 'hill', at: 0.708, len: 160, height: 32 },
-        { type: 'hill', at: 0.794, len: 160, height: 32 },
-        { type: 'bumps', at: 0.1, len: 60 },
-        { type: 'water', at: 0.24, off: 0, len: 80 },
-        { type: 'jump', at: 0.44 },
-        { type: 'mud', at: 0.62, off: 0, len: 80 },
-        { type: 'jump', at: 0.74 },
-        { type: 'bumps', at: 0.88, len: 60 },
+        { type: 'bumps', at: 0.12 },
+        { type: 'water', at: 0.336, off: 0 },
+        { type: 'jump', at: 0.52 },
+        { type: 'mud', at: 0.72, off: 0 },
+        { type: 'jump', at: 0.94 },
       ],
       scenery: [
-        { kind: 'tree', x: 655, y: 181, scale: 0.6 },
-        { kind: 'hay', x: 700, y: 520, scale: 0.5 },
-        { kind: 'tree', x: 904, y: 343, scale: 0.6 },
-        { kind: 'tree', x: 220, y: 340 },
-        { kind: 'silo', x: 975, y: 522 },
+        { kind: 'silo', x: 872, y: 521 },
+        { kind: 'tree', x: 713, y: 314, scale: 0.6 },
+        { kind: 'hay', x: 800, y: 520, scale: 0.5 },
+        { kind: 'tree', x: 120, y: 600, scale: 0.6 },
       ],
     },
     {
       id: 'iron-blaster',
       pack: 'ironman',
       name: 'Blaster',
-      blurb: 'Whoops, jumps and a long launch ramp straight across the middle.',
+      blurb: 'Over the long ridge again and again, crossing itself twice on the way.',
       laps: 3,
       width: 88,
       aiSkill: 0.42,
       reward: [1300, 690, 350, 130],
       unlock: { track: 'iron-bigdukes', place: 3 },
-      crossings: [{ x: 560, y: 345, r: 170 }],
+      crossings: [{ x: 542, y: 398, r: 186 }, { x: 662, y: 246, r: 204 }],
+      // Ground shapes read off the NES map's shading (see terrainHeight).
+      terrain: [
+        { type: 'ridge', fall: 60, a: [401, 602], b: [726, 78], w: 34, h: 30 },
+        { type: 'mound', fall: 34, x: 254, y: 226, r: 10, h: 10 },
+        { type: 'mound', fall: 34, x: 310, y: 278, r: 10, h: 10 },
+        { type: 'mound', fall: 34, x: 221, y: 310, r: 10, h: 10 },
+      ],
       points: [
-        [600, 615], [400, 615], [230, 612], [130, 592], [100, 525], [150, 470],
-        [290, 465], [425, 405], [560, 345], [700, 280], [840, 222], [960, 232],
-        [1068, 210], [1100, 140], [1010, 97], [750, 95], [500, 95], [250, 96],
-        [140, 110], [100, 170], [150, 235], [300, 262], [430, 305], [560, 345],
-        [700, 380], [850, 412], [990, 440], [1080, 480], [1100, 560], [1040, 610],
-        [850, 615],
+        [179, 391], [227, 393], [275, 394], [323, 395], [371, 395], [419, 395],
+        [467, 395], [515, 397], [563, 400], [610, 405], [658, 409], [706, 413],
+        [754, 418], [802, 421], [850, 423], [898, 424], [946, 424], [994, 426],
+        [1041, 433], [1085, 451], [1121, 482], [1132, 528], [1114, 572], [1078, 602],
+        [1031, 613], [983, 616], [935, 615], [887, 613], [840, 608], [792, 601],
+        [745, 593], [697, 586], [650, 576], [605, 562], [561, 542], [523, 513],
+        [504, 470], [520, 426], [550, 389], [579, 351], [606, 311], [636, 273],
+        [669, 239], [703, 205], [737, 171], [774, 141], [815, 116], [861, 102],
+        [909, 102], [956, 112], [1002, 127], [1045, 147], [1078, 181], [1069, 226],
+        [1031, 254], [984, 266], [936, 265], [889, 259], [841, 253], [793, 250],
+        [745, 249], [697, 247], [649, 246], [601, 244], [553, 244], [505, 243],
+        [457, 243], [410, 238], [367, 217], [340, 178], [295, 171], [250, 188],
+        [206, 206], [164, 230], [129, 263], [98, 299], [71, 338], [90, 376],
+        [137, 387],
       ],
       features: [
-        { type: 'hill', at: 0.200, len: 220 },
-        { type: 'hill', at: 0.289, len: 240 },
-        { type: 'bumps', at: 0.05, len: 70 },
-        { type: 'mud', at: 0.42, off: 0, len: 80 },
-        { type: 'bumps', at: 0.6, len: 70 },
-        { type: 'water', at: 0.78, off: 0, len: 80 },
+        { type: 'bumps', at: 0.176 },
+        { type: 'mud', at: 0.32, off: 0 },
+        { type: 'jump', at: 0.624 },
+        { type: 'water', at: 0.716, off: 0 },
+        { type: 'bumps', at: 0.92 },
       ],
       scenery: [
-        { kind: 'hay', x: 694, y: 189, scale: 0.5 },
-        { kind: 'hay', x: 507, y: 211 },
-        { kind: 'tree', x: 845, y: 519 },
-        { kind: 'tree', x: 418, y: 519 },
+        { kind: 'tree', x: 700, y: 96, scale: 0.6 },
+        { kind: 'hay', x: 300, y: 560, scale: 0.5 },
+        { kind: 'tree', x: 101, y: 177, scale: 0.6 },
       ],
     },
     {
       id: 'iron-cliffhanger',
       pack: 'ironman',
       name: 'Cliffhanger',
-      blurb: 'A giant loop with a steep climb and drop through the middle.',
+      blurb: 'Up the long ramp onto the high rim, then over the cliff into the infield.',
       laps: 3,
       width: 88,
-      aiSkill: 0.56,
+      aiSkill: 0.4,
       reward: [1250, 660, 340, 130],
       unlock: { track: 'iron-blaster', place: 3 },
+      // Ground shapes read off the NES map's shading (see terrainHeight).
+      terrain: [
+        { type: 'plateau', fall: 130, poly: [[0, 69], [1296, 69], [1296, 221], [0, 221]], h: 30 },
+        { type: 'ramp', fall: 60, a: [854, 616], b: [1119, 239], w: 36, h0: 0, h1: 30 },
+      ],
       points: [
-        [300, 615], [450, 605], [540, 470], [610, 340], [665, 288], [725, 330],
-        [800, 450], [880, 560], [960, 610], [1060, 600], [1102, 530], [1102, 350],
-        [1100, 200], [1060, 120], [950, 100], [700, 100], [450, 100], [200, 100],
-        [110, 140], [90, 250], [90, 400], [95, 530], [150, 600],
+        [648, 596], [696, 599], [744, 597], [791, 588], [836, 570], [876, 544],
+        [913, 513], [946, 479], [977, 442], [1007, 405], [1035, 365], [1059, 324],
+        [1075, 279], [1076, 231], [1054, 189], [1015, 162], [969, 149], [921, 144],
+        [873, 142], [825, 141], [777, 140], [729, 138], [681, 135], [633, 131],
+        [585, 126], [538, 122], [490, 117], [442, 114], [394, 110], [346, 107],
+        [298, 106], [250, 106], [205, 121], [176, 158], [191, 201], [232, 224],
+        [280, 230], [328, 232], [376, 235], [424, 238], [471, 242], [519, 247],
+        [567, 254], [613, 265], [656, 286], [689, 320], [697, 367], [674, 408],
+        [634, 434], [587, 445], [540, 449], [492, 449], [444, 447], [396, 444],
+        [348, 442], [300, 441], [252, 444], [206, 457], [176, 493], [189, 537],
+        [230, 562], [276, 573], [324, 577], [372, 579], [420, 579], [468, 580],
+        [516, 582], [564, 586], [612, 591],
       ],
       features: [
-        { type: 'hill', at: 0.170, len: 560, height: 40 },
-        { type: 'hill', at: 0.414, len: 300 },
-        { type: 'bumps', at: 0.29, len: 50 },
-        { type: 'mud', at: 0.35, off: 0, len: 80 },
-        { type: 'water', at: 0.55, off: 0, len: 80 },
-        { type: 'jump', at: 0.7 },
-        { type: 'bumps', at: 0.9, len: 60 },
+        { type: 'bumps', at: 0.12 },
+        { type: 'mud', at: 0.32, off: 0 },
+        { type: 'water', at: 0.52, off: 0 },
+        { type: 'jump', at: 0.72 },
+        { type: 'bumps', at: 0.92 },
       ],
       scenery: [
-        { kind: 'barn', x: 380, y: 330 },
+        { kind: 'barn', x: 145, y: 330 },
         { kind: 'silo', x: 880, y: 300 },
-        { kind: 'tree', x: 660, y: 470 },
-        { kind: 'hay', x: 300, y: 500 },
-        { kind: 'windmill', x: 960, y: 470 },
+        { kind: 'tree', x: 691, y: 496, scale: 0.6 },
+        { kind: 'windmill', x: 1020, y: 563 },
       ],
     },
     {
       id: 'iron-huevos',
       pack: 'ironman',
       name: 'Huevos Grande',
-      blurb: 'Egg-sized puddles on the top straight and a twisty S through the middle.',
+      blurb: 'Climb onto the egg plateau, splash past the ponds, then drop back down.',
       laps: 3,
       width: 88,
-      aiSkill: 0.56,
+      aiSkill: 0.46,
       reward: [1350, 720, 360, 140],
       unlock: { track: 'iron-cliffhanger', place: 3 },
+      // Ground shapes read off the NES map's shading (see terrainHeight).
+      terrain: [
+        { type: 'plateau', fall: 80, poly: [[236, 208], [996, 208], [996, 403], [236, 403]], h: 28 },
+      ],
       points: [
-        [600, 615], [850, 615], [1020, 612], [1100, 560], [1108, 420], [1108, 250],
-        [1090, 140], [1000, 104], [750, 100], [450, 100], [200, 104], [110, 140],
-        [92, 210], [150, 270], [300, 288], [560, 290], [800, 292], [880, 320],
-        [895, 385], [830, 440], [650, 448], [420, 448], [240, 452], [130, 490],
-        [100, 560], [170, 610], [350, 615],
+        [707, 607], [755, 610], [803, 611], [851, 611], [898, 608], [945, 597],
+        [988, 577], [1022, 543], [1039, 499], [1033, 452], [1007, 412], [968, 384],
+        [923, 368], [875, 361], [828, 359], [780, 359], [732, 361], [684, 362],
+        [636, 362], [588, 358], [544, 338], [523, 297], [546, 257], [590, 239],
+        [638, 236], [686, 235], [733, 234], [781, 233], [829, 231], [877, 230],
+        [925, 228], [973, 220], [1012, 194], [1019, 149], [986, 116], [940, 104],
+        [892, 103], [844, 102], [796, 102], [748, 101], [700, 101], [652, 101],
+        [604, 101], [556, 102], [508, 104], [460, 106], [412, 109], [364, 113],
+        [317, 121], [271, 134], [227, 154], [189, 182], [156, 217], [130, 257],
+        [109, 301], [96, 347], [92, 395], [100, 442], [123, 484], [158, 516],
+        [201, 537], [247, 551], [294, 560], [341, 568], [389, 574], [436, 580],
+        [484, 586], [532, 591], [579, 596], [627, 601], [675, 605],
       ],
       features: [
-        { type: 'hill', at: 0.593, len: 280 },
-        { type: 'hill', at: 0.757, len: 280 },
-        { type: 'jump', at: 0.08 },
-        { type: 'water', at: 0.32, off: 0, len: 70 },
-        { type: 'water', at: 0.38, off: 0, len: 70 },
-        { type: 'bumps', at: 0.55, len: 60 },
-        { type: 'mud', at: 0.7, off: 0, len: 80 },
-        { type: 'jump', at: 0.86 },
+        { type: 'jump', at: 0.052 },
+        { type: 'water', at: 0.267, off: 0 },
+        { type: 'water', at: 0.433, off: 0 },
+        { type: 'bumps', at: 0.6 },
+        { type: 'mud', at: 0.767, off: 0 },
+        { type: 'jump', at: 0.933 },
       ],
       scenery: [
-        { kind: 'tree', x: 560, y: 530, scale: 0.6 },
-        { kind: 'hay', x: 600, y: 200, scale: 0.5 },
-        { kind: 'tree', x: 750, y: 530, scale: 0.6 },
-        { kind: 'tree', x: 1000, y: 360 },
-        { kind: 'hay', x: 101, y: 373 },
+        { kind: 'pen', x: 431, y: 432 },
+        { kind: 'tree', x: 939, y: 509, scale: 0.6 },
+        { kind: 'hay', x: 315, y: 476, scale: 0.5 },
+        { kind: 'pond', x: 1087, y: 308 },
       ],
     },
     {
       id: 'iron-hurricane',
       pack: 'ironman',
       name: 'Hurricane Gulch',
-      blurb: 'The big one: a spiral over the gulch, crossing the creek on the way.',
+      blurb: 'Off the high ground on the right, across the gulch and through the creek.',
       laps: 3,
       width: 88,
-      aiSkill: 0.72,
+      aiSkill: 0.5,
       reward: [1500, 800, 410, 150],
       unlock: { track: 'iron-huevos', place: 3 },
-      crossings: [{ x: 350, y: 450, r: 110 }],
+      // Ground shapes read off the NES map's shading (see terrainHeight).
+      terrain: [
+        { type: 'plateau', fall: 130, poly: [[791, 65], [1194, 65], [1194, 410], [1046, 410]], h: 30 },
+        { type: 'ridge', fall: 60, a: [107, 158], b: [72, 531], w: 26, h: 18 },
+        { type: 'mound', fall: 40, x: 563, y: 214, r: 18, h: -8 },
+      ],
       points: [
-        [450, 615], [700, 615], [950, 615], [1060, 595], [1102, 520], [1102, 300],
-        [1100, 170], [1050, 105], [900, 100], [600, 100], [300, 100], [150, 110],
-        [95, 180], [95, 330], [120, 420], [200, 450], [350, 450], [550, 450],
-        [730, 445], [800, 400], [800, 330], [760, 292], [600, 290], [430, 290],
-        [365, 320], [350, 400], [350, 450], [352, 540], [372, 598],
+        [589, 606], [637, 606], [685, 601], [732, 593], [779, 583], [826, 571],
+        [872, 559], [918, 546], [963, 529], [1006, 507], [1043, 477], [1073, 439],
+        [1094, 396], [1108, 351], [1115, 303], [1115, 255], [1103, 209], [1078, 168],
+        [1041, 138], [996, 119], [949, 110], [902, 106], [854, 106], [806, 109],
+        [758, 114], [710, 120], [663, 128], [616, 136], [569, 145], [521, 152],
+        [473, 158], [426, 162], [378, 163], [330, 162], [282, 161], [234, 164],
+        [187, 176], [147, 202], [118, 240], [99, 284], [89, 331], [86, 378],
+        [96, 425], [128, 460], [174, 467], [218, 448], [257, 421], [297, 393],
+        [339, 370], [384, 354], [431, 345], [479, 340], [527, 338], [575, 339],
+        [622, 345], [667, 361], [697, 397], [684, 442], [643, 466], [597, 476],
+        [550, 487], [510, 513], [503, 559], [536, 592], [582, 605],
       ],
       features: [
-        { type: 'hill', at: 0.206, len: 320, height: 34 },
-        { type: 'hill', at: 0.561, len: 240 },
-        { type: 'bumps', at: 0.08, len: 60 },
-        { type: 'mud', at: 0.33, off: 0, len: 80 },
-        { type: 'water', at: 0.48, off: 0, len: 70 },
-        // Ramps just before each pass over the crossing: land in the middle of it.
-        { type: 'jump', at: 0.627 },
-        { type: 'water', at: 0.8, off: 0, len: 70 },
-        { type: 'jump', at: 0.912 },
+        { type: 'bumps', at: 0.1 },
+        { type: 'jump', at: 0.315 },
+        { type: 'mud', at: 0.433, off: 0 },
+        { type: 'water', at: 0.6, off: 0 },
+        { type: 'jump', at: 0.771 },
+        { type: 'water', at: 0.933, off: 0 },
       ],
       scenery: [
-        { kind: 'barn', x: 250, y: 255 },
-        { kind: 'silo', x: 1000, y: 370 },
-        { kind: 'tree', x: 371, y: 203 },
-        { kind: 'hay', x: 862, y: 501 },
-        { kind: 'windmill', x: 220, y: 565 },
+        { kind: 'barn', x: 736, y: 250 },
+        { kind: 'silo', x: 1060, y: 620 },
+        { kind: 'tree', x: 479, y: 423, scale: 0.6 },
+        { kind: 'windmill', x: 233, y: 564 },
       ],
     },
   ];
@@ -739,7 +816,7 @@
       };
     });
 
-    return {
+    const track = {
       ...def,
       samples,
       count,
@@ -748,6 +825,8 @@
       features,
       startIdx: 0,
     };
+    track.elev = buildElevation(track);
+    return track;
   }
 
   // Nearest centre-line sample to (x, y), searching around a hint index.
@@ -780,29 +859,93 @@
     return best;
   }
 
-  // Position relative to the feature: along = distance along track direction,
-  // across = sideways distance. Used for surface checks.
-  // Hills along the road: a smooth bump `height` px high over `len` px of
-  // track, centred on the feature. Returns the height here and the slope
-  // (rise per px) in the direction of travel round the lap.
+  // Hills along the road (the 'hill' feature): a smooth bump `height` px
+  // high over `len` px of track, centred on the feature.
   const HILL = { len: 240, height: 26 };
-  function elevationAt(track, idx) {
-    let h = 0;
-    let slope = 0;
-    for (const f of track.features) {
-      if (f.type !== 'hill') continue;
-      let d = idx - f.idx;
-      if (d > track.count / 2) d -= track.count;
-      if (d < -track.count / 2) d += track.count;
-      const s = d * SAMPLE_STEP;
-      if (Math.abs(s) >= f.len / 2) continue;
-      const k = Math.PI / f.len;
-      h += f.height * Math.cos(k * s) ** 2;
-      slope += -f.height * k * Math.sin(2 * k * s);
+
+  // ---------- Terrain ----------
+  // A track can describe its ground as shapes (world px), Super Off Road
+  // style: plateaus (polygons), ridges and ramps (thick lines), mounds and
+  // pits (circles; negative height). Each is flat at `h` inside and slopes
+  // smoothly to the ground over `fall` px. The road's height anywhere is the
+  // ground beneath it — so where two stretches cross, they always meet at
+  // the same height.
+  function shapeDistance(p, x, y) {
+    if (p.type === 'mound') return { d: Math.hypot(x - p.x, y - p.y) - p.r, h: p.h };
+    if (p.type === 'ridge' || p.type === 'ramp') {
+      const [ax, ay] = p.a;
+      const [bx, by] = p.b;
+      const vx = bx - ax;
+      const vy = by - ay;
+      const t = Math.max(0, Math.min(1, ((x - ax) * vx + (y - ay) * vy) / (vx * vx + vy * vy)));
+      const d = Math.hypot(x - (ax + vx * t), y - (ay + vy * t)) - p.w;
+      return { d, h: p.type === 'ramp' ? p.h0 + (p.h1 - p.h0) * t : p.h };
     }
+    // Plateau: 0 inside the polygon, else distance to its edge.
+    const pts = p.poly;
+    let inside = false;
+    let best = Infinity;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const [xi, yi] = pts[i];
+      const [xj, yj] = pts[j];
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+      const vx = xj - xi;
+      const vy = yj - yi;
+      const t = Math.max(0, Math.min(1, ((x - xi) * vx + (y - yi) * vy) / (vx * vx + vy * vy)));
+      best = Math.min(best, Math.hypot(x - (xi + vx * t), y - (yi + vy * t)));
+    }
+    return { d: inside ? 0 : best, h: p.h };
+  }
+
+  function terrainHeight(terrain, x, y) {
+    let up = 0;
+    let down = 0;
+    for (const p of terrain) {
+      const { d, h } = shapeDistance(p, x, y);
+      if (d >= p.fall) continue;
+      const k = d <= 0 ? 1 : 0.5 + 0.5 * Math.cos((Math.PI * d) / p.fall);
+      if (h >= 0) up = Math.max(up, h * k);
+      else down = Math.min(down, h * k);
+    }
+    return up + down;
+  }
+
+  function buildElevation(track) {
+    const n = track.count;
+    const raw = track.samples.map((s, i) => {
+      let h = track.terrain ? terrainHeight(track.terrain, s.x, s.y) : 0;
+      for (const f of track.features) {
+        if (f.type !== 'hill') continue;
+        let d = i - f.idx;
+        if (d > n / 2) d -= n;
+        if (d < -n / 2) d += n;
+        const along = d * SAMPLE_STEP;
+        if (Math.abs(along) < f.len / 2) h += f.height * Math.cos((Math.PI / f.len) * along) ** 2;
+      }
+      return h;
+    });
+    // A light smoothing along the road takes out any kinks.
+    const out = raw.map((_, i) => {
+      let sum = 0;
+      for (let k = -3; k <= 3; k++) sum += raw[(i + k + n) % n];
+      return sum / 7;
+    });
+    return out;
+  }
+
+  // Height of the road at sample `idx`, and its slope (rise per px) in the
+  // direction of travel round the lap.
+  function elevationAt(track, idx) {
+    if (!track.elev) return { h: 0, slope: 0 };
+    const n = track.count;
+    const i = ((idx % n) + n) % n;
+    const h = track.elev[i];
+    const slope = (track.elev[(i + 1) % n] - track.elev[(i - 1 + n) % n]) / (2 * SAMPLE_STEP);
     return { h, slope };
   }
 
+  // Position relative to the feature: along = distance along track direction,
+  // across = sideways distance. Used for surface checks.
   function inFeature(f, x, y) {
     const dx = x - f.x;
     const dy = y - f.y;
@@ -817,7 +960,7 @@
     return Math.abs(along) <= f.len / 2 && Math.abs(across) <= f.halfWidth;
   }
 
-  const api = { WORLD, TRACKS, SAMPLE_STEP, HILL, buildTrack, nearest, nearestGlobal, inFeature, elevationAt };
+  const api = { WORLD, TRACKS, SAMPLE_STEP, HILL, buildTrack, nearest, nearestGlobal, inFeature, elevationAt, terrainHeight };
   root.TractorTracks = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

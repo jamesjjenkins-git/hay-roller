@@ -562,7 +562,7 @@
     }
 
     // Hills: lit on the climb, shaded on the way down, with contour lines.
-    if (t.features.some((f) => f.type === 'hill')) drawRaisedRoad(c, t, rng);
+    if (t.elev && t.elev.some((h) => Math.abs(h) > 0.3)) drawRaisedRoad(c, t, rng);
 
     // Features.
     for (const f of t.features) drawFeature(c, f, rng);
@@ -731,16 +731,20 @@
       c.closePath();
     };
     const raised = [];
-    for (let i = 0; i < n; i++) if (lift[i] > 0.3 || lift[(i + 1) % n] > 0.3) raised.push(i);
-    // Bank: stack the road's footprint from the ground up to the surface.
+    for (let i = 0; i < n; i++) if (Math.abs(lift[i]) > 0.3 || Math.abs(lift[(i + 1) % n]) > 0.3) raised.push(i);
+    // Bank: stack the road's footprint from the ground to the surface — up
+    // for raised ground, down into a pit (where the far bank shows above it).
     for (const i of raised) {
       const la = lift[i];
       const lb = lift[(i + 1) % n];
-      const top = Math.max(la, lb);
-      for (let z = 0; z < top; z += 1) {
-        const k = z / Math.max(1, top);
-        c.fillStyle = `rgb(${Math.round(96 + 42 * k)}, ${Math.round(60 + 30 * k)}, ${Math.round(28 + 14 * k)})`;
-        quad(i, outer, Math.min(z, la), Math.min(z, lb));
+      const lo = Math.min(0, la, lb);
+      const hi = Math.max(0, la, lb);
+      for (let z = lo; z < hi; z += 1) {
+        const k = (z - lo) / Math.max(1, hi - lo);
+        const dark = hi <= 0 ? 0.75 : 1;
+        c.fillStyle = `rgb(${Math.round((96 + 42 * k) * dark)}, ${Math.round((60 + 30 * k) * dark)}, ${Math.round((28 + 14 * k) * dark)})`;
+        const clamp = (l) => (l >= 0 ? Math.min(z, l) : Math.max(z, l));
+        quad(i, outer, clamp(la), clamp(lb));
         c.fill();
       }
     }
