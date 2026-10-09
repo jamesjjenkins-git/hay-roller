@@ -4,6 +4,9 @@
 (function (root) {
   const WORLD = { width: 1200, height: 675 };
   const SAMPLE_STEP = 8; // px between centre-line samples
+  // Mud/water patches span this fraction of the road width either side of
+  // their centre (0.21 → 42% of the width), leaving a clear lane beside them.
+  const PATCH_HALF_WIDTH = 0.21;
 
   const TRACKS = [
     {
@@ -394,11 +397,32 @@
     }
     const length = count * SAMPLE_STEP;
 
+    // Mud and water sit against one side of the road, leaving a clear lane
+    // (about two tractors wide) on the other: drive accurately and you never
+    // touch them. On a bend they go on the inside, so cutting the corner
+    // costs you; on straights they alternate sides. Jumps and bump strips
+    // still span the full width.
+    let hazardSide = 1;
     const features = def.features.map((f, i) => {
       const idx = Math.floor(f.at * count) % count;
       const s = samples[idx];
-      const off = f.off || 0;
       const len = f.len || (f.type === 'jump' ? 30 : 60);
+      const patch = f.type === 'mud' || f.type === 'water';
+      let off = 0;
+      let halfWidth = def.width / 2;
+      if (patch) {
+        halfWidth = def.width * PATCH_HALF_WIDTH;
+        const before = samples[(idx - 10 + count) % count].angle;
+        const after = samples[(idx + 10) % count].angle;
+        let bend = after - before;
+        while (bend > Math.PI) bend -= Math.PI * 2;
+        while (bend < -Math.PI) bend += Math.PI * 2;
+        let side;
+        if (Math.abs(bend) > 0.15) side = Math.sign(bend); // inside of the bend
+        else if (f.off) side = Math.sign(f.off);
+        else side = (hazardSide = -hazardSide);
+        off = side * (def.width / 2 - halfWidth - 2);
+      }
       return {
         id: i,
         type: f.type,
@@ -407,8 +431,7 @@
         y: s.y + s.ny * off,
         angle: s.angle,
         len,
-        // Patches only cover part of the width so there's a line around them.
-        halfWidth: f.type === 'jump' || f.type === 'bumps' ? def.width / 2 : def.width * 0.32,
+        halfWidth,
       };
     });
 
@@ -460,6 +483,12 @@
     const dy = y - f.y;
     const along = dx * Math.cos(f.angle) + dy * Math.sin(f.angle);
     const across = -dx * Math.sin(f.angle) + dy * Math.cos(f.angle);
+    if (f.type === 'mud' || f.type === 'water') {
+      // Oval patches: only where you can actually see mud or water.
+      const a = along / (f.len / 2);
+      const b = across / f.halfWidth;
+      return a * a + b * b <= 1;
+    }
     return Math.abs(along) <= f.len / 2 && Math.abs(across) <= f.halfWidth;
   }
 

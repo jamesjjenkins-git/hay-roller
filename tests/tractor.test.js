@@ -360,3 +360,32 @@ test('walls glance you off with a small speed loss instead of sticking', () => {
   const c = s.track.samples[me.idx];
   assert.ok(Math.abs(Sim.angleDiff(Math.atan2(c.ty, c.tx), me.heading)) < 0.5, 'nose turned to run along the wall');
 });
+
+test('every mud patch and pond leaves a clear lane a tractor can drive through', () => {
+  for (const def of Tracks.TRACKS) {
+    const t = Tracks.buildTrack(def);
+    for (const f of t.features.filter((x) => x.type === 'mud' || x.type === 'water')) {
+      // Walk along the patch; at each step find the widest gap a tractor's
+      // centre can use that is on the road and clear of the patch.
+      for (let a = -f.len / 2; a <= f.len / 2; a += 6) {
+        const cx = f.x + Math.cos(f.angle) * a;
+        const cy = f.y + Math.sin(f.angle) * a;
+        const idx = Tracks.nearestGlobal(t, cx, cy);
+        const c = t.samples[idx];
+        const lim = t.halfWidth - Sim.RADIUS;
+        let best = 0;
+        let run = 0;
+        for (let lat = -lim; lat <= lim; lat += 1) {
+          const x = c.x + c.nx * lat;
+          const y = c.y + c.ny * lat;
+          // The tractor body (not just its centre) must stay out of the patch.
+          const hit = [[0, 0], [Sim.RADIUS, 0], [-Sim.RADIUS, 0], [0, Sim.RADIUS], [0, -Sim.RADIUS]]
+            .some(([ox, oy]) => Tracks.inFeature(f, x + ox, y + oy));
+          run = hit ? 0 : run + 1;
+          best = Math.max(best, run);
+        }
+        assert.ok(best >= 12, `${def.id} ${f.type} #${f.id}: only ${best}px of clear lane`);
+      }
+    }
+  }
+});
