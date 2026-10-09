@@ -152,6 +152,24 @@ folder:
 npm start        # serves on http://localhost:8080
 ```
 
+## iPhone app
+`ios/` is an Xcode project (Capacitor) that wraps the same game. After changing the web code:
+
+```sh
+npm install      # once
+npm run ios      # copies the game into www/ and syncs it into ios/
+npm run ios:open # opens Xcode
+```
+
+- **On your own iPhone, free account:** Xcode → Settings → Accounts, add your Apple ID. Then
+  App target → Signing & Capabilities → Team: *(your name) (Personal Team)*. Plug the phone in,
+  pick it as the run destination and press Run. Turn on Developer Mode on the phone when asked
+  (Settings → Privacy & Security), and trust the developer under Settings → General → VPN &
+  Device Management. Free-account installs expire after 7 days; press Run again to renew.
+- **TestFlight** needs the paid Apple Developer Program. Once joined: pick your team, set the
+  bundle id if `com.jamesjenkins.farmyardrally` is taken, bump the build number, then
+  Product → Archive → Distribute App → TestFlight.
+
 ## Tests
 ```sh
 npm run shots    # screenshot every track into screenshots/ (first time: npm run shots:setup)
