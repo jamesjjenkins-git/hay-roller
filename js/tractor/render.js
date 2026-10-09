@@ -1744,7 +1744,10 @@
         if (p.x < -10 || p.x > W + 10 || p.gy < -10 || p.gy > H + 10) continue;
         const ahead = pts[(k + 3) % n];
         const behind = pts[(k - 3 + n) % n];
-        const angle = Math.atan2(ahead.y - behind.y, ahead.x - behind.x);
+        // Lying along the wall on the ground: a bale on a slope sits higher
+        // up the screen but isn't turned by it (turned, the walls zig-zag
+        // over every hump).
+        const angle = Math.atan2(ahead.gy - behind.gy, ahead.x - behind.x);
         const a0 = pts[(k - 6 + n) % n];
         const a1 = pts[(k + 6) % n];
         let turn = Math.atan2(a1.gy - p.gy, a1.x - p.x) - Math.atan2(p.gy - a0.gy, p.x - a0.x);
