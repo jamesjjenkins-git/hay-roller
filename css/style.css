@@ -787,10 +787,6 @@ body.in-race .topbar { display: none; }
   -webkit-touch-callout: none;
 }
 #tractor-canvas { display: block; }
-#tractor-canvas-3d, #tractor-overlay { position: absolute; left: 0; top: 0; display: block; }
-#tractor-overlay { pointer-events: none; }
-#tractor-canvas-3d.hidden, #tractor-overlay.hidden, #tractor-canvas.hidden { display: none; }
-.race-screen { overflow: hidden; }
 
 .hud {
   position: absolute;
