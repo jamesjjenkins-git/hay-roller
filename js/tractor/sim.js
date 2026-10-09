@@ -78,11 +78,30 @@
     { name: 'Daisy Dukes', color: '#f4c20d' },
   ];
 
-  function createRace(trackDef, { seed = 1, playerUpgrades = {}, playerColor, playerLevel = 0, laps } = {}) {
+  // Farmyard Frenzy: a bonus round between races. Just you, 100 escaped
+  // animals and a minute to pop as many as you can. Every `per` popped pays
+  // 5% of the track's winning prize, so popping all 100 matches a race win,
+  // and a clean sweep adds a quarter on top.
+  const FRENZY = { animals: 100, time: 60, per: 5, share: 0.05, sweepBonus: 0.25, fleeRange: 100, fleeSpeed: 95 };
+
+  function frenzyRate(track) {
+    return Math.max(5, Math.round((track.reward[0] * FRENZY.share) / 5) * 5);
+  }
+
+  function frenzyEarnings(s) {
+    const popped = s.frenzy.popped;
+    const rate = frenzyRate(s.track);
+    const base = Math.floor(popped / FRENZY.per) * rate;
+    const sweep = popped >= s.frenzy.total;
+    const bonus = sweep ? Math.round((s.frenzy.total / FRENZY.per) * rate * FRENZY.sweepBonus) : 0;
+    return { popped, total: s.frenzy.total, rate, per: FRENZY.per, base, sweep, bonus, hay: base + bonus, timeLeft: Math.max(0, s.frenzy.timeLeft) };
+  }
+
+  function createRace(trackDef, { seed = 1, playerUpgrades = {}, playerColor, playerLevel = 0, laps, frenzy = false } = {}) {
     const track = trackDef.samples ? trackDef : Tracks.buildTrack(trackDef);
     const rng = FarmRng.mulberry32(seed);
     const start = track.samples[0];
-    const totalLaps = laps || track.laps;
+    const totalLaps = frenzy ? 999 : laps || track.laps;
 
     // Rivals keep their colours unless one is too close to the player's paint.
     const colors = DRIVERS.map((d) => d.color);
@@ -96,8 +115,8 @@
       }
     }
 
-    // 2x2 grid behind the start line.
-    const racers = DRIVERS.map((d, i) => {
+    // 2x2 grid behind the start line (just you in a Frenzy round).
+    const racers = (frenzy ? DRIVERS.slice(0, 1) : DRIVERS).map((d, i) => {
       const back = 34 + Math.floor(i / 2) * 44;
       const side = (i % 2 ? 1 : -1) * track.halfWidth * 0.45;
       const x = start.x - start.tx * back + start.nx * side;
@@ -150,8 +169,9 @@
       laps: totalLaps,
       racers,
       pickups: [],
-      animals: spawnAnimals(track, rng),
-      nextPickupAt: 2,
+      animals: frenzy ? spawnHerd(track, rng, FRENZY.animals) : spawnAnimals(track, rng),
+      frenzy: frenzy ? { timeLeft: FRENZY.time, popped: 0, total: FRENZY.animals } : null,
+      nextPickupAt: frenzy ? Infinity : 2,
       pickupId: 1,
       finishOrder: [],
       events: [],
@@ -451,7 +471,7 @@
   const ANIMAL = {
     kinds: { pig: { r: 9 }, sheep: { r: 9 }, cow: { r: 11 } },
     walk: 18, // px/s while wandering
-    slow: 0.22, // fraction of the tractor's speed lost on a hit
+    slow: 0.4, // fraction of the tractor's speed lost on a hit
     kick: 2.2, // the animal flies off at this multiple of the tractor's speed
     friction: 1.1, // per second while tumbling
     cooldown: 1.5, // s before the same animal can be hit again
@@ -500,6 +520,26 @@
     return out;
   }
 
+  // A whole herd spread right round the lap (but not on the starting grid).
+  function spawnHerd(track, rng, n) {
+    const kinds = Object.keys(ANIMAL.kinds);
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const frac = 0.04 + (0.94 * (i + rng())) / n;
+      const idx = Math.floor(frac * track.count) % track.count;
+      const kind = kinds[Math.floor(rng() * kinds.length)];
+      const r = ANIMAL.kinds[kind].r;
+      const lat = (rng() - 0.5) * (track.halfWidth - r) * 1.8;
+      const sm = track.samples[idx];
+      out.push({
+        id: i, kind, r, x: sm.x + sm.nx * lat, y: sm.y + sm.ny * lat, idx, home: idx,
+        heading: rng() * Math.PI * 2, vx: 0, vy: 0, z: 0, vz: 0, spin: 0,
+        mode: 'pause', timer: rng() * 3, target: null, walkPhase: 0, startle: 0, hitCooldown: 0,
+      });
+    }
+    return out;
+  }
+
   // Keeps an animal on the road, bouncing it off the walls.
   function keepOnTrack(track, a) {
     a.idx = Tracks.nearest(track, a.x, a.y, a.idx);
@@ -522,9 +562,33 @@
 
   function updateAnimals(s) {
     const { track, rng } = s;
+    if (s.frenzy) s.animals = s.animals.filter((a) => !a.popped);
     for (const a of s.animals) {
       a.hitCooldown = Math.max(0, a.hitCooldown - DT);
       a.startle = Math.max(0, a.startle - DT);
+      if (s.frenzy && a.mode !== 'tumble') {
+        // They know what's coming: bolt sideways off the racing line when a
+        // tractor bears down on them.
+        const r = s.racers[0];
+        const dx = a.x - r.x;
+        const dy = a.y - r.y;
+        const d = Math.hypot(dx, dy);
+        const ahead = (dx * Math.cos(r.heading) + dy * Math.sin(r.heading)) > 0;
+        if (d < FRENZY.fleeRange && ahead && Math.hypot(r.vx, r.vy) > 40) {
+          const c = track.samples[a.idx];
+          const lat = (a.x - c.x) * c.nx + (a.y - c.y) * c.ny;
+          const rlat = (r.x - c.x) * c.nx + (r.y - c.y) * c.ny;
+          const away = lat >= rlat ? 1 : -1;
+          a.heading = Math.atan2(c.ny * away, c.nx * away);
+          a.x += c.nx * away * FRENZY.fleeSpeed * DT;
+          a.y += c.ny * away * FRENZY.fleeSpeed * DT;
+          a.walkPhase += DT * 16;
+          a.mode = 'walk';
+          a.target = { x: a.x + c.nx * away * 30, y: a.y + c.ny * away * 30 };
+          a.timer = 0.6;
+          keepOnTrack(track, a);
+        }
+      }
       if (a.mode === 'tumble') {
         a.x += a.vx * DT;
         a.y += a.vy * DT;
@@ -584,6 +648,13 @@
         const dy = a.y - r.y;
         const d = Math.hypot(dx, dy);
         if (d >= RADIUS + a.r) continue;
+        if (s.frenzy) {
+          // Pop! Like a balloon — no slowdown in the bonus round.
+          a.popped = true;
+          s.frenzy.popped++;
+          s.events.push({ type: 'pop', id: r.id, kind: a.kind, x: a.x, y: a.y, count: s.frenzy.popped });
+          break;
+        }
         const speed = Math.hypot(r.vx, r.vy);
         // Off it goes: down the track and out to the side it was hit on, so
         // it clears your path rather than getting pushed along.
@@ -701,6 +772,17 @@
     collideRacers(s);
 
     const player = s.racers[0];
+    if (s.frenzy) {
+      // The bonus round ends when the minute is up or every animal is popped.
+      s.frenzy.timeLeft -= DT;
+      s.animals = s.animals.filter((a) => !a.popped);
+      if (!s.done && (s.frenzy.timeLeft <= 0 || !s.animals.length)) {
+        player.finished = true;
+        player.place = 1;
+        s.done = true;
+      }
+      return s;
+    }
     if (!s.done && (player.finished || s.t >= MAX_TIME)) {
       // Once you cross the line the rest are placed by where they are.
       for (const id of standings(s)) {
@@ -751,7 +833,7 @@
     };
   }
 
-  const api = { DT, RADIUS, MAX_TIME, DRIVERS, CATCHUP, ASSIST, WALL, ANIMAL, BUMPS, DRIFT, animalCount, catchUpBoost, aiStats, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
+  const api = { DT, RADIUS, MAX_TIME, DRIVERS, CATCHUP, ASSIST, WALL, ANIMAL, BUMPS, DRIFT, FRENZY, frenzyRate, frenzyEarnings, animalCount, catchUpBoost, aiStats, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
   root.TractorSim = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

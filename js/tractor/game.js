@@ -522,14 +522,20 @@
       document.body.classList.toggle('in-race', on);
     }
 
-    function startRace() {
+    // 'race' or 'frenzy' (the Farmyard Frenzy bonus round between races).
+    let raceKind = 'race';
+
+    function startRace(kind = 'race') {
+      raceKind = kind;
       const track = getTrack(selected);
       sim = Sim.createRace(track, {
         seed: root.FarmRng.randomSeed(),
         playerUpgrades: garage.state.upgrades,
         playerColor: garage.paintHex(),
         playerLevel: garage.level,
+        frenzy: kind === 'frenzy',
       });
+      raceEl.classList.toggle('frenzy', kind === 'frenzy');
       phase = 'countdown';
       countdown = COUNTDOWN_SECONDS;
       acc = 0;
@@ -676,7 +682,9 @@
         return;
       }
       if (act === 'resume') togglePause();
-      else if (act === 'restart' || act === 'again') startRace();
+      else if (act === 'restart') startRace(raceKind);
+      else if (act === 'again') startRace();
+      else if (act === 'frenzy') startRace('frenzy');
       else if (act === 'quit' || act === 'garage') toGarage();
       else if (act === 'controls') showControls(lastInput);
       else if (act === 'steer') {
@@ -702,6 +710,10 @@
     }
 
     function finishRace() {
+      if (raceKind === 'frenzy') {
+        finishFrenzy();
+        return;
+      }
       phase = 'results';
       sound.engineStop();
       const e = Sim.earnings(sim);
@@ -735,13 +747,48 @@
                 : ''}
             </div>
             ${awardsHtml(e, award, newlyUnlocked)}
-            <div class="r-actions">
+            <div class="r-actions three">
               <button class="btn btn-ghost" data-act="garage">Garage</button>
-              <button class="btn btn-primary btn-big" data-act="again">Race again</button>
+              <button class="btn btn-ghost" data-act="again">Race again</button>
+              <button class="btn btn-primary btn-big" data-act="frenzy">🎈 Bonus: Farmyard Frenzy</button>
             </div>
           </div>`;
         modal.classList.remove('hidden');
       }, 1500);
+    }
+
+    // End of a Farmyard Frenzy bonus round: pay out and offer the next race.
+    function finishFrenzy() {
+      phase = 'results';
+      sound.engineStop();
+      const e = Sim.frenzyEarnings(sim);
+      lastEarnings = { total: e.hay };
+      const best = garage.recordFrenzy(selected.id, e.popped);
+      if (e.hay > 0) wallet.credit(e.hay, `Farmyard Frenzy — ${e.popped} animals popped at ${selected.name}`);
+      if (e.sweep) sound.fanfare();
+      else sound.coins();
+      setTimeout(() => {
+        if (phase !== 'results') return;
+        modal.innerHTML = `
+          <div class="rmodal-card results frenzy-results">
+            <div class="place">🎈 ${e.popped}<small> / ${e.total}</small></div>
+            <div class="r-sub">Farmyard Frenzy · ${selected.name}${e.sweep ? ` · cleared with ${e.timeLeft.toFixed(1)}s to spare!` : ''}</div>
+            <div class="r-money">
+              <div><span>${Math.floor(e.popped / e.per)} × ${e.per} popped @ 🌾${fmt(e.rate)}</span><b>🌾 ${fmt(e.base)}</b></div>
+              ${e.sweep ? `<div><span>Clean sweep bonus</span><b>🌾 ${fmt(e.bonus)}</b></div>` : ''}
+              <div class="total"><span>Total earned</span><b id="r-total">🌾 ${fmt(e.hay)}</b></div>
+              ${e.hay > 0 && rewards && rewards.adsRemaining() > 0
+                ? `<button class="btn btn-ad" data-act="double">📺 Watch an ad to double it (+${fmt(e.hay)})</button>`
+                : ''}
+            </div>
+            ${best ? `<div class="awards"><div class="award record"><span class="a-icon">📈</span><span><b>New best</b><small>Most animals popped on ${selected.name}</small></span></div></div>` : `<p class="small">Your best here: ${garage.frenzyBest(selected.id)} popped</p>`}
+            <div class="r-actions">
+              <button class="btn btn-ghost" data-act="garage">Garage</button>
+              <button class="btn btn-primary btn-big" data-act="again">Next race 🏁</button>
+            </div>
+          </div>`;
+        modal.classList.remove('hidden');
+      }, 1200);
     }
 
     function awardsHtml(e, award, unlocked = []) {
@@ -810,6 +857,20 @@
     function updateHud() {
       if (!sim) return;
       const me = sim.racers[0];
+      if (sim.frenzy) {
+        const f = sim.frenzy;
+        const rate = Sim.frenzyRate(sim.track);
+        $('#hud-pos').innerHTML = `🎈${f.popped}`;
+        $('#hud-lap').textContent = `⏱ ${Math.max(0, Math.ceil(f.timeLeft))}s`;
+        $('#hud-lap').classList.toggle('hurry', f.timeLeft < 10);
+        $('#hud-time').textContent = `${f.total - f.popped} left · 🌾${rate} per ${Sim.FRENZY.per}`;
+        $('#hud-time').classList.remove('flash');
+        $('#hud-nitro').textContent = me.nitros ? '🔥'.repeat(Math.min(me.nitros, 6)) : '—';
+        $('#hud-cash').textContent = `🌾 ${fmt(Math.floor(f.popped / Sim.FRENZY.per) * rate)}`;
+        $('#btn-nitro').classList.toggle('empty', me.nitros === 0);
+        return;
+      }
+      $('#hud-lap').classList.remove('hurry');
       const pos = Sim.standings(sim).indexOf(0) + 1;
       $('#hud-pos').innerHTML = `${pos}<small>${ordinal(pos).slice(-2)}</small>`;
       $('#hud-lap').textContent = `LAP ${Math.max(1, Math.min(sim.laps, me.lap))}/${sim.laps}`;
@@ -847,7 +908,7 @@
         if (countdown <= 0) {
           countdown = 0;
           phase = 'racing';
-          banner = { text: 'GO!', t: 1 };
+          banner = { text: raceKind === 'frenzy' ? 'POP THEM ALL!' : 'GO!', t: 1 };
           sound.beep(true);
         } else if (Math.ceil(countdown) !== before) {
           sound.beep(false);
@@ -890,6 +951,7 @@
         const mine = e.id === 0;
         if (e.type === 'wall' && mine) sound.thud();
         else if (e.type === 'bang') sound.bonk();
+        else if (e.type === 'pop') sound.pop();
         else if (e.type === 'animal') {
           if (mine) sound.bonk();
           sound.animal(e.kind);

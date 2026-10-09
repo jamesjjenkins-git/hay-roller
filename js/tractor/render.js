@@ -94,6 +94,11 @@
           const label = e.kind === 'cash' ? `+${e.value}` : '+NITRO';
           if (r && r.isPlayer) particles.push(textP(e.x, e.y - 14, label, e.kind === 'cash' ? '#ffd23f' : '#ff7a2f', 1.1));
           for (let i = 0; i < 8; i++) spark(e.x, e.y, e.kind === 'cash' ? '#ffd23f' : '#ff7a2f');
+        } else if (e.type === 'pop') {
+          // Burst like a balloon: confetti and a little "POP!".
+          for (let i = 0; i < 12; i++) spark(e.x, e.y, ['#ff5d8f', '#ffd23f', '#5bd1ff', '#7ee07a', '#fff'][i % 5]);
+          particles.push({ type: 'star', x: e.x, y: e.y, life: 0.25, max: 0.25 });
+          particles.push(textP(e.x, e.y - 14, e.count % 5 === 0 ? `${e.count}!` : 'POP!', '#fff', 0.6));
         } else if (e.type === 'nitro' && r) {
           particles.push(textP(r.x, r.y - 22, 'NITRO!', '#ff7a2f', 0.8));
         }

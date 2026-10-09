@@ -17,6 +17,7 @@ bumps.
   the pause menu: slide left or right anywhere on the left half to steer at a steady rate; hold
   still for a moment and it's just like lifting your thumb.
   Gas is automatic. **NITRO** and **BRAKE** (hold to reverse) sit bottom-right. Play in landscape.
+- **🎈 Farmyard Frenzy bonus round** after every race: just you, 100 escaped animals and one minute. They pop like balloons when you hit them (and scatter when you bear down on them). Every 5 popped pays 5% of that track's winning prize (🌾15 per 5 on Muddy Meadow up to 🌾75 per 5 on the bonus track), so popping all 100 is worth a race win, plus a 25% clean-sweep bonus. Best score per track is remembered.
 - **Two camera views**, switchable any time with the 📷 camera button at the top of the race screen, the **V**
   key, or the pause menu (the choice is remembered):
   - **Whole track** — the classic single-screen *Super Off Road* view.

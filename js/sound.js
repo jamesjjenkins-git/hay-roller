@@ -107,6 +107,7 @@
     chip: () => { tone(1800, 0.04, { type: 'square', gain: 0.03 }); tone(2400, 0.05, { type: 'square', gain: 0.02, delay: 0.03 }); },
     beep: (high) => tone(high ? 880 : 520, high ? 0.4 : 0.15, { type: 'square', gain: 0.06 }),
     bonk: () => tone(240, 0.12, { type: 'triangle', gain: 0.18, slideTo: 90 }),
+    pop: () => { tone(1400, 0.05, { type: 'square', gain: 0.06, slideTo: 300 }); tone(700, 0.08, { type: 'triangle', gain: 0.08, slideTo: 1600, delay: 0.02 }); },
     animal: (kind) => voices[kind] && voices[kind](),
     coins: () => [0, 0.08, 0.16, 0.24].forEach((d, i) => tone(1200 + i * 300, 0.12, { type: 'square', gain: 0.04, delay: d })),
     fanfare: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i === 3 ? 0.5 : 0.15, { type: 'triangle', gain: 0.12, delay: i * 0.13 })),

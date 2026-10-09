@@ -199,6 +199,17 @@
           firstLapTime: lapRecord && !hadLap,
         };
       },
+      // Best Farmyard Frenzy score per track; returns true for a new best.
+      recordFrenzy(trackId, popped) {
+        const best = (state.frenzyBest = state.frenzyBest || {});
+        const isBest = popped > (best[trackId] || 0);
+        if (isBest) best[trackId] = popped;
+        save();
+        return isBest;
+      },
+      frenzyBest(trackId) {
+        return (state.frenzyBest && state.frenzyBest[trackId]) || 0;
+      },
       // Totals across every track for the cabinet header.
       awardTotals() {
         const t = { gold: 0, silver: 0, bronze: 0, fastest: 0 };

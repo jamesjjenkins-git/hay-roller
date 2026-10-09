@@ -1053,6 +1053,7 @@ kbd {
 .link-btn { border: 0; background: none; padding: 2px; font-weight: 800; text-decoration: underline; font-size: 13px; justify-self: center; }
 .unlock { margin: 0; padding: 8px; background: #c9f2c4; border: 2px solid var(--ink); border-radius: 10px; font-weight: 800; }
 .r-actions { display: grid; grid-template-columns: auto 1fr; gap: 10px; }
+.r-actions.three { grid-template-columns: auto auto 1fr; }
 /* Keep Garage / Race again reachable even when the card has to scroll. */
 .results .r-actions { position: sticky; bottom: -16px; margin: 0 -20px -16px; padding: 8px 20px 12px; background: var(--cream); border-top: 2px dashed #e3d6b4; }
 
@@ -1634,3 +1635,8 @@ body.has-banner main { padding-bottom: 96px; }
 }
 /* Never interrupt a race; it appears again once you're back in the menus. */
 body.in-race .update-banner { display: none; }
+
+/* Farmyard Frenzy */
+.hud-lap.hurry { background: #e2412f; color: #fff; animation: pulse 0.6s ease-in-out infinite alternate; }
+@keyframes pulse { from { transform: scale(1); } to { transform: scale(1.08); } }
+.frenzy-results .place small { font-size: 0.5em; opacity: 0.7; }

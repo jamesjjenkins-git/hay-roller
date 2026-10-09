@@ -464,3 +464,45 @@ test('rumble strips only cost speed if you steer while crossing them', () => {
   assert.ok(straight >= 158, `straight across keeps speed (${straight.toFixed(0)})`);
   assert.ok(turning < straight - 20, `turning across costs speed (${turning.toFixed(0)} vs ${straight.toFixed(0)})`);
 });
+
+test('Farmyard Frenzy: just you, 100 animals, a minute, and they pop', () => {
+  const def = Tracks.TRACKS[0];
+  const s = Sim.createRace(def, { seed: 2, frenzy: true });
+  assert.equal(s.racers.length, 1);
+  assert.equal(s.animals.length, 100);
+  assert.equal(s.pickups.length, 0);
+  // Drop the tractor onto an animal: it pops, with no slowdown.
+  const a = s.animals[10];
+  const me = s.racers[0];
+  me.x = a.x - 5;
+  me.y = a.y;
+  me.vx = 150;
+  me.vy = 0;
+  me.heading = 0;
+  me.idx = Tracks.nearestGlobal(s.track, me.x, me.y);
+  Sim.step(s, {});
+  assert.ok(s.events.some((e) => e.type === 'pop'));
+  assert.ok(s.frenzy.popped >= 1);
+  assert.equal(s.animals.length, 100 - s.frenzy.popped);
+  // The round ends after 60 seconds.
+  for (let i = 0; i < 60 * 60 + 5 && !s.done; i++) Sim.step(s, { 0: { steer: 0, throttle: 0, brake: 1, nitro: false } });
+  assert.ok(s.done);
+  assert.ok(s.frenzy.timeLeft <= 0);
+});
+
+test('Farmyard Frenzy pays 5% of the winning prize per 5 popped, plus a clean sweep bonus', () => {
+  const s = Sim.createRace(Tracks.TRACKS[0], { seed: 2, frenzy: true });
+  assert.equal(Sim.frenzyRate(s.track), 15); // 300 × 5%
+  s.frenzy.popped = 37;
+  let e = Sim.frenzyEarnings(s);
+  assert.equal(e.base, 7 * 15);
+  assert.equal(e.hay, 105);
+  assert.ok(!e.sweep);
+  s.frenzy.popped = 100;
+  e = Sim.frenzyEarnings(s);
+  assert.ok(e.sweep);
+  assert.equal(e.base, 300); // all 100 = a race win
+  assert.equal(e.hay, 375);
+  const last = Sim.createRace(Tracks.TRACKS[Tracks.TRACKS.length - 1], { seed: 1, frenzy: true });
+  assert.equal(Sim.frenzyRate(last.track), 75);
+});
