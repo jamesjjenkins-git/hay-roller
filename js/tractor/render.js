@@ -311,6 +311,7 @@
       drawParticles('under');
 
       const order = sim.racers.slice().sort((a, b) => a.z - b.z || a.y - b.y);
+      for (const a of sim.animals || []) drawFarmAnimal(ctx, a, now);
       for (const r of order) drawShadow(ctx, r);
       for (const r of order) drawTractor(ctx, r, now);
       drawParticles('over');
@@ -901,6 +902,35 @@
       ctx.fillText('N', 0, 0);
       ctx.fillStyle = '#555';
       ctx.fillRect(-3, -14, 6, 4);
+    }
+    ctx.restore();
+  }
+
+  // Escaped animals reuse the Hay Bale Derby artwork, a bit smaller.
+  const ANIMAL_SCALE = 0.62;
+  function drawFarmAnimal(ctx, a, now) {
+    const art = root.HayRender && root.HayRender.drawAnimal;
+    if (!art) return;
+    ctx.save();
+    ctx.translate(a.x, a.y);
+    if (a.z > 0) {
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.beginPath();
+      ctx.ellipse(a.z * 0.3, a.z * 0.5, a.r, a.r * 0.75, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.translate(0, -a.z);
+    }
+    ctx.scale(ANIMAL_SCALE, ANIMAL_SCALE);
+    art(ctx, { ...a, x: 0, y: 0, r: a.r / ANIMAL_SCALE, id: a.id + 1 }, now);
+    if (a.startle > 0 && a.mode !== 'tumble') {
+      // Little dizzy stars after being knocked flying.
+      for (let i = 0; i < 3; i++) {
+        const t = now / 300 + (i * Math.PI * 2) / 3;
+        ctx.fillStyle = '#ffd23f';
+        ctx.font = `14px ${FONT}`;
+        ctx.textAlign = 'center';
+        ctx.fillText('★', Math.cos(t) * 18, -26 + Math.sin(t) * 6);
+      }
     }
     ctx.restore();
   }

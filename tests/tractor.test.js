@@ -389,3 +389,74 @@ test('every mud patch and pond leaves a clear lane a tractor can drive through',
     }
   }
 });
+
+test('escaped animals: 1 on early tracks, up to 3 on later ones, all on the road', () => {
+  const counts = Tracks.TRACKS.map((def) => Sim.createRace(def, { seed: 3 }).animals.length);
+  assert.ok(counts.every((n) => n >= 1 && n <= 3), String(counts));
+  assert.equal(counts[0], 1);
+  assert.equal(counts[counts.length - 1], 3);
+  for (let i = 1; i < counts.length; i++) {
+    if (!Tracks.TRACKS[i].bonus) assert.ok(counts[i] >= counts[i - 1] || Tracks.TRACKS[i].aiSkill < Tracks.TRACKS[i - 1].aiSkill);
+  }
+  for (const def of Tracks.TRACKS) {
+    const s = Sim.createRace(def, { seed: 5 });
+    for (let t = 0; t < 600; t++) Sim.step(s, {});
+    for (const a of s.animals) {
+      const c = s.track.samples[Tracks.nearestGlobal(s.track, a.x, a.y)];
+      const lat = Math.abs((a.x - c.x) * c.nx + (a.y - c.y) * c.ny);
+      assert.ok(lat <= s.track.halfWidth - a.r + 1, `${def.id} ${a.kind} off the road`);
+    }
+  }
+});
+
+test('hitting an animal knocks it down the track and costs some speed', () => {
+  const s = Sim.createRace(Tracks.TRACKS[0], { seed: 1 });
+  const me = s.racers[0];
+  const a = s.animals[0];
+  const c = s.track.samples[a.idx];
+  // Put the player just behind the animal, flat out along the track.
+  me.x = a.x - c.tx * 30;
+  me.y = a.y - c.ty * 30;
+  me.heading = c.angle;
+  me.vx = c.tx * 180;
+  me.vy = c.ty * 180;
+  me.idx = Tracks.nearestGlobal(s.track, me.x, me.y);
+  a.mode = 'pause';
+  a.timer = 10;
+  let hit = null;
+  for (let t = 0; t < 30 && !hit; t++) {
+    Sim.step(s, { 0: { steer: 0, throttle: 1, brake: 0, nitro: false } });
+    hit = s.events.find((e) => e.type === 'animal');
+    if (!hit) s.events.length = 0;
+  }
+  assert.ok(hit, 'should hit the animal');
+  assert.equal(a.mode, 'tumble');
+  assert.ok(a.vx * c.tx + a.vy * c.ty > 100, 'animal flies off down the track');
+  assert.ok(Math.hypot(me.vx, me.vy) < 170, 'player loses some speed');
+  for (let t = 0; t < 300; t++) Sim.step(s, {});
+  assert.notEqual(a.mode, 'tumble', 'animal settles again');
+});
+
+test('rumble strips only cost speed if you steer while crossing them', () => {
+  const def = Tracks.TRACKS.find((d) => d.features.some((f) => f.type === 'bumps'));
+  const cross = (steer) => {
+    const s = Sim.createRace(def, { seed: 1 });
+    s.animals = [];
+    const f = s.track.features.find((x) => x.type === 'bumps');
+    const me = s.racers[0];
+    const c = s.track.samples[f.idx];
+    me.x = c.x - c.tx * (f.len / 2 + 2);
+    me.y = c.y - c.ty * (f.len / 2 + 2);
+    me.heading = c.angle;
+    me.vx = c.tx * 160;
+    me.vy = c.ty * 160;
+    me.steer = steer;
+    me.idx = Tracks.nearestGlobal(s.track, me.x, me.y);
+    for (let t = 0; t < 20; t++) Sim.step(s, { 0: { steer, throttle: 1, brake: 0, nitro: false } });
+    return Math.hypot(me.vx, me.vy);
+  };
+  const straight = cross(0);
+  const turning = cross(0.5);
+  assert.ok(straight >= 158, `straight across keeps speed (${straight.toFixed(0)})`);
+  assert.ok(turning < straight - 20, `turning across costs speed (${turning.toFixed(0)} vs ${straight.toFixed(0)})`);
+});

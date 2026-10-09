@@ -17,7 +17,7 @@
       accel: 150 + u.accel * 26,
       grip: 6.5 + u.handling * 1.3,
       turnRate: 3.5 + u.handling * 0.33,
-      // How well it copes with mud, water and bumps (0 = badly, 1 = barely notices).
+      // How well it copes with mud and water (0 = badly, 1 = barely notices).
       rough: 0.35,
       nitros: 2 + u.boost,
     };
@@ -149,6 +149,7 @@
       laps: totalLaps,
       racers,
       pickups: [],
+      animals: spawnAnimals(track, rng),
       nextPickupAt: 2,
       pickupId: 1,
       finishOrder: [],
@@ -257,8 +258,12 @@
       topMul = 0.55 + st.rough * 0.35;
       gripMul = 0.35;
     } else if (r.surface === 'bumps') {
-      topMul = 0.75 + st.rough * 0.25;
-      r.bump = Math.max(r.bump, 0.6 * (1 - st.rough * 0.7));
+      // Rumble strips: cross them straight and you're fine, but steering
+      // while you're on them shakes the tractor and costs real speed.
+      const turning = Math.min(1, Math.abs(r.steer) / BUMPS.fullAt);
+      topMul = 1 - BUMPS.loss * turning;
+      gripMul = 1 - 0.4 * turning;
+      r.bump = Math.max(r.bump, 0.25 + 0.5 * turning);
     }
     r.catchUp = catchUpBoost(s, r);
     const top = st.topSpeed * topMul * (boosting ? 1.45 : 1) * (1 + r.catchUp);
@@ -413,6 +418,176 @@
     }
   }
 
+  // Rumble strips only cost you if you're turning while on them.
+  const BUMPS = { loss: 0.35, fullAt: 0.35 };
+
+  // ---------- Escaped farm animals ----------
+  // A few pigs, sheep and cows wander about on the track. Hit one and it goes
+  // tumbling off down the track, and you lose a little speed. Early tracks
+  // have one; the hardest have three.
+
+  const ANIMAL = {
+    kinds: { pig: { r: 12 }, sheep: { r: 12 }, cow: { r: 15 } },
+    walk: 18, // px/s while wandering
+    slow: 0.22, // fraction of the tractor's speed lost on a hit
+    kick: 1.5, // the animal flies off at this multiple of the tractor's speed
+    friction: 1.8, // per second while tumbling
+    cooldown: 1, // s before the same animal can be hit again
+  };
+
+  function animalCount(track) {
+    if (track.animals != null) return track.animals;
+    const skill = track.aiSkill || 0;
+    return skill < 0.3 ? 1 : skill < 0.5 ? 2 : 3;
+  }
+
+  function spawnAnimals(track, rng) {
+    const kinds = Object.keys(ANIMAL.kinds);
+    const n = animalCount(track);
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      // Spread around the lap, clear of the start line.
+      const frac = 0.2 + (0.7 * (i + 0.2 + rng() * 0.6)) / n;
+      const idx = Math.floor(frac * track.count) % track.count;
+      const kind = kinds[Math.floor(rng() * kinds.length)];
+      const r = ANIMAL.kinds[kind].r;
+      const lat = (rng() - 0.5) * (track.halfWidth - r) * 1.4;
+      const sm = track.samples[idx];
+      out.push({
+        id: i,
+        kind,
+        r,
+        x: sm.x + sm.nx * lat,
+        y: sm.y + sm.ny * lat,
+        idx,
+        home: idx,
+        heading: rng() * Math.PI * 2,
+        vx: 0,
+        vy: 0,
+        z: 0,
+        vz: 0,
+        spin: 0,
+        mode: 'pause',
+        timer: rng() * 2,
+        target: null,
+        walkPhase: 0,
+        startle: 0,
+        hitCooldown: 0,
+      });
+    }
+    return out;
+  }
+
+  // Keeps an animal on the road, bouncing it off the walls.
+  function keepOnTrack(track, a) {
+    a.idx = Tracks.nearest(track, a.x, a.y, a.idx);
+    const c = track.samples[a.idx];
+    const lat = (a.x - c.x) * c.nx + (a.y - c.y) * c.ny;
+    const lim = track.halfWidth - a.r;
+    if (Math.abs(lat) > lim) {
+      const side = Math.sign(lat);
+      a.x -= c.nx * (Math.abs(lat) - lim) * side;
+      a.y -= c.ny * (Math.abs(lat) - lim) * side;
+      const vn = a.vx * c.nx + a.vy * c.ny;
+      if (vn * side > 0) {
+        a.vx -= c.nx * vn * 1.6;
+        a.vy -= c.ny * vn * 1.6;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function updateAnimals(s) {
+    const { track, rng } = s;
+    for (const a of s.animals) {
+      a.hitCooldown = Math.max(0, a.hitCooldown - DT);
+      a.startle = Math.max(0, a.startle - DT);
+      if (a.mode === 'tumble') {
+        a.x += a.vx * DT;
+        a.y += a.vy * DT;
+        const k = Math.exp(-ANIMAL.friction * DT * (a.z > 0 ? 0.15 : 1));
+        a.vx *= k;
+        a.vy *= k;
+        a.heading += a.spin * DT;
+        a.spin *= k;
+        a.vz -= 900 * DT;
+        a.z += a.vz * DT;
+        if (a.z <= 0) {
+          a.z = 0;
+          a.vz = a.vz < -120 ? -a.vz * 0.4 : 0;
+        }
+        keepOnTrack(track, a);
+        if (a.z === 0 && Math.hypot(a.vx, a.vy) < 12) {
+          // Dazed for a moment, then it wanders about wherever it landed.
+          a.mode = 'pause';
+          a.timer = 1.2;
+          a.startle = 1.2;
+          a.home = a.idx;
+          a.vx = a.vy = 0;
+        }
+      } else if (a.mode === 'pause') {
+        a.timer -= DT;
+        if (a.timer <= 0) {
+          // Amble towards a random spot on the road near where it lives.
+          const idx = (a.home + Math.floor((rng() - 0.5) * 16) + track.count) % track.count;
+          const c = track.samples[idx];
+          const lat = (rng() - 0.5) * (track.halfWidth - a.r) * 1.6;
+          a.target = { x: c.x + c.nx * lat, y: c.y + c.ny * lat };
+          a.mode = 'walk';
+          a.timer = 2 + rng() * 3;
+        }
+      } else {
+        const dx = a.target.x - a.x;
+        const dy = a.target.y - a.y;
+        const d = Math.hypot(dx, dy);
+        a.timer -= DT;
+        if (d < 4 || a.timer <= 0) {
+          a.mode = 'pause';
+          a.timer = 1 + rng() * 2.5;
+        } else {
+          const want = Math.atan2(dy, dx);
+          a.heading += angleDiff(want, a.heading) * Math.min(1, 4 * DT);
+          a.x += Math.cos(a.heading) * ANIMAL.walk * DT;
+          a.y += Math.sin(a.heading) * ANIMAL.walk * DT;
+          a.walkPhase += DT * 9;
+          if (keepOnTrack(track, a)) a.mode = 'pause';
+        }
+      }
+
+      if (a.hitCooldown > 0 || a.z > 12) continue;
+      for (const r of s.racers) {
+        if (r.z > 10) continue;
+        const dx = a.x - r.x;
+        const dy = a.y - r.y;
+        const d = Math.hypot(dx, dy);
+        if (d >= RADIUS + a.r) continue;
+        const speed = Math.hypot(r.vx, r.vy);
+        // Off it goes: down the track and out to the side it was hit on, so
+        // it clears your path rather than getting pushed along.
+        const nx = d > 0 ? dx / d : Math.cos(r.heading);
+        const ny = d > 0 ? dy / d : Math.sin(r.heading);
+        const fx = Math.cos(r.heading);
+        const fy = Math.sin(r.heading);
+        const side = -fy * nx + fx * ny >= 0 ? 1 : -1;
+        const kick = Math.max(120, speed * ANIMAL.kick);
+        a.vx = (fx * 0.8 - fy * side * 0.6) * kick;
+        a.vy = (fy * 0.8 + fx * side * 0.6) * kick;
+        a.vz = 180 + speed * 0.6;
+        a.spin = (rng() < 0.5 ? -1 : 1) * (6 + rng() * 6);
+        a.mode = 'tumble';
+        a.hitCooldown = ANIMAL.cooldown;
+        a.x = r.x + nx * (RADIUS + a.r);
+        a.y = r.y + ny * (RADIUS + a.r);
+        r.vx *= 1 - ANIMAL.slow;
+        r.vy *= 1 - ANIMAL.slow;
+        r.bump = Math.max(r.bump, 0.6);
+        s.events.push({ type: 'animal', id: r.id, kind: a.kind, x: a.x, y: a.y, power: speed });
+        break;
+      }
+    }
+  }
+
   // ---------- Pickups ----------
 
   function updatePickups(s) {
@@ -492,6 +667,7 @@
   function step(s, inputs = {}) {
     s.t += DT;
     updatePickups(s);
+    updateAnimals(s);
     for (const r of s.racers) {
       const prev = r.idx;
       let input = inputs[r.id];
@@ -553,7 +729,7 @@
     };
   }
 
-  const api = { DT, RADIUS, MAX_TIME, DRIVERS, CATCHUP, ASSIST, WALL, catchUpBoost, aiStats, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
+  const api = { DT, RADIUS, MAX_TIME, DRIVERS, CATCHUP, ASSIST, WALL, ANIMAL, BUMPS, animalCount, catchUpBoost, aiStats, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
   root.TractorSim = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -944,5 +944,5 @@
     ctx.restore();
   }
 
-  root.HayRender = { createRenderer };
+  root.HayRender = { createRenderer, drawAnimal };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

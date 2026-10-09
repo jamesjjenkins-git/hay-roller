@@ -603,7 +603,7 @@
         tip: 'You can also click and drag left/right on the left half of the track to steer with the mouse.',
       },
     };
-    const TRACK_TIPS = 'Jumps launch you — you can’t steer in the air. Mud and water slow you down. Grab 💰 cash bags for extra credits and red <b>N</b> cans for an extra nitro.';
+    const TRACK_TIPS = 'Jumps launch you — you can’t steer in the air. Mud and water slow you down — there’s always a clear line past them. Cross rumble strips in a straight line: steering while you’re on them costs speed. Watch out for escaped pigs, sheep and cows: hit one and it goes flying, but it costs you speed. Grab 💰 cash bags for extra credits and red <b>N</b> cans for an extra nitro.';
 
     function showPauseMenu() {
       modal.innerHTML = `
@@ -889,6 +889,10 @@
         const mine = e.id === 0;
         if (e.type === 'wall' && mine) sound.thud();
         else if (e.type === 'bang') sound.bonk();
+        else if (e.type === 'animal') {
+          if (mine) sound.bonk();
+          sound.animal(e.kind);
+        }
         else if (e.type === 'pickup' && mine) e.kind === 'cash' ? sound.coins() : sound.chip();
         else if (e.type === 'nitro' && mine) sound.whoosh();
         else if (e.type === 'jump' && mine) sound.boing();
