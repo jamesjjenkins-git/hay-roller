@@ -1402,26 +1402,70 @@
     return false;
   }
 
+  // Grandstand along the top edge: tiers of benches stepping down towards
+  // the camera, each with its riser face showing, the crowd on them, and a
+  // front rail hung with bunting, casting a shadow on the grass.
   function drawGrandstand(c, rng) {
-    const y = 0;
-    c.fillStyle = '#9b6633';
-    c.fillRect(300, y, 600, 46);
-    c.strokeStyle = OUTLINE;
-    c.lineWidth = 3 * LINE;
-    c.strokeRect(300, y - 3, 600, 49);
+    const x0 = 300;
+    const x1 = 900;
+    const front = 42;
+    c.fillStyle = 'rgba(0,0,0,0.2)';
+    c.fillRect(x0 + 8, front, x1 - x0, 12);
+    c.fillStyle = '#6b4423';
+    c.fillRect(x0, 0, x1 - x0, front);
     const shirts = ['#e2412f', '#2f7de2', '#f4c20d', '#2fae4a', '#8e44c9', '#fff', '#f07c1b'];
+    const skins = ['#f2c9a0', '#c98e5e', '#8a5a3c'];
     for (let row = 0; row < 3; row++) {
-      for (let x = 310; x < 895; x += 13) {
-        const yy = y + 9 + row * 13 + (rng() - 0.5) * 2;
+      const top = 2 + row * 13;
+      // Bench top, then the riser below it.
+      c.fillStyle = row % 2 ? '#b98448' : '#c28d50';
+      c.fillRect(x0, top + 5, x1 - x0, 5);
+      c.fillStyle = '#82552a';
+      c.fillRect(x0, top + 10, x1 - x0, 3);
+      for (let x = x0 + 10; x < x1 - 5; x += 13) {
+        const px = x + (row % 2) * 6 + (rng() - 0.5) * 2;
+        const py = top + 4 + (rng() - 0.5) * 1.5;
         c.fillStyle = shirts[Math.floor(rng() * shirts.length)];
-        circle(c, x + (row % 2) * 6, yy + 4, 6);
+        roundRect(c, px - 5, py, 10, 8, 4);
         c.fill();
-        c.fillStyle = ['#f2c9a0', '#c98e5e', '#8a5a3c'][Math.floor(rng() * 3)];
-        circle(c, x + (row % 2) * 6, yy, 3.6);
+        c.fillStyle = skins[Math.floor(rng() * 3)];
+        circle(c, px, py - 1, 3.6);
         c.fill();
+        // A few arms up, waving.
+        if (rng() < 0.12) {
+          c.strokeStyle = c.fillStyle;
+          c.lineWidth = 1.6;
+          c.beginPath();
+          c.moveTo(px + 4, py + 2);
+          c.lineTo(px + 7, py - 5);
+          c.stroke();
+        }
       }
     }
+    // Front rail with bunting.
+    c.fillStyle = '#e8d6b0';
+    c.fillRect(x0, front - 3, x1 - x0, 5);
+    c.fillStyle = '#c98f52';
+    c.fillRect(x0, front + 2, x1 - x0, 3);
+    const flags = ['#e2412f', '#f4c20d', '#2f7de2', '#2fae4a'];
+    for (let x = x0 + 4, k = 0; x < x1 - 8; x += 12, k++) {
+      c.beginPath();
+      c.moveTo(x, front + 5);
+      c.lineTo(x + 8, front + 5);
+      c.lineTo(x + 4, front + 11);
+      c.closePath();
+      c.fillStyle = flags[k % flags.length];
+      c.fill();
+    }
+    // End walls.
+    c.fillStyle = '#5a3a1c';
+    c.fillRect(x0 - 4, 0, 6, front + 5);
+    c.fillRect(x1 - 2, 0, 6, front + 5);
+    c.strokeStyle = OUTLINE;
+    c.lineWidth = 2.5 * LINE;
+    c.strokeRect(x0 - 4, -3, x1 - x0 + 8, front + 8);
   }
+
 
   // Screen px a hill lifts the road per px of height (Super Off Road style:
   // higher ground is drawn further up the screen, with an earth bank below).
@@ -2169,7 +2213,8 @@
         const x = s0.x + s0.nx * off * side;
         const y = s0.y + s0.ny * off * side;
         const lift = groundAt(x, y) * RAISE;
-        const inside = x > 20 && x < W - 20 && y - lift > 40 && y < H - 12;
+        const stand = x > 290 && x < 910 && y - lift < 66; // the grandstand
+        const inside = x > 20 && x < W - 20 && y - lift > 40 && y < H - 12 && !stand;
         if (inside && !onSurface(t, x, y, t.halfWidth + 18)) {
           best = { x, y, lift };
           break;
