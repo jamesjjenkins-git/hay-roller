@@ -110,7 +110,7 @@
         const slabIdx = dk.idx.filter(dk.slab);
         const lap = new Set();
         for (const i of slabIdx) {
-          for (const j of [(i - 1 + n) % n, (i + 1) % n]) if (!dk.slab(j)) lap.add(j);
+          for (const j of [(i - 1 + n) % n, (i + 1) % n]) if (!dk.slab(j) && liftAt(track, j) > BRIDGE_SLAB) lap.add(j);
         }
         drawRaisedRoad(cc, track, root.FarmRng.mulberry32(dk.idx[0] + 1), { only: [...slabIdx, ...lap], slab: dk.slab, noBank: lap });
         dk.sprite = cv;
@@ -1693,6 +1693,19 @@
       const d = Math.abs(a - b);
       return Math.min(d, t.count - d) > 12;
     };
+    // Points along every deck's railings, where it reaches the ground on
+    // screen too (the abutment and railing ends).
+    const rails = [];
+    for (const dk of t.decks || []) {
+      const outerW = t.halfWidth + 13;
+      for (const i of dk.idx) {
+        if (!dk.slab(i)) continue;
+        const s = t.samples[i];
+        const L = liftAt(t, i);
+        for (const side of [-1, 1]) rails.push([s.x + s.nx * side * (outerW - 2), s.y + s.ny * side * (outerW - 2) - L]);
+      }
+    }
+    const railNear = (x, y, r) => rails.some(([rx, ry]) => Math.hypot(rx - x, ry - y) < r);
     const clashes = (x, y, r, lift = 0, si = -1) => walls.some((w) => Math.hypot(w.x - x, w.y - y) < r + SIZE[w.kind] - 3 + (Math.abs(w.gy - w.y - lift) > 8 || (si >= 0 && apart(w.si, si)) ? 16 : 0));
     let placed = 0;
     for (const raw of lines) {
@@ -1740,9 +1753,11 @@
         const span = Math.hypot(a1.x - a0.x, a1.gy - a0.gy);
         const tight = span / Math.max(0.001, Math.abs(turn)) < BARREL_RADIUS * 0.6;
         const kind = placed % 9 === 0 ? 'tyre' : tight ? 'barrel' : 'bale';
-        // A bridge deck has railings instead.
+        // A bridge deck has railings instead, and the walls stop short of
+        // them (and of the stone ends) rather than butting into them.
         const dk = deckOf(t, p.si);
         if (dk && dk.slab(p.si)) continue;
+        if (railNear(p.x, p.y, SIZE[kind] + 4)) continue;
         if (clashes(p.x, p.y, SIZE[kind], p.gy - p.y, p.si)) {
           nextAt = travelled + 4;
           continue;
@@ -1880,6 +1895,9 @@
       const lb = lift[(i + 1) % n];
       const hi = Math.max(0, la, lb);
       if (opts.noBank && opts.noBank.has(i)) continue;
+      // Lower than the slab is thick, a deck end needs no slab or bank (it
+      // showed as a plank lying across the road).
+      if (slab(i) && Math.min(la, lb) < BRIDGE_SLAB) continue;
       if (slab(i)) {
         // A bridge deck: a timber slab with the road running underneath.
         for (let z = Math.min(la, lb) - BRIDGE_SLAB; z < Math.min(la, lb); z += 1) {
