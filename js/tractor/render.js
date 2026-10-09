@@ -820,32 +820,35 @@
     // Only where there's any terrain nearby.
     const cols = Math.ceil(W / cw);
     const rows = Math.ceil(H / ch);
-    const grid = [];
+    // Sampled one cell past every screen edge, so cells along the edges are
+    // shaded from real neighbours (not flat ground), with no seam there.
+    const rowsG = [];
     let any = false;
-    for (let j = 0; j <= rows + 1; j++) {
+    for (let j = -1; j <= rows + 1; j++) {
       const row = [];
-      for (let i = 0; i <= cols + 1; i++) {
+      for (let i = -1; i <= cols + 1; i++) {
         const h = hAt(i * cw + cw / 2, j * ch + ch / 2);
         if (Math.abs(h) > 0.4) any = true;
         row.push(h);
       }
-      grid.push(row);
+      rowsG.push(row);
     }
     if (!any) return;
+    const G = (j, i) => rowsG[j + 1][i + 1];
     for (let j = 0; j <= rows; j++) {
       for (let i = 0; i <= cols; i++) {
-        const h = grid[j][i];
+        const h = G(j, i);
         // Skip flat ground unless it's next to a dip (it has to cover the
         // near edge of the pit).
-        const behind = j > 0 ? grid[j - 1][i] : 0;
+        const behind = G(j - 1, i);
         if (Math.abs(h) < 0.05 && behind > -0.4) continue;
         const x = i * cw;
         const y = j * ch;
         const lift = h * RAISE;
         // Grass, lit from above: slopes facing the camera a little darker,
         // slopes facing away a little lighter.
-        const dx = ((grid[j][i + 1] || 0) - (grid[j][Math.max(0, i - 1)] || 0)) / (2 * cw);
-        const dy = (((grid[j + 1] && grid[j + 1][i]) || 0) - behind) / (2 * ch);
+        const dx = (G(j, i + 1) - G(j, i - 1)) / (2 * cw);
+        const dy = (G(j + 1, i) - behind) / (2 * ch);
         // Faded out at the foot of a slope, so where the drawn ground stops
         // it matches the flat grass around it (else its edge shows in steps).
         const foot = Math.min(1, Math.abs(h) / 0.8);
@@ -855,7 +858,7 @@
         // ground only slopes gently towards the camera, the gap down to the
         // next row is more of the same slope, not a bank (else slopes come
         // out striped).
-        const drop = (h - ((grid[j + 1] && grid[j + 1][i]) || 0)) * RAISE;
+        const drop = (h - G(j + 1, i)) * RAISE;
         if (h > 0) {
           // Darker the steeper the drop, blended in (a hard switch drew the
           // crease along a bank's corners as 2px stairs).
@@ -869,7 +872,7 @@
         c.fillRect(x, y - lift, cw + 0.5, ch + 0.5);
         // A lighter lip along the crest of a bank (only the top row of a
         // slope, or a steep slope would be striped with them).
-        const front = grid[j + 1] ? grid[j + 1][i] : 0;
+        const front = G(j + 1, i);
         if (h > 0.5 && h - front > 0.35 && behind - h < 0.2) {
           c.fillStyle = 'rgba(200,240,150,0.55)';
           c.fillRect(x, y - lift + ch - 1, cw + 0.5, 1.5);
