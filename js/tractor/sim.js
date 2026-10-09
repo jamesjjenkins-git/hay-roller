@@ -351,8 +351,17 @@
         } else if (Math.abs(input.steer) > 0.15 && Math.sign(input.steer) !== r.driftSide) {
           r.driftSide = Math.sign(input.steer);
         }
+        r.driftTime = (r.driftTime || 0) + DT;
       } else if (wasDrifting) {
         r.driftExit = DRIFT.exitTime;
+        // A little kick out of the slide: the longer the drift, the bigger
+        // (up to a point). It can briefly take you past top speed.
+        if (r.driftTime > DRIFT.kickMinTime) {
+          const kick = Math.min(DRIFT.kickMax, r.driftTime * DRIFT.kickPerSec);
+          vf += kick;
+          s.events.push({ type: 'driftKick', id: r.id, power: kick });
+        }
+        r.driftTime = 0;
       }
       // Turning scrubs off a little speed, which tightens the line through
       // corners; a drift carries its speed round instead.
@@ -519,6 +528,7 @@
     carry: 0.08, swing: 0.4, ease: 6,
     kick: 0.66, kickSteer: 0.3, slideCarry: 0.22, turnBoost: 1.3, scrub: 0.4, topMul: 0.94, minSpeed: 50, slideEase: 4,
     exitAccel: 2, exitTime: 0.8, // quicker pick-up for a moment after letting go
+    kickPerSec: 22, kickMax: 30, kickMinTime: 0.35, // speed kick (px/s) when you come out of a drift
   };
 
   // Rumble strips only cost you if you're turning while on them.

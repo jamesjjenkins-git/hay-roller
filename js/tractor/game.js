@@ -995,6 +995,7 @@
         }
         else if (e.type === 'pickup' && mine) e.kind === 'cash' ? sound.coins() : sound.chip();
         else if (e.type === 'nitro' && mine) sound.whoosh();
+        else if (e.type === 'driftKick' && mine) sound.chip();
         else if (e.type === 'jump' && mine) sound.boing();
         else if (e.type === 'lap' && mine) {
           if (e.time != null) {

@@ -99,6 +99,14 @@
           for (let i = 0; i < 12; i++) spark(e.x, e.y, ['#ff5d8f', '#ffd23f', '#5bd1ff', '#7ee07a', '#fff'][i % 5]);
           particles.push({ type: 'star', x: e.x, y: e.y, life: 0.25, max: 0.25 });
           particles.push(textP(e.x, e.y - 14, e.count % 5 === 0 ? `${e.count}!` : 'POP!', '#fff', 0.6));
+        } else if (e.type === 'driftKick' && r) {
+          // A puff of flame and dust out the back.
+          const fx = Math.cos(r.heading);
+          const fy = Math.sin(r.heading);
+          for (let i = 0; i < 5; i++) {
+            particles.push({ type: 'flame', x: r.x - fx * 16, y: r.y - fy * 16, vx: -fx * 120 + (Math.random() - 0.5) * 50, vy: -fy * 120 + (Math.random() - 0.5) * 50, life: 0.3, max: 0.3 });
+          }
+          for (let i = 0; i < 4; i++) dust(r.x - fx * 12, r.y - fy * 12, 1.2);
         } else if (e.type === 'nitro' && r) {
           particles.push(textP(r.x, r.y - 22, 'NITRO!', '#ff7a2f', 0.8));
         }
