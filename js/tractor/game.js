@@ -327,10 +327,15 @@
       layout();
     }
 
+    // The size the race was last laid out for; the frame loop re-lays out
+    // whenever the window differs (iOS can report a rotation's new size
+    // well after the resize and orientationchange events).
+    let laidOut = '';
     function layout() {
       if (phase === 'garage') return;
       const vw = root.innerWidth;
       const vh = root.innerHeight;
+      laidOut = `${vw}x${vh}`;
       if (viewMode === 'chase') {
         renderer.resize(vw, vh);
       } else {
@@ -345,6 +350,7 @@
     });
     root.addEventListener('resize', () => mounted && layout());
     root.addEventListener('orientationchange', () => setTimeout(() => mounted && layout(), 200));
+    if (root.visualViewport) root.visualViewport.addEventListener('resize', () => mounted && layout());
 
     // ---------- Garage ----------
 
@@ -1096,11 +1102,13 @@
       const dt = lastNow ? Math.min(0.1, (now - lastNow) / 1000) : 0;
       lastNow = now;
       if (!sim || phase === 'garage') return;
+      if (laidOut !== `${root.innerWidth}x${root.innerHeight}`) layout();
 
       // Phones must be sideways to race: hold the countdown until rotated,
       // and pause if the phone is turned upright mid-race.
       // The "turn your phone sideways" hint is only for racing, not menus.
       raceEl.classList.toggle('modal-open', !modal.classList.contains('hidden'));
+      raceEl.classList.toggle('paused', !!(phase && phase.paused));
       const needsRotate = raceEl.classList.contains('portrait') && matchMedia('(pointer: coarse)').matches;
       if (needsRotate && phase === 'racing') togglePause();
       if (phase === 'countdown' && needsRotate) {

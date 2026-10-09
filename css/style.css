@@ -1750,7 +1750,8 @@ body.in-race .update-banner { display: none; }
 .series-tab.active { background: var(--straw); }
 .series-tab.locked { opacity: 0.55; cursor: default; }
 .cabinet-card h2 small { font-size: 0.6em; opacity: 0.7; }
-.race-screen.modal-open .rotate-hint { display: none !important; }
+.race-screen.modal-open:not(.paused) .rotate-hint { display: none !important; }
+.race-screen.paused .rotate-hint { background: rgba(30, 20, 5, 0.96); }
 .rbtn-drift.on { box-shadow: 0 0 0 5px #e3c8ff, 0 0 22px 8px rgba(160, 90, 255, 0.8); opacity: 1; }
 
 /* Track pack switcher */

@@ -22,5 +22,13 @@ for (const p of COPY) fs.cpSync(path.join(ROOT, p), path.join(OUT, p), { recursi
 const index = path.join(OUT, 'index.html');
 let html = fs.readFileSync(index, 'utf8');
 html = html.replace('<html lang="en">', '<html lang="en" class="native-app">');
+// In the app the page must never zoom: after a rotation iOS can otherwise
+// keep the web view scaled for the old orientation, leaving the race too
+// small and the screen part-covered.
+html = html.replace(
+  'content="width=device-width, initial-scale=1, viewport-fit=cover"',
+  'content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"',
+);
+if (!html.includes('maximum-scale=1')) throw new Error('viewport meta not found in index.html');
 fs.writeFileSync(index, html);
 console.log(`Copied ${COPY.join(', ')} to www/`);
