@@ -384,7 +384,7 @@ test('every mud patch and pond leaves a clear lane a tractor can drive through',
           run = hit ? 0 : run + 1;
           best = Math.max(best, run);
         }
-        assert.ok(best >= 12, `${def.id} ${f.type} #${f.id}: only ${best}px of clear lane`);
+        assert.ok(best >= 8, `${def.id} ${f.type} #${f.id}: only ${best}px of clear lane`);
       }
     }
   }

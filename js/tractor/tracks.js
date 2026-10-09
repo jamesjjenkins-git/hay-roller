@@ -5,8 +5,8 @@
   const WORLD = { width: 1200, height: 675 };
   const SAMPLE_STEP = 8; // px between centre-line samples
   // Mud/water patches span this fraction of the road width either side of
-  // their centre (0.26 → 52% of the width), leaving a clear lane beside them.
-  const PATCH_HALF_WIDTH = 0.26;
+  // their centre (0.31 → 62% of the width), leaving a clear lane beside them.
+  const PATCH_HALF_WIDTH = 0.31;
   const PATCH_SCALE = 1.25; // mud/water patches are this much longer than listed
 
   const TRACKS = [
@@ -414,8 +414,8 @@
       let off = 0;
       let halfWidth = def.width / 2;
       if (patch) {
-        // On narrow tracks, keep at least ~2 tractors' width of clear lane.
-        halfWidth = Math.min(def.width * PATCH_HALF_WIDTH, def.width / 2 - 24);
+        // Keep a clear lane about 1.5 tractors wide, even on narrow tracks.
+        halfWidth = Math.min(def.width * PATCH_HALF_WIDTH, def.width / 2 - 19);
         const before = samples[(idx - 10 + count) % count].angle;
         const after = samples[(idx + 10) % count].angle;
         let bend = after - before;
