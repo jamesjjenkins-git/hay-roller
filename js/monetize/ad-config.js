@@ -7,13 +7,15 @@
 //      (GADApplicationIdentifier), then set `live: true`.
 //   3. Never tap your own live ads: add your phone's id to `testDevices`
 //      (Xcode's console prints it the first time an ad is requested).
-// The ids already here are Google's public test ids.
+// The simulator always gets test ads; a real phone gets real ones unless
+// it's listed in `testDevices`.
 (function (root) {
   const config = {
-    live: false,
+    live: true,
+    // Farmyard Rally in AdMob: app ca-app-pub-3653000407024097~5736706042.
     ios: {
-      banner: 'ca-app-pub-3940256099942544/2435281174',
-      rewarded: 'ca-app-pub-3940256099942544/1712485313',
+      banner: 'ca-app-pub-3653000407024097/9028163924', // Home banner
+      rewarded: 'ca-app-pub-3653000407024097/7017998123', // Free Hay
     },
     testDevices: [],
     // A cartoon farm game: keep ads suitable for a family audience.

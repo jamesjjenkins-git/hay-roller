@@ -32,11 +32,13 @@
 
   // Test-mode billing: asks for confirmation, then "succeeds" without payment.
   function testBilling(confirmFn) {
+    // Unique per purchase: purchases are granted once per transaction id.
+    let n = 0;
     return {
       testMode: true,
       async purchase(product) {
         const ok = await confirmFn(product);
-        return ok ? { ok: true, transactionId: `test-${Date.now()}` } : { ok: false, cancelled: true };
+        return ok ? { ok: true, transactionId: `test-${Date.now()}-${++n}` } : { ok: false, cancelled: true };
       },
       async restore() {
         return [];
