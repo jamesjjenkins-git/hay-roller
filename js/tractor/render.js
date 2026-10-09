@@ -1150,6 +1150,140 @@
       for (const x of [-32, 0, 32]) bale(x, 12, 0);
       for (const x of [-16, 16]) bale(x, 0, 14);
     },
+    corn(c, rng) {
+      // Tilled patch with its front edge showing, then rows of corn plants
+      // standing up, back row first, the odd ripe cob showing.
+      groundShadow(c, 74, 34, 8, 8);
+      c.fillStyle = '#6b4a26';
+      roundRect(c, -72, -32, 144, 72, 6);
+      c.fill();
+      roundRect(c, -72, -36, 144, 72, 6);
+      fillStroke(c, '#8a6a3d', 2.5);
+      c.strokeStyle = 'rgba(60,35,15,0.35)';
+      c.lineWidth = 2;
+      for (let row = -28; row <= 28; row += 14) {
+        c.beginPath();
+        c.moveTo(-68, row + 3);
+        c.lineTo(68, row + 3);
+        c.stroke();
+      }
+      for (let row = -28; row <= 28; row += 14) {
+        for (let col = -64; col <= 64; col += 11) {
+          const x = col + (rng() - 0.5) * 3;
+          const y = row + 2 + (rng() - 0.5) * 2;
+          c.strokeStyle = '#3f7a24';
+          c.lineWidth = 1.6;
+          c.beginPath();
+          c.moveTo(x, y);
+          c.lineTo(x, y - 9);
+          c.stroke();
+          c.fillStyle = '#3d8a2a';
+          c.beginPath();
+          c.ellipse(x, y - 9, 6, 4.2, 0, 0, Math.PI * 2);
+          c.fill();
+          c.fillStyle = rng() < 0.5 ? '#5fae3a' : '#6cc043';
+          c.beginPath();
+          c.ellipse(x - 0.8, y - 10.5, 4.6, 3, 0, 0, Math.PI * 2);
+          c.fill();
+          if (rng() < 0.18) {
+            c.fillStyle = '#f4c20d';
+            c.beginPath();
+            c.ellipse(x + 3, y - 7, 1.6, 3, 0.4, 0, Math.PI * 2);
+            c.fill();
+          }
+        }
+      }
+    },
+    pen(c) {
+      // A muddy pen fenced with posts and rails: the back fence, the pigs,
+      // then the front fence over them.
+      const w = 140;
+      const d = 90;
+      const ph = 9; // fence height
+      groundShadow(c, 76, 44, 6, 8);
+      roundRect(c, -w / 2, -d / 2, w, d, 6);
+      c.fillStyle = '#7a5a32';
+      c.fill();
+      c.fillStyle = 'rgba(60,35,15,0.35)';
+      for (const [x, y, rx, ry] of [[-20, 8, 30, 14], [30, -12, 22, 10], [-40, -18, 14, 7]]) {
+        c.beginPath();
+        c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+        c.fill();
+      }
+      const fence = (y0, y1, x0, x1, step) => {
+        c.strokeStyle = '#a8763c';
+        c.lineWidth = 2.4;
+        c.beginPath();
+        c.moveTo(x0, y0 - ph * 0.45);
+        c.lineTo(x1, y1 - ph * 0.45);
+        c.moveTo(x0, y0 - ph * 0.9);
+        c.lineTo(x1, y1 - ph * 0.9);
+        c.stroke();
+        c.fillStyle = '#7a4f25';
+        const n = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / step));
+        for (let i = 0; i <= n; i++) {
+          const x = x0 + ((x1 - x0) * i) / n;
+          const y = y0 + ((y1 - y0) * i) / n;
+          c.fillRect(x - 1.5, y - ph - 1, 3, ph + 1);
+        }
+      };
+      fence(-d / 2, -d / 2, -w / 2, w / 2, 20);
+      fence(-d / 2, d / 2, -w / 2, -w / 2, 18);
+      fence(-d / 2, d / 2, w / 2, w / 2, 18);
+      for (const [px, py, a] of [[-30, -10, 0.3], [20, 15, -2.5], [35, -20, 1.8]]) {
+        c.save();
+        c.translate(px, py);
+        c.fillStyle = 'rgba(0,0,0,0.2)';
+        c.beginPath();
+        c.ellipse(3, 3, 14, 9, a, 0, Math.PI * 2);
+        c.fill();
+        c.rotate(a);
+        c.beginPath();
+        c.ellipse(0, 2, 14, 10, 0, 0, Math.PI * 2);
+        c.fillStyle = '#c97a8d';
+        c.fill();
+        c.beginPath();
+        c.ellipse(0, -1, 14, 10, 0, 0, Math.PI * 2);
+        fillStroke(c, '#f7a8bb', 2);
+        c.beginPath();
+        c.ellipse(14, -1, 3.5, 5, 0, 0, Math.PI * 2);
+        fillStroke(c, '#ef8aa3', 1.5);
+        c.restore();
+      }
+      fence(d / 2, d / 2, -w / 2, w / 2, 20);
+    },
+    sheep(c) {
+      // A small flock grazing, each fleece standing on little dark legs.
+      for (const [sx, sy, a] of [[14, -18, -2.6], [-22, -12, 0.4], [24, 10, 3.0], [-6, 14, 1.4]]) {
+        c.save();
+        c.translate(sx, sy);
+        c.fillStyle = 'rgba(0,0,0,0.2)';
+        c.beginPath();
+        c.ellipse(3, 3, 12, 8, a, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#2a2a2a';
+        for (const [lx, ly] of [[-5, -4], [-5, 4], [5, -4], [5, 4]]) {
+          const ca = Math.cos(a);
+          const sa = Math.sin(a);
+          c.fillRect(lx * ca - ly * sa - 1, lx * sa + ly * ca - 4, 2, 4);
+        }
+        c.translate(0, -4);
+        c.rotate(a);
+        for (const [px, py] of [[-6, 0], [0, -5], [0, 5], [6, 0], [0, 0]]) {
+          circle(c, px, py, 6);
+          fillStroke(c, '#f6f3ea', 1.5);
+        }
+        for (const [px, py] of [[-6, 0], [0, -5], [0, 5], [6, 0], [0, 0]]) {
+          circle(c, px, py, 5);
+          c.fillStyle = '#f6f3ea';
+          c.fill();
+        }
+        c.beginPath();
+        c.ellipse(12, 0, 5, 4, 0, 0, Math.PI * 2);
+        fillStroke(c, '#2a2a2a', 1.5);
+        c.restore();
+      }
+    },
     pond(c, rng) {
       // Muddy bank, then water getting deeper towards the middle, a few
       // reeds and lily pads, and a duck.
