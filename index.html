@@ -6,6 +6,8 @@
   <title>Farmyard Rally</title>
   <meta name="description" content="Race and upgrade your tractor in cartoon farmyard rallies. Earn credits at the Hay Bale Derby.">
   <meta name="theme-color" content="#d8432f">
+  <!-- Replaced with the build id when published; used by js/update.js. -->
+  <meta name="app-version" content="__BUILD__">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -90,6 +92,7 @@
         </a>
       </div>
       <p class="disclaimer">Hay is free in-game currency with no cash value. It can't be bought, sold or withdrawn.</p>
+      <p class="version-line">Version <span id="app-version">dev</span> · <button class="link-btn" id="check-updates">Check for updates</button></p>
       <div class="ad-banner" id="home-banner" aria-label="Advertisement"></div>
     </section>
 
@@ -326,6 +329,7 @@
   <script src="js/monetize/rewards.js"></script>
   <script src="js/monetize/store.js"></script>
   <script src="js/monetize/ads.js"></script>
+  <script src="js/update.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

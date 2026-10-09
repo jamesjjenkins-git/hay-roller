@@ -296,6 +296,17 @@
   renderBalance();
   route();
 
+  // ---------- Version / updates ----------
+
+  $('#app-version').textContent = root.FarmUpdate ? root.FarmUpdate.current : 'dev';
+  $('#check-updates').addEventListener('click', async () => {
+    const r = root.FarmUpdate ? await root.FarmUpdate.check() : 'dev';
+    if (r === 'updated') toast('A new version is ready — tap the banner to update.', 'good');
+    else if (r === 'current') toast("You're on the latest version.", 'info');
+    else if (r === 'offline') toast("Couldn't check for updates — are you online?", 'warn');
+    else toast('Update checks only run on the published site.', 'info');
+  });
+
   renderGold();
   const welcome = rewards.claimWelcome();
   if (welcome) setTimeout(() => toast(`Welcome to the farm! Here's 🌾${fmt(welcome)} Hay to get you started.`, 'good', 5000), 600);

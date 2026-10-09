@@ -129,6 +129,12 @@ race is replayed from its seed and settled, so a bet is never lost or left hangi
 
 Then on the iPhone open the link in Safari → Share → **Add to Home Screen**.
 
+**Updates:** each deploy stamps a build id onto every script/stylesheet URL (so phones never
+mix old cached files with new ones) and writes `version.json`. The app checks it when opened or
+brought back to the foreground; if a newer build is live it shows *"New version available — tap
+to update"* (never during a race). The home page footer shows the running version and has a
+**Check for updates** link.
+
 ## Running it
 No build step and no dependencies. Either open `index.html` directly in a browser, or serve the
 folder:
