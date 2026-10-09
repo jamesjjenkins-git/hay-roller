@@ -77,14 +77,14 @@
     }
     // Horizontal slider: the further from where your thumb landed, the harder
     // you turn. A small dead zone keeps the tractor straight when you rest.
-    const SLIDE_MAX = 36;
-    const SLIDE_DEAD = 3;
+    const SLIDE_MAX = 48;
+    const SLIDE_DEAD = 4;
     function stickMove(x) {
       const dx = Math.max(-SLIDE_MAX, Math.min(SLIDE_MAX, x - stickOrigin.x));
       stickKnob.style.transform = `translateX(${dx}px)`;
       const mag = Math.max(0, Math.abs(dx) - SLIDE_DEAD) / (SLIDE_MAX - SLIDE_DEAD);
       // Front-loaded curve: a small nudge already gives a useful turn.
-      input.slide = Math.sign(dx) * Math.pow(mag, 0.6);
+      input.slide = Math.sign(dx) * Math.pow(mag, 0.8);
     }
     function stickEnd() {
       stickTouch = null;

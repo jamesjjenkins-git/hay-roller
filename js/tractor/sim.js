@@ -15,8 +15,8 @@
     return {
       topSpeed: 165 + u.speed * 17,
       accel: 150 + u.accel * 26,
-      grip: 7.5 + u.handling * 1.3,
-      turnRate: 4.3 + u.handling * 0.35,
+      grip: 6.5 + u.handling * 1.3,
+      turnRate: 3.5 + u.handling * 0.33,
       // How well it copes with mud, water and bumps (0 = badly, 1 = barely notices).
       rough: 0.35,
       nitros: 2 + u.boost,
@@ -269,7 +269,7 @@
       // Turning: tractors can pivot slowly even when stopped.
       const turnFactor = Math.min(1, 0.4 + speed / (st.topSpeed * 0.5));
       const dir = vf < -5 ? -1 : 1;
-      r.steer += (input.steer - r.steer) * Math.min(1, 35 * DT);
+      r.steer += (input.steer - r.steer) * Math.min(1, 20 * DT);
       r.heading += r.steer * st.turnRate * turnFactor * dir * DT;
     }
 
