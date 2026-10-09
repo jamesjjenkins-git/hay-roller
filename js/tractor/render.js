@@ -654,6 +654,9 @@
         // On the inside of tight bends the offset edge folds back over the
         // road; don't draw anything where there's driving surface.
         if (onSurface(t, p.x, p.gy, t.halfWidth + 3)) continue;
+        // Keep clear of any other stretch of road (crossings, the mouths of
+        // junctions, hairpins), not just the bit this wall lines.
+        if (nearOtherRoad(t, i, p.x, p.gy, t.halfWidth + 16) || nearOtherRoad(t, i, p.x, p.y, t.halfWidth + 12, true)) continue;
         // Local radius of this edge, from how fast it turns.
         const a0 = pts[(i - 3 + t.count) % t.count];
         const a1 = pts[(i + 3) % t.count];
@@ -763,62 +766,126 @@
     }
   }
 
-  const WALL_H = { bale: 9, tyre: 13, barrel: 15 };
+  // Kept low so the track stays easy to see.
+  const WALL_H = { bale: 6, tyre: 8, barrel: 10 };
   const BARREL_COLORS = ['#2f6fd0', '#e2412f', '#2e9a47'];
+  // Round things are seen slightly from the front, so their tops are ovals.
+  const OVAL = 0.62;
+
+  // Straw texture: short strokes along the bale, a couple of twine bands.
+  function baleTop(c, n) {
+    roundRect(c, -12, -7, 24, 14, 3);
+    fillStroke(c, n % 2 ? '#e8c35c' : '#ddb44c', 1.6);
+    c.save();
+    roundRect(c, -12, -7, 24, 14, 3);
+    c.clip();
+    const rng = root.FarmRng.mulberry32(n * 131 + 7);
+    c.lineWidth = 1;
+    for (let k = 0; k < 16; k++) {
+      const x = -11 + rng() * 22;
+      const y = -6 + rng() * 12;
+      c.strokeStyle = rng() < 0.5 ? 'rgba(255,245,200,0.75)' : 'rgba(150,105,30,0.55)';
+      c.beginPath();
+      c.moveTo(x, y);
+      c.lineTo(x + 3 + rng() * 3, y + (rng() - 0.5) * 1.5);
+      c.stroke();
+    }
+    c.restore();
+    c.strokeStyle = 'rgba(120,70,25,0.8)';
+    c.lineWidth = 1.4;
+    c.beginPath();
+    c.moveTo(-4.5, -7);
+    c.lineTo(-4.5, 7);
+    c.moveTo(4.5, -7);
+    c.lineTo(4.5, 7);
+    c.stroke();
+  }
 
   function drawWallSolid(c, w) {
     const h = WALL_H[w.kind];
     // Ground shadow.
     c.fillStyle = 'rgba(0,0,0,0.18)';
     c.beginPath();
-    c.ellipse(w.x + 3, w.y + 3, w.kind === 'bale' ? 13 : 10, 7, w.angle || 0, 0, Math.PI * 2);
+    c.ellipse(w.x + 3, w.y + 3, w.kind === 'bale' ? 13 : 10, 6, w.angle || 0, 0, Math.PI * 2);
     c.fill();
     if (w.kind === 'bale') {
       solid(c, w.x, w.y, h, '#a8842f', (cc) => {
         cc.rotate(w.angle);
         roundRect(cc, -12, -7, 24, 14, 3);
       });
-      // Outline down the visible side.
+      // Straw strands down the visible side.
       c.save();
       c.translate(w.x, w.y);
       c.rotate(w.angle);
       roundRect(c, -12, -7, 24, 14, 3);
       c.restore();
-      c.strokeStyle = 'rgba(59,42,20,0.5)';
+      c.strokeStyle = 'rgba(59,42,20,0.45)';
       c.lineWidth = 1;
       c.stroke();
       c.save();
       c.translate(w.x, w.y - h);
       c.rotate(w.angle);
-      roundRect(c, -12, -7, 24, 14, 3);
-      fillStroke(c, w.n % 2 ? '#e6bd55' : '#dcb04a', 1.8);
-      c.strokeStyle = 'rgba(120,80,20,0.6)';
-      c.lineWidth = 1;
-      c.beginPath();
-      c.moveTo(-4, -6);
-      c.lineTo(-4, 6);
-      c.moveTo(4, -6);
-      c.lineTo(4, 6);
-      c.stroke();
+      baleTop(c, w.n);
       c.restore();
     } else if (w.kind === 'tyre') {
-      // Three tyres stacked: dark rubber with a lighter band between each.
-      for (let z = 0; z < h; z += 1) {
-        circle(c, w.x, w.y - z, 8);
-        c.fillStyle = z % 4 === 3 ? '#4a4a4a' : '#1d1d1d';
+      // Tyres stacked: each a dark oval band, the top one showing its hole.
+      const R = 8.5;
+      for (let k = 0; k < 3; k++) {
+        const y = w.y - (k * h) / 3;
+        c.beginPath();
+        c.ellipse(w.x, y, R, R * OVAL, 0, 0, Math.PI * 2);
+        c.fillStyle = '#161616';
+        c.fill();
+        c.beginPath();
+        c.ellipse(w.x, y - h / 6, R, R * OVAL, 0, 0, Math.PI);
+        c.fillStyle = '#2b2b2b';
         c.fill();
       }
-      drawTyreStack(c, w.x, w.y - h, w.n % 2);
+      const ty = w.y - h;
+      c.beginPath();
+      c.ellipse(w.x, ty, R, R * OVAL, 0, 0, Math.PI * 2);
+      fillStroke(c, '#2a2a2a', 1.6);
+      c.beginPath();
+      c.ellipse(w.x, ty, R * 0.45, R * 0.45 * OVAL, 0, 0, Math.PI * 2);
+      c.fillStyle = w.n % 2 ? '#e2412f' : '#f4f0e6';
+      c.fill();
     } else {
+      // Oil drum: a cylinder with an oval lid and a rib round the middle.
       const col = BARREL_COLORS[w.n % 3];
-      solid(c, w.x, w.y, h, shade(col, -0.22), (cc) => circle(cc, 0, 0, 9));
-      // A rib round the middle of the drum.
-      c.strokeStyle = shade(col, -0.4);
+      const R = 8.5;
+      const ty = w.y - h;
+      c.beginPath();
+      c.moveTo(w.x - R, ty);
+      c.lineTo(w.x - R, w.y);
+      c.ellipse(w.x, w.y, R, R * OVAL, 0, Math.PI, 0, true);
+      c.lineTo(w.x + R, ty);
+      c.closePath();
+      const g = c.createLinearGradient(w.x - R, 0, w.x + R, 0);
+      g.addColorStop(0, shade(col, -0.3));
+      g.addColorStop(0.35, shade(col, 0.05));
+      g.addColorStop(1, shade(col, -0.35));
+      c.fillStyle = g;
+      c.fill();
+      c.lineWidth = 1.6 * LINE;
+      c.strokeStyle = OUTLINE;
+      c.stroke();
+      c.strokeStyle = shade(col, -0.45);
       c.lineWidth = 1.2;
       c.beginPath();
-      c.ellipse(w.x, w.y - h / 2, 9, 3, 0, 0, Math.PI);
+      c.ellipse(w.x, w.y - h / 2, R, R * OVAL, 0, 0, Math.PI);
       c.stroke();
-      drawBarrel(c, w.x, w.y - h, w.n);
+      c.beginPath();
+      c.ellipse(w.x, ty, R, R * OVAL, 0, 0, Math.PI * 2);
+      fillStroke(c, shade(col, 0.12), 1.6);
+      c.strokeStyle = 'rgba(255,255,255,0.45)';
+      c.lineWidth = 1.2;
+      c.beginPath();
+      c.ellipse(w.x, ty, R * 0.62, R * 0.62 * OVAL, 0, 0, Math.PI * 2);
+      c.stroke();
+      c.beginPath();
+      c.ellipse(w.x + 3, ty - 1, 1.6, 1.1, 0, 0, Math.PI * 2);
+      c.fillStyle = '#d9d9d9';
+      c.fill();
     }
   }
 
@@ -880,6 +947,22 @@
     circle(c, x + 3, y - 3, 1.8);
     c.fillStyle = '#d9d9d9';
     c.fill();
+  }
+
+  // `screen`: compare against where the road is drawn (lifted by hills).
+  function nearOtherRoad(t, i, x, y, within, screen) {
+    const lim = within * within;
+    const skip = Math.ceil((t.width * 1.5) / root.TractorTracks.SAMPLE_STEP);
+    for (let k = 0; k < t.count; k++) {
+      let d = Math.abs(k - i);
+      d = Math.min(d, t.count - d);
+      if (d <= skip) continue;
+      const s = t.samples[k];
+      const dx = s.x - x;
+      const dy = s.y - (screen ? liftAt(t, k) : 0) - y;
+      if (dx * dx + dy * dy < lim) return true;
+    }
+    return false;
   }
 
   function onSurface(t, x, y, within) {
@@ -997,7 +1080,7 @@
 
   // Jump ramp: a wooden wedge rising towards its lip, with the lip face and
   // the side facing the camera showing.
-  const RAMP_H = 11;
+  const RAMP_H = 13;
   function drawRamp(c, f, lift) {
     const L = f.len;
     const hw = f.halfWidth - 6;
@@ -1255,34 +1338,63 @@
     ctx.translate(p.x, p.y - (p.elev || 0) * RAISE);
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.beginPath();
-    ctx.ellipse(3, 6, 10, 5, 0, 0, Math.PI * 2);
+    ctx.ellipse(3, 5, 10, 5, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.translate(0, -6 + bob);
     if (p.type === 'cash') {
-      ctx.beginPath();
-      ctx.moveTo(-10, 8);
-      ctx.quadraticCurveTo(-14, -4, -4, -8);
-      ctx.lineTo(4, -8);
-      ctx.quadraticCurveTo(14, -4, 10, 8);
-      ctx.closePath();
+      // A fat sack: darker back half below, the front on top, tied at the neck.
+      const sack = (dy) => {
+        ctx.beginPath();
+        ctx.moveTo(-10, 8 + dy);
+        ctx.quadraticCurveTo(-14, -4 + dy, -4, -8 + dy);
+        ctx.lineTo(4, -8 + dy);
+        ctx.quadraticCurveTo(14, -4 + dy, 10, 8 + dy);
+        ctx.quadraticCurveTo(0, 12 + dy, -10, 8 + dy);
+        ctx.closePath();
+      };
+      sack(3);
+      ctx.fillStyle = '#a8864f';
+      ctx.fill();
+      sack(0);
       fillStroke(ctx, '#d9b77a', 2);
-      ctx.fillStyle = '#7a5a2a';
-      ctx.fillRect(-5, -11, 10, 4);
+      ctx.beginPath();
+      ctx.ellipse(0, -9, 5, 2.4, 0, 0, Math.PI * 2);
+      fillStroke(ctx, '#7a5a2a', 1.4);
       ctx.fillStyle = '#2e8b3a';
       ctx.font = `13px ${FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('$', 0, 1);
+      ctx.fillText('$', 0, 2);
     } else {
-      roundRect(ctx, -6, -11, 12, 20, 4);
-      fillStroke(ctx, '#e2412f', 2);
+      // Nitro can: a red cylinder with an oval lid and a nozzle.
+      const R = 6.5;
+      const top = -10;
+      const bot = 8;
+      ctx.beginPath();
+      ctx.moveTo(-R, top);
+      ctx.lineTo(-R, bot);
+      ctx.ellipse(0, bot, R, R * OVAL, 0, Math.PI, 0, true);
+      ctx.lineTo(R, top);
+      ctx.closePath();
+      const g = ctx.createLinearGradient(-R, 0, R, 0);
+      g.addColorStop(0, '#a8281c');
+      g.addColorStop(0.35, '#f0503c');
+      g.addColorStop(1, '#9a2418');
+      ctx.fillStyle = g;
+      ctx.fill();
+      ctx.lineWidth = 2 * LINE;
+      ctx.strokeStyle = OUTLINE;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(0, top, R, R * OVAL, 0, 0, Math.PI * 2);
+      fillStroke(ctx, '#ff7a64', 1.6);
+      ctx.fillStyle = '#555';
+      ctx.fillRect(-2, top - 5, 4, 4);
       ctx.fillStyle = '#fff';
-      ctx.font = `11px ${FONT}`;
+      ctx.font = `10px ${FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('N', 0, 0);
-      ctx.fillStyle = '#555';
-      ctx.fillRect(-3, -14, 6, 4);
+      ctx.fillText('N', 0, 1);
     }
     ctx.restore();
   }
