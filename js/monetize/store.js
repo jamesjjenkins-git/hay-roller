@@ -1,7 +1,8 @@
 // In-app store: Gold packs and "Remove ads".
 //
-// Real money only ever buys Gold or Remove ads. Gold is spent on cosmetics
-// (premium paints) and can never be turned into Hay or used in the casino
+// Real money only ever buys Gold or Remove ads. Gold is spent in the garage
+// (cosmetics, and optional shortcuts racing also earns: upgrade levels and
+// spare nitros) and can never be turned into Hay or used in the casino
 // games. Purchases go through a `billing` adapter. In a browser that's a
 // TEST MODE that grants items without taking payment; in the iPhone app it's
 // Apple in-app purchase (js/monetize/iap.js).

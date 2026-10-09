@@ -108,8 +108,10 @@ The decisions behind this (and what we chose not to do) are in [docs/monetisatio
 - **🌾 Hay** — the game currency, shared by every game. **Hay is never sold.** You get it from a
   500 welcome gift, a 200 daily bonus (resets at local midnight), opt-in reward ads (150 each,
   up to 10 a day), and winnings. After a race with prize money you can watch an ad to double it.
-- **🪙 Gold** — bought with real money, spent on premium paint jobs (60–200 Gold). Gold can't be
-  bet or turned into Hay, which keeps real money away from the casino-style games.
+- **🪙 Gold** — bought with real money (100 for 99p, 500 for £2.99, 1,000 for £4.99) and spent in
+  the garage: premium paints, decals, hats and trails, plus optional shortcuts (any upgrade level
+  for a tenth of its Hay price, and spare nitros for one extra boost in a race). Gold can't be bet
+  or turned into Hay, which keeps real money away from the casino-style games.
 - **Remove ads** — a one-off purchase that hides the home page banner. Reward ads stay
   available because they're always the player's choice.
 - **Ads:** one banner pinned to the bottom of the **home page only** — never in a game, the

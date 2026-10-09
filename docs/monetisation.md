@@ -12,9 +12,19 @@ don't get re-argued (or quietly undone).
   out of the betting loop keeps the casino mini-games on the right side of
   app-store gambling rules ("simulated gambling" with no purchasable currency)
   and keeps the game fair.
-- **Gold is the only thing you buy, and it's cosmetic.** Gold buys premium
-  paint jobs only. It never buys Hay, upgrades, track unlocks or anything that
-  makes you faster. No pay-to-win.
+- **Gold is the only thing you buy. Optional pay-to-win is fine; forced or
+  frustrating pay-to-win is not.** Gold buys cosmetics, and also shortcuts to
+  things racing already earns: any upgrade level (at a tenth of its Hay price)
+  and spare nitros (one extra boost for one race, taken only when the player
+  chooses). The line:
+  - **Never:** Gold turning into Hay, a paid prize multiplier (no Gold version
+    of "double your prize"), selling track or series unlocks, or making the
+    game harder (AI, prizes, unlocks) to push people towards buying.
+  - **Always:** everything Gold buys for racing can be earned by racing; the
+    garage shows the Hay price first and Gold as "or 🪙".
+  - **The side effect we accept:** a faster tractor wins more races and so
+    more Hay, so Gold upgrades raise Hay income indirectly. Hay still can't be
+    bought, and the casino games are unchanged.
 - **Ads are minimal and never interrupt play.**
 
 ## Ads
@@ -73,7 +83,16 @@ provider shows labelled placeholders; in the iPhone app
   phone adds it and a refund removes it. A Restore purchases button is in the
   store (App Review requires one).
 - Prices shown in the app are the App Store's own, in the player's currency.
-- Premium paints cost 60–200 Gold; ordinary paints are free.
+- **Packs: 100 Gold for 99p, 500 for £2.99, 1,000 for £4.99; Remove ads 99p.**
+  The bigger packs are much better value (+65%, double) to make them the
+  natural buy, which only works because there's plenty to spend Gold on:
+  about 3,400 Gold of cosmetics (ten premium paints, five each of decals and
+  hats, four trails; all kept for every vehicle), plus the optional boosts. A
+  completionist spends roughly £15–20 on looks; buying every upgrade level
+  across all three series with Gold instead of Hay would be about 9,900 Gold.
+- Remove ads is cheap (99p) because it only hides the one home-page banner;
+  most ad income is meant to come from the opt-in reward videos, which stay.
+- Ordinary paints and the "none" cosmetics are free.
 
 ## Free Hay
 
@@ -107,5 +126,9 @@ provider shows labelled placeholders; in the iPhone app
   real-money gambling and break the "earned, never sold" rule.
 - **Banners in games or between races, interstitials**: rejected; the user
   wanted ads on the home page only.
-- **Paid upgrades or paid track unlocks**: rejected as pay-to-win; progress
-  comes from racing.
+- **Paid track or series unlocks**: still not sold; unlocks come from racing.
+  (Paid upgrades were first rejected as pay-to-win, then allowed as optional
+  shortcuts priced in Gold; see Principles.)
+- **Only three or four premium paints for Gold**: dropped once the 1,000 pack
+  arrived; with only 590 Gold to spend, the big pack left Gold that could
+  never be used.
