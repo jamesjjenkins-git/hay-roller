@@ -44,12 +44,59 @@
     cow: () => tone(130, 0.55, { type: 'sawtooth', gain: 0.07, slideTo: 95 }),
   };
 
+  // Continuous engine note whose pitch follows speed.
+  let engine = null;
+  function engineStart() {
+    const a = audio();
+    if (!a || engine) return;
+    const osc = a.createOscillator();
+    const osc2 = a.createOscillator();
+    const filter = a.createBiquadFilter();
+    const g = a.createGain();
+    osc.type = 'sawtooth';
+    osc2.type = 'square';
+    filter.type = 'lowpass';
+    filter.frequency.value = 500;
+    g.gain.value = 0.0001;
+    g.gain.exponentialRampToValueAtTime(0.035, a.currentTime + 0.3);
+    osc.connect(filter);
+    osc2.connect(filter);
+    filter.connect(g).connect(a.destination);
+    osc.start();
+    osc2.start();
+    engine = { osc, osc2, g, filter, a };
+    engineSet(0, false);
+  }
+  function engineSet(frac, boost) {
+    if (!engine) return;
+    const f = 45 + Math.max(0, Math.min(1.6, frac)) * 70 + (boost ? 25 : 0);
+    const t = engine.a.currentTime;
+    engine.osc.frequency.setTargetAtTime(f, t, 0.08);
+    engine.osc2.frequency.setTargetAtTime(f * 0.5, t, 0.08);
+    engine.filter.frequency.setTargetAtTime(boost ? 1400 : 500 + frac * 400, t, 0.1);
+  }
+  function engineStop() {
+    if (!engine) return;
+    const { osc, osc2, g, a } = engine;
+    g.gain.setTargetAtTime(0.0001, a.currentTime, 0.05);
+    osc.stop(a.currentTime + 0.3);
+    osc2.stop(a.currentTime + 0.3);
+    engine = null;
+  }
+
   root.FarmSound = {
+    engineStart,
+    engineSet,
+    engineStop,
+    thud: () => tone(110, 0.15, { type: 'triangle', gain: 0.2, slideTo: 60 }),
+    whoosh: () => tone(200, 0.6, { type: 'sawtooth', gain: 0.06, slideTo: 900 }),
+    boing: () => tone(300, 0.25, { type: 'sine', gain: 0.12, slideTo: 700 }),
     get muted() {
       return muted;
     },
     setMuted(v) {
       muted = !!v;
+      if (muted) engineStop();
       try {
         root.localStorage.setItem(MUTE_KEY, muted ? '1' : '0');
       } catch (e) {

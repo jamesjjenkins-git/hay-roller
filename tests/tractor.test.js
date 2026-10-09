@@ -1,0 +1,109 @@
+const test = require('node:test');
+const assert = require('node:assert');
+const Tracks = require('../js/tractor/tracks.js');
+const Sim = require('../js/tractor/sim.js');
+const Garage = require('../js/tractor/garage.js');
+
+function memStore() {
+  const d = {};
+  return { getItem: (k) => (k in d ? d[k] : null), setItem: (k, v) => (d[k] = String(v)), removeItem: (k) => delete d[k] };
+}
+
+// Simple "thumb on the joystick" driver: point at the track a little ahead.
+function stickDriver(s) {
+  const me = s.racers[0];
+  const tg = s.track.samples[(me.idx + 9) % s.track.count];
+  const want = Math.atan2(tg.y - me.y, tg.x - me.x);
+  return { steer: Math.max(-1, Math.min(1, Sim.angleDiff(want, me.heading) * 2.5)), throttle: 1, brake: 0, nitro: false };
+}
+
+test('tracks keep separate stretches apart so walls never merge', () => {
+  for (const def of Tracks.TRACKS) {
+    const t = Tracks.buildTrack(def);
+    for (let i = 0; i < t.count; i += 2) {
+      for (let j = i + 1; j < t.count; j += 2) {
+        const along = Math.min(j - i, t.count - (j - i)) * Tracks.SAMPLE_STEP;
+        if (along < 2 * t.width) continue;
+        const d = Math.hypot(t.samples[i].x - t.samples[j].x, t.samples[i].y - t.samples[j].y);
+        assert.ok(d >= t.width + 24, `${def.id}: samples ${i}/${j} only ${d.toFixed(0)}px apart`);
+      }
+    }
+  }
+});
+
+test('tracks fit on one screen', () => {
+  for (const def of Tracks.TRACKS) {
+    const t = Tracks.buildTrack(def);
+    for (const s of t.samples) {
+      assert.ok(s.x - t.halfWidth > 0 && s.x + t.halfWidth < Tracks.WORLD.width, `${def.id} x out of bounds`);
+      assert.ok(s.y - t.halfWidth > 40 && s.y + t.halfWidth < Tracks.WORLD.height, `${def.id} y out of bounds`);
+    }
+  }
+});
+
+test('a joystick driver finishes every track and the race ends with four places', () => {
+  for (const def of Tracks.TRACKS) {
+    const s = Sim.createRace(def, { seed: 11 });
+    while (!s.done) {
+      Sim.step(s, { 0: stickDriver(s) });
+      s.events.length = 0;
+    }
+    assert.ok(s.t < Sim.MAX_TIME, `${def.id} timed out`);
+    assert.ok(s.racers[0].progress >= def.laps * s.track.length);
+    assert.deepStrictEqual(s.racers.map((r) => r.place).sort(), [1, 2, 3, 4]);
+  }
+});
+
+test('upgrades make the tractor faster', () => {
+  const time = (lvl) => {
+    const up = { engine: lvl, gearbox: lvl, tyres: lvl, suspension: lvl, nitro: 0 };
+    let total = 0;
+    for (const seed of [1, 2, 3]) {
+      const s = Sim.createRace(Tracks.TRACKS[0], { seed, playerUpgrades: up });
+      while (!s.done) {
+        Sim.step(s, { 0: stickDriver(s) });
+        s.events.length = 0;
+      }
+      total += s.racers[0].finishTime;
+    }
+    return total;
+  };
+  assert.ok(time(5) < time(0) * 0.85);
+});
+
+test('earnings pay the place prize plus cash bags', () => {
+  const s = Sim.createRace(Tracks.TRACKS[0], { seed: 1 });
+  s.racers[0].place = 2;
+  s.racers[0].cash = 75;
+  assert.deepStrictEqual(Sim.earnings(s), { place: 2, placeReward: Tracks.TRACKS[0].reward[1], cash: 75, total: Tracks.TRACKS[0].reward[1] + 75 });
+});
+
+test('garage buys upgrades with wallet credits and caps at max level', () => {
+  const store = memStore();
+  const g = Garage.createGarage(store);
+  let balance = 100000;
+  const wallet = {
+    canAfford: (n) => n <= balance,
+    spend: (n) => { balance -= n; },
+  };
+  const cost = g.nextCost('engine');
+  assert.ok(g.buy('engine', wallet));
+  assert.strictEqual(balance, 100000 - cost);
+  for (let i = 0; i < 10; i++) g.buy('engine', wallet);
+  assert.strictEqual(g.state.upgrades.engine, Garage.MAX_LEVEL);
+  assert.strictEqual(g.nextCost('engine'), null);
+  assert.strictEqual(Garage.createGarage(store).state.upgrades.engine, Garage.MAX_LEVEL, 'persists');
+  const broke = { canAfford: () => false, spend: () => assert.fail('should not spend') };
+  assert.strictEqual(g.buy('tyres', broke), false);
+});
+
+test('tracks unlock by finishing high enough on the previous one', () => {
+  const g = Garage.createGarage(memStore());
+  const barnyard = Tracks.TRACKS[1];
+  assert.strictEqual(g.isUnlocked(Tracks.TRACKS[0]), true);
+  assert.strictEqual(g.isUnlocked(barnyard), false);
+  g.recordResult('meadow', 4, 70);
+  assert.strictEqual(g.isUnlocked(barnyard), false);
+  g.recordResult('meadow', 3, 65);
+  assert.strictEqual(g.isUnlocked(barnyard), true);
+});

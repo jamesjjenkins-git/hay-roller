@@ -1,4 +1,4 @@
-// Farmyard Casino shell: wallet UI, lobby and simple hash routing.
+// Farmyard Rally shell: wallet UI, lobby and simple hash routing.
 (function (root) {
   const wallet = root.FarmWallet.createWallet();
   const sound = root.FarmSound;
@@ -104,6 +104,7 @@
   });
 
   wallet.subscribe(renderBalance);
+  wallet.subscribe(() => games['tractor-rally'] && games['tractor-rally'].refresh());
 
   // ---------- Sound toggle ----------
 
@@ -121,6 +122,12 @@
   // ---------- Games & routing ----------
 
   const games = {
+    'tractor-rally': root.TractorRally.createTractorRally({
+      el: $('#view-tractor-rally'),
+      wallet,
+      sound,
+      toast,
+    }),
     'hay-derby': root.HayDerby.createHayDerby({
       el: $('#view-hay-derby'),
       wallet,
@@ -141,16 +148,48 @@
       if (current !== game) games[game].mount();
     } else {
       $('#view-lobby').classList.remove('hidden');
+      drawLobbyArt();
     }
     current = game;
     root.scrollTo(0, 0);
   }
 
+  // Lobby art: a tractor in your current paint job.
+  function drawLobbyArt() {
+    const c = $('#lobby-tractor-art');
+    if (!c || !c.clientWidth) return;
+    const dpr = Math.min(root.devicePixelRatio || 1, 2);
+    c.width = c.clientWidth * dpr;
+    c.height = c.clientHeight * dpr;
+    const x = c.getContext('2d');
+    x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const w = c.clientWidth;
+    const h = c.clientHeight;
+    x.fillStyle = '#d9a066';
+    x.fillRect(0, h * 0.22, w, h * 0.56);
+    x.fillStyle = '#8a5a2b';
+    x.fillRect(0, h * 0.22 - 6, w, 6);
+    x.fillRect(0, h * 0.78, w, 6);
+    const paint = root.TractorGarage.createGarage().paintHex();
+    const draw = (px, py, color, s) => {
+      x.save();
+      x.translate(px, py);
+      x.scale(s, s);
+      root.TractorRender.drawTractor(x, { x: 0, y: 0, z: 0, heading: 0, steer: 0, color, isPlayer: color === paint, bump: 0, progress: px, id: 0 }, 0);
+      x.restore();
+    };
+    const s = Math.min(2.6, Math.max(1.4, h / 90));
+    draw(w * 0.25, h * 0.38, '#2f7de2', s);
+    draw(w * 0.42, h * 0.62, '#2fae4a', s);
+    draw(w * 0.68, h * 0.45, paint, s * 1.1);
+  }
+
   root.addEventListener('hashchange', route);
+  root.addEventListener('resize', drawLobbyArt);
   renderBalance();
   route();
 
   if (wallet.balance === 0 && wallet.history().length === 0) {
-    setTimeout(() => toast('Tap the wallet at the top to grab some free credits!', 'info', 5000), 600);
+    setTimeout(() => toast('Tap the credits at the top to top up your wallet!', 'info', 5000), 600);
   }
 })(typeof globalThis !== 'undefined' ? globalThis : this);

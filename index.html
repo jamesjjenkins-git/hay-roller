@@ -2,9 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Farmyard Casino</title>
-  <meta name="description" content="A cartoon farm-themed casino of play-money games. Starting with the Hay Bale Derby.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Farmyard Rally</title>
+  <meta name="description" content="Race and upgrade your tractor in cartoon farmyard rallies. Earn credits at the Hay Bale Derby.">
+  <meta name="theme-color" content="#d8432f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Farm Rally">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌾</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,9 +20,9 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="logo" href="#/" aria-label="Farmyard Casino home">
-      <span class="logo-icon">🐓</span>
-      <span class="logo-text">Farmyard <b>Casino</b></span>
+    <a class="logo" href="#/" aria-label="Farmyard Rally home">
+      <span class="logo-icon">🚜</span>
+      <span class="logo-text">Farmyard <b>Rally</b></span>
     </a>
     <div class="topbar-right">
       <button class="icon-btn" id="mute-btn" title="Sound on/off" aria-label="Toggle sound">🔊</button>
@@ -32,9 +39,23 @@
     <!-- Lobby -->
     <section class="view" id="view-lobby">
       <div class="hero">
-        <h1>Welcome to the Farmyard Casino!</h1>
-        <p>Play-money games down on the farm. Grab some free credits and pick a game.</p>
+        <h1>Farmyard Rally</h1>
+        <p>Race your tractor, win credits, upgrade, repeat.</p>
       </div>
+
+      <a class="feature-card" href="#/tractor-rally">
+        <div class="feature-art">
+          <canvas id="lobby-tractor-art" aria-hidden="true"></canvas>
+        </div>
+        <div class="feature-body">
+          <span class="tag">Main game</span>
+          <h2>Tractor Rally</h2>
+          <p>Four tractors, one muddy track. Hit the jumps, grab cash bags, fire your nitro and bash your way to first. Spend your winnings on a faster tractor.</p>
+          <span class="btn btn-primary btn-big">Go to the garage</span>
+        </div>
+      </a>
+
+      <h2 class="section-title">Earn more credits</h2>
       <div class="game-grid">
         <a class="game-card playable" href="#/hay-derby">
           <div class="game-art art-hay">
@@ -63,16 +84,61 @@
             <span class="badge">Coming soon</span>
           </div>
         </div>
-        <div class="game-card soon">
-          <div class="game-art art-cow">🐮🔢</div>
-          <div class="game-body">
-            <h2>Cow Pat Bingo</h2>
-            <p>Bet on the square Daisy picks. A true farmyard classic.</p>
-            <span class="badge">Coming soon</span>
+      </div>
+      <p class="disclaimer">Credits are free in-game currency with no cash value. Nothing can be bought, sold or withdrawn.</p>
+    </section>
+
+    <!-- Tractor Rally -->
+    <section class="view hidden" id="view-tractor-rally">
+      <div class="garage" id="garage">
+        <div class="game-header">
+          <a class="btn btn-ghost" href="#/">← Home</a>
+          <h1>The Garage</h1>
+          <span class="race-no" id="garage-record"></span>
+        </div>
+        <div class="garage-grid">
+          <div class="g-card g-tractor">
+            <canvas id="tractor-preview"></canvas>
+            <div class="paints" id="paints"></div>
+            <div class="stat-bars" id="stat-bars"></div>
+          </div>
+          <div class="g-card g-upgrades">
+            <h2>Upgrades</h2>
+            <div id="upgrade-list"></div>
+            <a class="earn-link" href="#/hay-derby">Need credits? Try the Hay Bale Derby →</a>
+          </div>
+          <div class="g-card g-tracks">
+            <h2>Pick a track</h2>
+            <div id="track-list"></div>
+            <button class="btn btn-primary btn-big race-btn" id="race-btn">Race! 🏁</button>
           </div>
         </div>
       </div>
-      <p class="disclaimer">All credits are free play money with no cash value. Nothing can be bought, sold or withdrawn.</p>
+
+      <div class="race-screen hidden" id="race-screen">
+        <canvas id="tractor-canvas" aria-label="Tractor race track"></canvas>
+        <div class="hud">
+          <div class="hud-left">
+            <div class="hud-pos" id="hud-pos">1<small>st</small></div>
+            <div class="hud-lap" id="hud-lap">LAP 1/4</div>
+          </div>
+          <div class="hud-right">
+            <div class="hud-chip" id="hud-cash">🌾 0</div>
+            <div class="hud-chip" id="hud-nitro">🔥🔥</div>
+            <button class="hud-pause" id="btn-pause" aria-label="Pause"><i></i><i></i></button>
+          </div>
+        </div>
+        <div class="stick-zone" id="stick-zone">
+          <div class="stick-hint">Drag here to steer</div>
+          <div class="stick-base" id="stick-base"><div class="stick-knob" id="stick-knob"></div></div>
+        </div>
+        <div class="race-buttons">
+          <button class="rbtn rbtn-nitro" id="btn-nitro">NITRO</button>
+          <button class="rbtn rbtn-brake" id="btn-brake">BRAKE</button>
+        </div>
+        <div class="rotate-hint">📱↻<br>Turn your phone sideways to race</div>
+        <div class="race-modal hidden" id="race-modal"></div>
+      </div>
     </section>
 
     <!-- Hay Bale Derby -->
@@ -146,6 +212,11 @@
   <script src="js/race-sim.js"></script>
   <script src="js/race-render.js"></script>
   <script src="js/hay-derby.js"></script>
+  <script src="js/tractor/tracks.js"></script>
+  <script src="js/tractor/sim.js"></script>
+  <script src="js/tractor/garage.js"></script>
+  <script src="js/tractor/render.js"></script>
+  <script src="js/tractor/game.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
