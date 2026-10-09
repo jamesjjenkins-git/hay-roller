@@ -195,7 +195,7 @@
       reward: [900, 480, 240, 90],
       unlock: { track: 'sheep', place: 3 },
       points: [
-        [600, 105], [880, 160], [1090, 350], [880, 560], [730, 600], [600, 440],
+        [600, 105], [880, 160], [1090, 350], [880, 560], [730, 600], [680, 520], [628, 470], [572, 470], [520, 520],
         [470, 600], [320, 560], [110, 350], [320, 160],
       ],
       features: [
@@ -521,7 +521,7 @@
         { kind: 'silo', x: 300, y: 280 },
         { kind: 'tree', x: 894, y: 352, scale: 0.6 },
         { kind: 'hay', x: 562, y: 228, scale: 0.6 },
-        { kind: 'tree', x: 533, y: 287, scale: 0.6 },
+        { kind: 'tree', x: 533, y: 282, scale: 0.6 },
       ],
     },
     {
@@ -700,6 +700,61 @@
     ];
   }
 
+  // No bend may be tighter than the walls' distance from the middle of the
+  // road (plus this), or the inside wall folds into a sharp point.
+  const MIN_RADIUS_EXTRA = 14;
+
+  // Gently relaxes any part of a closed line (in place) that curves tighter
+  // than `minR`, by pulling those points towards their neighbours' midpoint.
+  function roundTightCorners(line, minR) {
+    // Work on an even 4px spacing.
+    const even = [];
+    let carry = 0;
+    for (let i = 0; i < line.length; i++) {
+      const a = line[i];
+      const b = line[(i + 1) % line.length];
+      const seg = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      let d = carry;
+      while (d < seg) {
+        even.push([a[0] + ((b[0] - a[0]) * d) / seg, a[1] + ((b[1] - a[1]) * d) / seg]);
+        d += 4;
+      }
+      carry = d - seg;
+    }
+    const n = even.length;
+    const K = 5; // neighbours 20px either side
+    const radius = (i) => {
+      const a = even[(i - K + n) % n];
+      const b = even[i];
+      const c = even[(i + K) % n];
+      const ab = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const bc = Math.hypot(c[0] - b[0], c[1] - b[1]);
+      const ca = Math.hypot(a[0] - c[0], a[1] - c[1]);
+      const cross = Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]));
+      return cross < 1e-9 ? Infinity : (ab * bc * ca) / (2 * cross);
+    };
+    for (let iter = 0; iter < 2000; iter++) {
+      // Points to smooth this pass: anywhere too tight, plus a little either side.
+      const mark = new Uint8Array(n);
+      let any = false;
+      for (let i = 0; i < n; i++) {
+        if (radius(i) >= minR) continue;
+        any = true;
+        for (let k = -3; k <= 3; k++) mark[(i + k + n) % n] = 1;
+      }
+      if (!any) break;
+      const next = even.map((p, j) => {
+        if (!mark[j]) return p;
+        const a = even[(j - 1 + n) % n];
+        const c = even[(j + 1) % n];
+        return [p[0] * 0.5 + (a[0] + c[0]) * 0.25, p[1] * 0.5 + (a[1] + c[1]) * 0.25];
+      });
+      for (let i = 0; i < n; i++) even[i] = next[i];
+    }
+    line.length = 0;
+    for (const p of even) line.push(p);
+  }
+
   // Turn control points into evenly spaced samples with tangents/normals.
   function buildTrack(def) {
     const pts = def.points;
@@ -712,6 +767,7 @@
       const p3 = pts[(i + 2) % n];
       for (let k = 0; k < 40; k++) dense.push(catmullRom(p0, p1, p2, p3, k / 40));
     }
+    roundTightCorners(dense, def.width / 2 + MIN_RADIUS_EXTRA);
     // Resample at a fixed spacing.
     const samples = [];
     let carry = 0;
