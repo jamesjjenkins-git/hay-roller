@@ -1868,6 +1868,65 @@
         c.fill();
       }
     }
+    // Abutments: where an earth bank meets a bridge deck, the bank ends in
+    // a squared stone face across the road (it was cut off on a slant),
+    // drawn where it faces the camera.
+    if (opts.slab) {
+      for (const i of raised) {
+        for (const dir of [-1, 1]) {
+          const j = (i + dir + n) % n;
+          if (!slab(i) || slab(j)) continue;
+          // Bank at `j`, deck from `i`: the face looks from j towards i.
+          const a = t.samples[j];
+          const b = t.samples[i];
+          if (b.y - a.y <= 0.5) continue;
+          const L = Math.max(lift[i], lift[j]);
+          if (L < 4) continue;
+          const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, nx: (a.nx + b.nx) / 2, ny: (a.ny + b.ny) / 2 };
+          const P = (w, z) => [m.x + m.nx * w, m.y + m.ny * w - z];
+          const face = [P(-outer, L), P(outer, L), P(outer, 0), P(-outer, 0)];
+          c.beginPath();
+          face.forEach(([x, y], k) => (k ? c.lineTo(x, y) : c.moveTo(x, y)));
+          c.closePath();
+          c.fillStyle = '#9a8f7c';
+          c.fill();
+          c.save();
+          c.clip();
+          // Courses of stone with staggered joints.
+          c.strokeStyle = 'rgba(60,45,30,0.45)';
+          c.lineWidth = 1;
+          for (let z = 0, row = 0; z < L; z += 5, row++) {
+            const [x0, y0] = P(-outer, z);
+            const [x1, y1] = P(outer, z);
+            c.beginPath();
+            c.moveTo(x0, y0);
+            c.lineTo(x1, y1);
+            for (let w = -outer + (row % 2 ? 4 : 9); w < outer; w += 10) {
+              const [px, py] = P(w, z);
+              c.moveTo(px, py);
+              c.lineTo(px, py - 5);
+            }
+            c.stroke();
+          }
+          c.fillStyle = 'rgba(0,0,0,0.18)';
+          const [gx0, gy0] = P(-outer, 0);
+          const [gx1, gy1] = P(outer, 0);
+          c.beginPath();
+          c.moveTo(gx0, gy0);
+          c.lineTo(gx1, gy1);
+          c.lineTo(gx1, gy1 - 3);
+          c.lineTo(gx0, gy0 - 3);
+          c.fill();
+          c.restore();
+          c.beginPath();
+          face.forEach(([x, y], k) => (k ? c.lineTo(x, y) : c.moveTo(x, y)));
+          c.closePath();
+          c.lineWidth = 1.6 * LINE;
+          c.strokeStyle = OUTLINE;
+          c.stroke();
+        }
+      }
+    }
     // The raised surface: berm, dirt and the worn centre, like the flat road.
     for (const [w, col] of TRACK_BANDS.map(([bw, bc]) => [t.halfWidth + bw / 2, bc])) {
       c.fillStyle = col;
@@ -2016,7 +2075,29 @@
       const base = dk.bridges[0].upper;
       const rel = (i) => ((((i - base) % n) + n + Math.floor(n / 2)) % n) - Math.floor(n / 2);
       dk.idx.sort((p, q) => rel(p) - rel(q));
-      const isSlab = (i) => dk.bridges.some((b) => TT.bridgeProfile(t, b, i) >= 0.999);
+      // The timber deck is only the stretch standing over the road below
+      // (on the ground, with a little to spare past its walls); the rest of
+      // the upper road at bridge height is an earth bank like any hill.
+      // On screen, an earth bank is a column from the ground up to the road;
+      // wherever that column would cover the road below (or its walls), the
+      // upper road is a timber deck instead.
+      const coversLower = (i, b) => {
+        const s = t.samples[i];
+        const L = liftAt(t, i);
+        if (L < 3) return false;
+        for (let k = -40; k <= 40; k++) {
+          const j = (((b.lower + k) % n) + n) % n;
+          const q = t.samples[j];
+          const qy = q.y - liftAt(t, j);
+          const dx = Math.abs(s.x - q.x) - outer;
+          const dy = Math.max(s.y - L - outer - qy, 0, qy - (s.y + outer));
+          if (Math.hypot(Math.max(0, dx), dy) < t.halfWidth + 22) return true;
+        }
+        return false;
+      };
+      const slabSet = new Set();
+      for (const i of dk.idx) if (dk.bridges.some((b) => coversLower(i, b))) slabSet.add(i);
+      const isSlab = (i) => slabSet.has(i);
       dk.slab = isSlab;
       let x0 = Infinity;
       let y0 = Infinity;
@@ -2075,7 +2156,7 @@
       for (const side of [-1, 1]) {
         const gx = s.x + s.nx * side * (outer - 5);
         const gy = s.y + s.ny * side * (outer - 5);
-        if (nearOtherRoad(t, i, gx, gy, t.halfWidth + 10)) continue;
+        if (nearOtherRoad(t, i, gx, gy, t.halfWidth + 24)) continue;
         legs.push({ side, k, x: gx, gy, top: gy - L + BRIDGE_SLAB });
       }
     }
