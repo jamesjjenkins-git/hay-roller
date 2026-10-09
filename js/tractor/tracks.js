@@ -5,8 +5,9 @@
   const WORLD = { width: 1200, height: 675 };
   const SAMPLE_STEP = 8; // px between centre-line samples
   // Mud/water patches span this fraction of the road width either side of
-  // their centre (0.21 → 42% of the width), leaving a clear lane beside them.
-  const PATCH_HALF_WIDTH = 0.21;
+  // their centre (0.26 → 52% of the width), leaving a clear lane beside them.
+  const PATCH_HALF_WIDTH = 0.26;
+  const PATCH_SCALE = 1.25; // mud/water patches are this much longer than listed
 
   const TRACKS = [
     {
@@ -408,22 +409,27 @@
     const features = def.features.map((f, i) => {
       const idx = Math.floor(f.at * count) % count;
       const s = samples[idx];
-      const len = f.len || (f.type === 'jump' ? 30 : 60);
       const patch = f.type === 'mud' || f.type === 'water';
+      let len = (f.len || (f.type === 'jump' ? 30 : 60)) * (patch ? PATCH_SCALE : 1);
       let off = 0;
       let halfWidth = def.width / 2;
       if (patch) {
-        halfWidth = def.width * PATCH_HALF_WIDTH;
+        // On narrow tracks, keep at least ~2 tractors' width of clear lane.
+        halfWidth = Math.min(def.width * PATCH_HALF_WIDTH, def.width / 2 - 24);
         const before = samples[(idx - 10 + count) % count].angle;
         const after = samples[(idx + 10) % count].angle;
         let bend = after - before;
         while (bend > Math.PI) bend -= Math.PI * 2;
         while (bend < -Math.PI) bend += Math.PI * 2;
+        // A straight oval on a tight bend bulges into the lane; shorten it
+        // so it bows in by no more than a few pixels.
+        const radius = (SAMPLE_STEP * 20) / Math.max(0.01, Math.abs(bend));
+        len = Math.min(len, Math.sqrt(80 * radius));
         let side;
         if (Math.abs(bend) > 0.15) side = Math.sign(bend) * (bendSide = -bendSide); // inside, then outside
         else if (f.off) side = Math.sign(f.off);
         else side = (hazardSide = -hazardSide);
-        off = side * (def.width / 2 - halfWidth - 2);
+        off = side * (def.width / 2 - halfWidth);
       }
       return {
         id: i,

@@ -907,7 +907,7 @@
   }
 
   // Escaped animals reuse the Hay Bale Derby artwork, a bit smaller.
-  const ANIMAL_SCALE = 0.62;
+  const ANIMAL_SCALE = 0.47;
   function drawFarmAnimal(ctx, a, now) {
     const art = root.HayRender && root.HayRender.drawAnimal;
     if (!art) return;

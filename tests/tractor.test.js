@@ -433,7 +433,7 @@ test('hitting an animal knocks it down the track and costs some speed', () => {
   assert.equal(a.mode, 'tumble');
   assert.ok(a.vx * c.tx + a.vy * c.ty > 100, 'animal flies off down the track');
   assert.ok(Math.hypot(me.vx, me.vy) < 170, 'player loses some speed');
-  for (let t = 0; t < 300; t++) Sim.step(s, {});
+  for (let t = 0; t < 480; t++) Sim.step(s, {});
   assert.notEqual(a.mode, 'tumble', 'animal settles again');
 });
 

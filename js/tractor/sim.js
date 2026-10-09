@@ -427,12 +427,12 @@
   // have one; the hardest have three.
 
   const ANIMAL = {
-    kinds: { pig: { r: 12 }, sheep: { r: 12 }, cow: { r: 15 } },
+    kinds: { pig: { r: 9 }, sheep: { r: 9 }, cow: { r: 11 } },
     walk: 18, // px/s while wandering
     slow: 0.22, // fraction of the tractor's speed lost on a hit
-    kick: 1.5, // the animal flies off at this multiple of the tractor's speed
-    friction: 1.8, // per second while tumbling
-    cooldown: 1, // s before the same animal can be hit again
+    kick: 2.2, // the animal flies off at this multiple of the tractor's speed
+    friction: 1.1, // per second while tumbling
+    cooldown: 1.5, // s before the same animal can be hit again
   };
 
   function animalCount(track) {
@@ -518,7 +518,7 @@
           a.vz = a.vz < -120 ? -a.vz * 0.4 : 0;
         }
         keepOnTrack(track, a);
-        if (a.z === 0 && Math.hypot(a.vx, a.vy) < 12) {
+        if (a.z === 0 && Math.hypot(a.vx, a.vy) < 20) {
           // Dazed for a moment, then it wanders about wherever it landed.
           a.mode = 'pause';
           a.timer = 1.2;
@@ -570,10 +570,10 @@
         const fx = Math.cos(r.heading);
         const fy = Math.sin(r.heading);
         const side = -fy * nx + fx * ny >= 0 ? 1 : -1;
-        const kick = Math.max(120, speed * ANIMAL.kick);
-        a.vx = (fx * 0.8 - fy * side * 0.6) * kick;
-        a.vy = (fy * 0.8 + fx * side * 0.6) * kick;
-        a.vz = 180 + speed * 0.6;
+        const kick = Math.max(160, speed * ANIMAL.kick);
+        a.vx = (fx * 0.9 - fy * side * 0.45) * kick;
+        a.vy = (fy * 0.9 + fx * side * 0.45) * kick;
+        a.vz = 220 + speed * 0.8;
         a.spin = (rng() < 0.5 ? -1 : 1) * (6 + rng() * 6);
         a.mode = 'tumble';
         a.hitCooldown = ANIMAL.cooldown;
