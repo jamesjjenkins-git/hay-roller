@@ -429,7 +429,12 @@
         let key = w.gy;
         const s = w.si != null ? track.samples[w.si] : null;
         if (!s || Math.abs(s.ny) > 0.6) return key;
+        const wl = w.gy - w.y;
+        const wdk = deckOf(track, w.si);
         for (const r of sim.racers) {
+          // Only vehicles on the same level as the wall: not one up on a
+          // bridge beside a wall of the road below, or the other way round.
+          if (deckOf(track, r.idx) !== wdk || Math.abs((r.elev || 0) * RAISE - wl) > 8) continue;
           const dx = w.x - r.x;
           const dy = w.gy - r.y;
           const along = dx * s.tx + dy * s.ty;
@@ -1663,7 +1668,9 @@
     // Lift each point with the road beside it, smooth, and lay pieces along.
     const walls = [];
     const SIZE = { bale: 13, tyre: 9, barrel: 10 };
-    const clashes = (x, y, r) => walls.some((w) => Math.hypot(w.x - x, w.y - y) < r + SIZE[w.kind] - 3);
+    // Pieces at different heights (a bridge's end over the road below)
+    // need more room, or they look stacked on each other.
+    const clashes = (x, y, r, lift = 0) => walls.some((w) => Math.hypot(w.x - x, w.y - y) < r + SIZE[w.kind] - 3 + (Math.abs(w.gy - w.y - lift) > 8 ? 10 : 0));
     let placed = 0;
     for (const raw of lines) {
       const n = raw.length;
@@ -1684,7 +1691,12 @@
         // On shaped ground, sit at the height of the ground drawn there;
         // beside a bridge ramp, at the height of the ramp.
         const ramp = (t.bridges || []).some((b) => root.TractorTracks.bridgeProfile(t, b, si) > 0);
-        const lift = t.terrain && !ramp ? root.TractorTracks.terrainHeight(t.terrain, x, gy) * RAISE : liftAt(t, si);
+        // ...but a wall belongs to its road: where the ground beside the
+        // road drops away from it (a pit beside a flat stretch), the wall
+        // stays at the road's height, not down in the pit.
+        const road = liftAt(t, si);
+        const ground = t.terrain ? root.TractorTracks.terrainHeight(t.terrain, x, gy) * RAISE : road;
+        const lift = !ramp && Math.abs(ground - road) < 6 ? ground : road;
         return { x, gy, y: gy - lift, si };
       });
       let travelled = 0;
@@ -1708,7 +1720,7 @@
         // A bridge deck has railings instead.
         const dk = deckOf(t, p.si);
         if (dk && dk.slab(p.si)) continue;
-        if (clashes(p.x, p.y, SIZE[kind])) {
+        if (clashes(p.x, p.y, SIZE[kind], p.gy - p.y)) {
           nextAt = travelled + 4;
           continue;
         }
