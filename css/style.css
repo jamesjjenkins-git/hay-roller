@@ -1097,7 +1097,7 @@ kbd {
 .slot-machine.win .reels { box-shadow: 0 0 0 5px var(--straw); }
 .slot-machine.big-win .reels { animation: glow 0.5s ease-in-out 6 alternate; }
 @keyframes glow { to { box-shadow: 0 0 0 8px #ffd23f, 0 0 30px 10px #fff3a0; } }
-.slot-readout { display: flex; align-items: center; gap: 14px; width: 100%; max-width: 420px; }
+.slot-readout { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; max-width: 420px; text-align: center; }
 .slot-readout div, .bet-stepper div {
   display: grid;
   justify-items: center;
@@ -1109,7 +1109,7 @@ kbd {
 }
 .slot-readout small, .bet-stepper small { color: #fff; opacity: 0.7; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
 .slot-readout b, .bet-stepper b { font-family: var(--font-display); font-weight: 400; font-size: 24px; }
-.slot-readout p { margin: 0; font-weight: 800; color: var(--ink); flex: 1; }
+.slot-readout p { margin: 0; font-weight: 800; color: var(--ink); min-height: 1.4em; }
 .slot-controls { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; justify-content: center; }
 .bet-stepper { display: flex; align-items: center; gap: 8px; }
 .bet-stepper .btn { width: 46px; height: 46px; padding: 0; font-size: 26px; }
