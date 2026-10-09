@@ -63,11 +63,7 @@
 
   // The plugin, when running in the iPhone app.
   function nativePlugin() {
-    const cap = root.Capacitor;
-    if (cap && cap.isNativePlatform && cap.isNativePlatform() && cap.isPluginAvailable && cap.isPluginAvailable('FarmStore')) {
-      return cap.registerPlugin('FarmStore');
-    }
-    return null;
+    return (root.FarmNative && root.FarmNative.nativePlugin('FarmStore')) || null;
   }
 
   const api = { APPLE_IDS, createAppStoreBilling, nativePlugin };

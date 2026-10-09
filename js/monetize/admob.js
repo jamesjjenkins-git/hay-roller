@@ -146,10 +146,10 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 
   // In the iPhone app, swap the placeholders for real ads.
-  const cap = root.Capacitor;
-  if (cap && cap.isNativePlatform && cap.isNativePlatform() && cap.isPluginAvailable && cap.isPluginAvailable('AdMob') && root.FarmAds) {
+  const plugin = root.FarmNative && root.FarmNative.nativePlugin('AdMob');
+  if (plugin && root.FarmAds) {
     const provider = createAdMobProvider({
-      plugin: cap.registerPlugin('AdMob'),
+      plugin,
       config: root.FarmAdConfig,
       log: (...a) => console.warn(...a),
     });

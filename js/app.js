@@ -121,6 +121,8 @@
     $('#dev-topup').classList.toggle('hidden', !DEV);
     if (typeof modal.showModal === 'function') modal.showModal();
     else modal.setAttribute('open', '');
+    // No banner over the wallet (in the app it's a native view on top of the page).
+    updateBanner(false);
     if (section === 'gold') $('#w-gold').scrollIntoView({ block: 'start' });
   }
 
@@ -237,7 +239,8 @@
     if (show) ads.showBanner(banner);
     else ads.hideBanner(banner);
   }
-  store.subscribe(() => updateBanner(!current));
+  store.subscribe(() => updateBanner(!current && !modal.open));
+  modal.addEventListener('close', () => updateBanner(!current));
 
   // Where consent rules need it, a way to change your ad privacy choices.
   const privacyBtn = $('#ad-privacy');
