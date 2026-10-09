@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Farmyard Casino</title>
+  <meta name="description" content="A cartoon farm-themed casino of play-money games. Starting with the Hay Bale Derby.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌾</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="logo" href="#/" aria-label="Farmyard Casino home">
+      <span class="logo-icon">🐓</span>
+      <span class="logo-text">Farmyard <b>Casino</b></span>
+    </a>
+    <div class="topbar-right">
+      <button class="icon-btn" id="mute-btn" title="Sound on/off" aria-label="Toggle sound">🔊</button>
+      <button class="wallet-pill" id="wallet-btn" aria-label="Open wallet">
+        <span class="coin">🌾</span>
+        <span id="balance">0</span>
+        <span class="unit">credits</span>
+        <span class="plus">+</span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Lobby -->
+    <section class="view" id="view-lobby">
+      <div class="hero">
+        <h1>Welcome to the Farmyard Casino!</h1>
+        <p>Play-money games down on the farm. Grab some free credits and pick a game.</p>
+      </div>
+      <div class="game-grid">
+        <a class="game-card playable" href="#/hay-derby">
+          <div class="game-art art-hay">
+            <span class="art-bale b1"></span><span class="art-bale b2"></span><span class="art-bale b3"></span>
+            <span class="art-critter">🐄</span><span class="art-critter c2">🐔</span>
+          </div>
+          <div class="game-body">
+            <h2>Hay Bale Derby</h2>
+            <p>Six bales race down the hill. Back the winner — and hope the cows stay out of the way.</p>
+            <span class="btn btn-primary">Play now</span>
+          </div>
+        </a>
+        <div class="game-card soon">
+          <div class="game-art art-pig">🐖🎰</div>
+          <div class="game-body">
+            <h2>Piggy Bank Slots</h2>
+            <p>Spin the reels for corn, carrots and golden truffles.</p>
+            <span class="badge">Coming soon</span>
+          </div>
+        </div>
+        <div class="game-card soon">
+          <div class="game-art art-egg">🥚🎡</div>
+          <div class="game-body">
+            <h2>Egg Roulette</h2>
+            <p>Which nest will the hen lay in? Place your chips on the coop.</p>
+            <span class="badge">Coming soon</span>
+          </div>
+        </div>
+        <div class="game-card soon">
+          <div class="game-art art-cow">🐮🔢</div>
+          <div class="game-body">
+            <h2>Cow Pat Bingo</h2>
+            <p>Bet on the square Daisy picks. A true farmyard classic.</p>
+            <span class="badge">Coming soon</span>
+          </div>
+        </div>
+      </div>
+      <p class="disclaimer">All credits are free play money with no cash value. Nothing can be bought, sold or withdrawn.</p>
+    </section>
+
+    <!-- Hay Bale Derby -->
+    <section class="view hidden" id="view-hay-derby">
+      <div class="game-header">
+        <a class="btn btn-ghost" href="#/">← Lobby</a>
+        <h1>Hay Bale Derby</h1>
+        <span class="race-no" id="race-no">Race #1</span>
+      </div>
+
+      <div class="race-frame">
+        <canvas id="race-canvas" aria-label="Race track: six hay bales rolling downhill"></canvas>
+        <div class="race-overlay" id="race-overlay"></div>
+      </div>
+
+      <p class="race-status" id="race-status" aria-live="polite"></p>
+
+      <div class="game-panel">
+        <div class="bet-board" id="bet-board"></div>
+        <aside class="bet-controls">
+          <div class="panel-block">
+            <h3>Chip</h3>
+            <div class="chip-row" id="chip-row"></div>
+          </div>
+          <div class="panel-block totals">
+            <div><span>Total bet</span><b id="bet-total">0</b></div>
+            <div><span>Balance after</span><b id="bet-after">0</b></div>
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn-ghost" id="clear-bets">Clear</button>
+            <button class="btn btn-primary btn-big" id="start-race">Watch race</button>
+          </div>
+          <div class="panel-block">
+            <h3>Positions</h3>
+            <ol class="live" id="live-positions"></ol>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <!-- Wallet -->
+  <dialog class="modal" id="wallet-modal">
+    <form method="dialog" class="modal-inner">
+      <button class="modal-close" value="close" aria-label="Close">✕</button>
+      <h2>Your Wallet</h2>
+      <div class="wallet-balance"><span class="coin">🌾</span><span id="wallet-balance">0</span> credits</div>
+      <p class="muted">Credits are free play money — top up whenever you like.</p>
+      <div class="packs" id="packs">
+        <button type="button" class="pack" data-amount="100"><b>100</b><small>Handful of seed</small></button>
+        <button type="button" class="pack" data-amount="500"><b>500</b><small>Sack of corn</small></button>
+        <button type="button" class="pack" data-amount="1000"><b>1,000</b><small>Cartload</small></button>
+        <button type="button" class="pack" data-amount="5000"><b>5,000</b><small>Whole harvest</small></button>
+      </div>
+      <div class="custom-add">
+        <label for="custom-amount">Custom amount</label>
+        <input id="custom-amount" type="number" min="1" max="100000" step="1" inputmode="numeric" placeholder="e.g. 250">
+        <button type="button" class="btn btn-primary" id="custom-add-btn">Add</button>
+      </div>
+      <h3>Recent activity</h3>
+      <ul class="history" id="history"></ul>
+      <button type="button" class="btn btn-ghost btn-small" id="reset-wallet">Reset wallet</button>
+    </form>
+  </dialog>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script src="js/rng.js"></script>
+  <script src="js/wallet.js"></script>
+  <script src="js/sound.js"></script>
+  <script src="js/race-sim.js"></script>
+  <script src="js/race-render.js"></script>
+  <script src="js/hay-derby.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
