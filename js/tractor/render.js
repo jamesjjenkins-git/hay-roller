@@ -556,6 +556,19 @@
 
   // ---------- Background ----------
 
+  // The road's cross-section as bands (extra width over the road, colour),
+  // drawn widest first: berm foot, berm top, the ridge at the road's edge,
+  // then dirt getting lighter towards the worn middle.
+  const TRACK_BANDS = [
+    [26, '#7a4f25'],
+    [20, '#8f5d2e'],
+    [5, '#a8743e'],
+    [0, '#c4884b'],
+    [-5, '#cc9455'],
+    [-10, '#d39b5d'],
+    [-16, '#d9a066'],
+  ];
+
   function drawBackground(c, t) {
     const rng = root.FarmRng.mulberry32(t.id.length * 7919 + t.count);
 
@@ -592,21 +605,23 @@
     c.lineJoin = 'round';
     c.lineCap = 'round';
     trackPath(c, t);
+    // Grass trodden down along the outside of the berm.
+    c.strokeStyle = 'rgba(95,80,30,0.13)';
+    c.lineWidth = t.width + 50;
+    c.stroke();
     c.strokeStyle = 'rgba(0,0,0,0.18)';
     c.lineWidth = t.width + 34;
     c.save();
     c.translate(4, 6);
     c.stroke();
     c.restore();
-    c.strokeStyle = '#8a5a2b';
-    c.lineWidth = t.width + 26;
-    c.stroke();
-    c.strokeStyle = '#c98f52';
-    c.lineWidth = t.width;
-    c.stroke();
-    c.strokeStyle = '#d9a066';
-    c.lineWidth = t.width - 16;
-    c.stroke();
+    // Berm: a dark foot, its rounded top, and a lighter ridge at the road's
+    // edge; then the dirt, worn darker towards the edges in soft steps.
+    for (const [w, col] of TRACK_BANDS) {
+      c.strokeStyle = col;
+      c.lineWidth = t.width + w;
+      c.stroke();
+    }
 
     // Dirt speckle and worn racing ruts.
     c.save();
@@ -771,9 +786,13 @@
         const dy = (((grid[j + 1] && grid[j + 1][i]) || 0) - behind) / (2 * ch);
         const light = Math.max(-0.14, Math.min(0.14, -(dx * 0.6 + dy) * 0.9));
         const top = shade('#6fbf4f', light);
-        // Bank below (raised ground) or the far wall of a dip.
+        // Bank below (raised ground) or the far wall of a dip. Where the
+        // ground only slopes gently towards the camera, the gap down to the
+        // next row is more of the same slope, not a bank (else slopes come
+        // out striped).
+        const drop = (h - ((grid[j + 1] && grid[j + 1][i]) || 0)) * RAISE;
         if (h > 0) {
-          c.fillStyle = shade('#6fbf4f', light - 0.14);
+          c.fillStyle = drop < 2.5 ? top : shade('#6fbf4f', light - 0.14);
           c.fillRect(x, y - lift, cw + 0.5, ch + lift + 0.5);
         } else if (h < 0) {
           c.fillStyle = '#7a5a32';
@@ -781,9 +800,10 @@
         }
         c.fillStyle = top;
         c.fillRect(x, y - lift, cw + 0.5, ch + 0.5);
-        // A lighter lip along the top edge of a bank.
+        // A lighter lip along the crest of a bank (only the top row of a
+        // slope, or a steep slope would be striped with them).
         const front = grid[j + 1] ? grid[j + 1][i] : 0;
-        if (h > 0.5 && h - front > 0.35) {
+        if (h > 0.5 && h - front > 0.35 && behind - h < 0.2) {
           c.fillStyle = 'rgba(200,240,150,0.55)';
           c.fillRect(x, y - lift + ch - 1, cw + 0.5, 1.5);
         }
@@ -1635,7 +1655,8 @@
       const hi = Math.max(0, la, lb);
       for (let z = lo; z < hi; z += 1) {
         const k = (z - lo) / Math.max(1, hi - lo);
-        const dark = hi <= 0 ? 0.75 : 1;
+        // Layers of soil every few px of height, darker in a pit.
+        const dark = (hi <= 0 ? 0.75 : 1) * (Math.floor(z - lo) % 7 === 5 ? 0.86 : 1);
         c.fillStyle = `rgb(${Math.round((96 + 42 * k) * dark)}, ${Math.round((60 + 30 * k) * dark)}, ${Math.round((28 + 14 * k) * dark)})`;
         const clamp = (l) => (l >= 0 ? Math.min(z, l) : Math.max(z, l));
         quad(i, outer, clamp(la), clamp(lb));
@@ -1643,7 +1664,7 @@
       }
     }
     // The raised surface: berm, dirt and the worn centre, like the flat road.
-    for (const [w, col] of [[outer, '#8a5a2b'], [t.halfWidth, '#c98f52'], [t.halfWidth - 8, '#d9a066']]) {
+    for (const [w, col] of TRACK_BANDS.map(([bw, bc]) => [t.halfWidth + bw / 2, bc])) {
       c.fillStyle = col;
       c.strokeStyle = col;
       c.lineWidth = 1;
@@ -1681,6 +1702,22 @@
         c.fillRect(a.x + a.nx * off, a.y + a.ny * off - lift[i], 2 + rng() * 2, 2 + rng() * 2);
       }
     }
+    // A sunlit lip along the top of each bank that faces the camera.
+    c.strokeStyle = 'rgba(255, 228, 175, 0.6)';
+    c.lineWidth = 1.5;
+    c.lineCap = 'round';
+    c.beginPath();
+    for (const i of raised) {
+      const a = t.samples[i];
+      const b = t.samples[(i + 1) % n];
+      if (lift[i] < 3 || lift[(i + 1) % n] < 3) continue;
+      for (const side of [-1, 1]) {
+        if (side * a.ny < 0.25) continue;
+        c.moveTo(a.x + a.nx * side * outer, a.y + a.ny * side * outer - lift[i] + 0.5);
+        c.lineTo(b.x + b.nx * side * outer, b.y + b.ny * side * outer - lift[(i + 1) % n] + 0.5);
+      }
+    }
+    c.stroke();
   }
 
   // Jump ramp: a wooden wedge rising towards its lip, with the lip face and
