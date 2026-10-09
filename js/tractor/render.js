@@ -150,7 +150,7 @@
             else dust(rearX, rearY);
           }
         }
-        if (r.nitroTime > 0 && Math.random() < 0.8) {
+        if ((r.nitroTime > 0 && Math.random() < 0.8) || (r.kickT > 0 && Math.random() < 0.5)) {
           particles.push({ type: 'flame', x: r.x - fx * 18, y: r.y - fy * 18, vx: -fx * 90 + (Math.random() - 0.5) * 30, vy: -fy * 90 + (Math.random() - 0.5) * 30, life: 0.25, max: 0.25 });
         }
         // Exhaust puffs.
