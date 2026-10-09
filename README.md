@@ -188,8 +188,8 @@ product ids are fixed in `js/monetize/iap.js` (Apple never lets an id be reused)
 | Product | App Store id | Type |
 | --- | --- | --- |
 | Pocket of Gold (100) | `com.jamesjenkins.farmyardrally.gold.small` | Consumable |
-| Pail of Gold (550) | `com.jamesjenkins.farmyardrally.gold.medium` | Consumable |
-| Barrow of Gold (1,200) | `com.jamesjenkins.farmyardrally.gold.large` | Consumable |
+| Pail of Gold (500) | `com.jamesjenkins.farmyardrally.gold.medium` | Consumable |
+| Barrow of Gold (1,000) | `com.jamesjenkins.farmyardrally.gold.large` | Consumable |
 | Remove ads | `com.jamesjenkins.farmyardrally.removeads` | Non-consumable |
 
 **Testing now, no paid account needed:** run the app from Xcode. The shared *App* scheme uses

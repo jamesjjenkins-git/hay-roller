@@ -76,7 +76,7 @@ test('a paid purchase is granted first, then finished', async () => {
   await store.init();
   const r = await store.buy('gold_medium');
   assert.ok(r.ok);
-  assert.strictEqual(gold.balance, 550);
+  assert.strictEqual(gold.balance, 500);
   const steps = plugin.log.map((e) => e[0]);
   assert.deepStrictEqual(steps, ['purchase', 'grant', 'finish']);
 });
@@ -87,14 +87,14 @@ test('a purchase interrupted before it was granted arrives next launch, once', a
   const delivered = [];
   store.onDelivered((p) => delivered.push(p.id));
   await store.init();
-  assert.strictEqual(gold.balance, 1200);
+  assert.strictEqual(gold.balance, 1000);
   assert.deepStrictEqual(delivered, ['gold_large']);
   // Granted but the finish was lost (say the app closed): it comes back,
   // gets finished, and is not granted again.
   plugin.unfinishedList = [{ transactionId: '7', productId: APPLE_IDS.gold_large }];
   const again = createStore({ storage: s, goldWallet: gold, billing });
   await again.init();
-  assert.strictEqual(gold.balance, 1200);
+  assert.strictEqual(gold.balance, 1000);
   assert.strictEqual(plugin.log.filter((e) => e[0] === 'finish').length, 2);
 });
 

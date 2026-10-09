@@ -55,10 +55,10 @@ test('store sells Gold packs and Remove ads; cancelling grants nothing', async (
   const store = createStore({ storage: s, goldWallet: gold, billing: testBilling(async () => answer) });
   assert.strictEqual(store.testMode, true);
   assert.ok((await store.buy('gold_medium')).ok);
-  assert.strictEqual(gold.balance, 550);
+  assert.strictEqual(gold.balance, 500);
   answer = false;
   assert.strictEqual((await store.buy('gold_small')).ok, false);
-  assert.strictEqual(gold.balance, 550);
+  assert.strictEqual(gold.balance, 500);
   assert.strictEqual(store.owns('remove_ads'), false);
   answer = true;
   await store.buy('remove_ads');

@@ -8,7 +8,7 @@
       "internalID": "6403977794",
       "localizations": [
         {
-          "description": "100 Gold for premium paint jobs.",
+          "description": "100 Gold to spend in the garage.",
           "displayName": "Pocket of Gold",
           "locale": "en_GB"
         }
@@ -18,12 +18,12 @@
       "type": "Consumable"
     },
     {
-      "displayPrice": "4.99",
+      "displayPrice": "2.99",
       "familyShareable": false,
       "internalID": "6482722880",
       "localizations": [
         {
-          "description": "550 Gold for premium paint jobs.",
+          "description": "500 Gold to spend in the garage.",
           "displayName": "Pail of Gold",
           "locale": "en_GB"
         }
@@ -33,12 +33,12 @@
       "type": "Consumable"
     },
     {
-      "displayPrice": "9.99",
+      "displayPrice": "4.99",
       "familyShareable": false,
       "internalID": "6441565801",
       "localizations": [
         {
-          "description": "1,200 Gold for premium paint jobs.",
+          "description": "1,000 Gold to spend in the garage.",
           "displayName": "Barrow of Gold",
           "locale": "en_GB"
         }
@@ -48,7 +48,7 @@
       "type": "Consumable"
     },
     {
-      "displayPrice": "2.99",
+      "displayPrice": "0.99",
       "familyShareable": false,
       "internalID": "6445170535",
       "localizations": [

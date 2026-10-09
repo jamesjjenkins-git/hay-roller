@@ -25,9 +25,9 @@
 
   const PRODUCTS = [
     { id: 'gold_small', kind: 'gold', gold: 100, price: '£0.99', name: 'Pocket of Gold' },
-    { id: 'gold_medium', kind: 'gold', gold: 550, price: '£4.99', name: 'Pail of Gold', tag: '+10%' },
-    { id: 'gold_large', kind: 'gold', gold: 1200, price: '£9.99', name: 'Barrow of Gold', tag: '+20%' },
-    { id: 'remove_ads', kind: 'entitlement', price: '£2.99', name: 'Remove ads', desc: 'Hides the home page banner for good. Optional reward videos stay available.' },
+    { id: 'gold_medium', kind: 'gold', gold: 500, price: '£2.99', name: 'Pail of Gold', tag: '+65%' },
+    { id: 'gold_large', kind: 'gold', gold: 1000, price: '£4.99', name: 'Barrow of Gold', tag: '2× value' },
+    { id: 'remove_ads', kind: 'entitlement', price: '£0.99', name: 'Remove ads', desc: 'Hides the home page banner for good. Optional reward videos stay available.' },
   ];
 
   // Test-mode billing: asks for confirmation, then "succeeds" without payment.
