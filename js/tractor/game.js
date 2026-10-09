@@ -6,6 +6,7 @@
   const TROPHY_ICON = { gold: '🥇', silver: '🥈', bronze: '🥉' };
   const SELECTED_KEY = 'farmCasino.tractor.track';
   const VIEW_KEY = 'farmCasino.tractor.view';
+  const STEER_KEY = 'farmCasino.tractor.steer';
   const COUNTDOWN_SECONDS = 3;
 
   const ordinal = (n) => n + (['th', 'st', 'nd', 'rd'][n % 100 > 10 && n % 100 < 14 ? 0 : n % 10] || 'th');
@@ -54,13 +55,13 @@
       if (k.has('ArrowLeft') || k.has('a')) steer -= 1;
       if (k.has('ArrowRight') || k.has('d')) steer += 1;
       // Touch slider: left/right steers directly, like the arrow keys but analogue.
-      if (steer === 0) steer = input.slide;
+      if (steer === 0) steer = steerMode === 'buttons' ? buttonSteer(performance.now()) : input.slide;
       const brake = input.brake || k.has('ArrowDown') || k.has('s') ? 1 : 0;
       const nitro = input.nitro || k.has(' ') || k.has('Shift');
       input.nitro = false;
       // While the thumb is sliding, the angle you've turned to is held exactly;
       // the straight-line assist only helps once you've let go or gone still.
-      return { steer, throttle: brake ? 0 : 1, brake, nitro, assist: stickTouch == null || thumbResting };
+      return { steer, throttle: brake ? 0 : 1, brake, nitro, assist: steerMode === 'buttons' ? padDir === 0 : stickTouch == null || thumbResting };
     }
 
     const stickZone = $('#stick-zone');
@@ -188,6 +189,84 @@
       btn.addEventListener('mouseup', end);
       btn.addEventListener('mouseleave', (e) => btn.classList.contains('pressed') && end(e));
     }
+    // ---------- Left/right buttons (alternative to the slider) ----------
+    // One pad covering both buttons, so you can rock your thumb from one to
+    // the other without lifting. A tap gives a small nudge; holding builds
+    // to a steady turn over a fraction of a second.
+    const BUTTON_STEER = 0.5; // fraction of the tractor's full turn rate
+    const BUTTON_RAMP_MS = 160;
+    const steerPad = $('#steer-pad');
+    const padTouches = new Map(); // touch id -> -1 | 1
+    let padDir = 0;
+    let padSince = 0;
+    function updatePad() {
+      const dirs = [...padTouches.values()];
+      const dir = dirs.length ? dirs[dirs.length - 1] : 0;
+      if (dir !== padDir) {
+        padDir = dir;
+        padSince = performance.now();
+      }
+      steerPad.querySelector('.sbtn-l').classList.toggle('pressed', padDir < 0);
+      steerPad.querySelector('.sbtn-r').classList.toggle('pressed', padDir > 0);
+    }
+    function padDirAt(clientX) {
+      const r = steerPad.getBoundingClientRect();
+      return clientX < r.left + r.width / 2 ? -1 : 1;
+    }
+    function buttonSteer(now) {
+      if (!padDir) return 0;
+      return padDir * BUTTON_STEER * Math.min(1, 0.35 + (now - padSince) / BUTTON_RAMP_MS);
+    }
+    function padClear() {
+      padTouches.clear();
+      updatePad();
+    }
+    steerPad.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      for (const t of e.changedTouches) padTouches.set(t.identifier, padDirAt(t.clientX));
+      updatePad();
+    }, { passive: false });
+    steerPad.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        if (padTouches.has(t.identifier)) padTouches.set(t.identifier, padDirAt(t.clientX));
+      }
+      updatePad();
+    }, { passive: false });
+    const padEnd = (e) => {
+      for (const t of e.changedTouches) padTouches.delete(t.identifier);
+      updatePad();
+    };
+    steerPad.addEventListener('touchend', padEnd);
+    steerPad.addEventListener('touchcancel', padEnd);
+    steerPad.addEventListener('mousedown', (e) => {
+      padTouches.set('mouse', padDirAt(e.clientX));
+      updatePad();
+    });
+    root.addEventListener('mouseup', () => {
+      if (padTouches.delete('mouse')) updatePad();
+    });
+
+    let steerMode = 'slider';
+    try {
+      if (localStorage.getItem(STEER_KEY) === 'buttons') steerMode = 'buttons';
+    } catch (e) {
+      // Ignore.
+    }
+    raceEl.classList.toggle('steer-buttons', steerMode === 'buttons');
+    function setSteerMode(m) {
+      steerMode = m;
+      try {
+        localStorage.setItem(STEER_KEY, m);
+      } catch (e) {
+        // Ignore.
+      }
+      stickEnd();
+      padClear();
+      raceEl.classList.toggle('steer-buttons', m === 'buttons');
+      updateStickHint();
+    }
+
     holdButton($('#btn-brake'), () => (input.brake = true), () => (input.brake = false));
     holdButton($('#btn-nitro'), () => (input.nitro = true));
 
@@ -487,15 +566,22 @@
       updateStickHint();
     }
     function updateStickHint() {
-      $('.stick-hint').textContent = lastInput === 'touch' ? 'Slide ← → to steer' : '← → steer · Space nitro · ↓ brake';
+      $('.stick-hint').textContent = lastInput !== 'touch' ? '← → steer · Space nitro · ↓ brake'
+        : steerMode === 'buttons' ? 'Hold ◀ ▶ to steer' : 'Slide ← → to steer';
     }
     updateStickHint();
 
+    const STEER_TEXT = '';
+    function steerText() {
+      return steerMode === 'buttons'
+        ? 'Hold <b>◀</b> or <b>▶</b> at the bottom left to turn — tap for a small nudge, hold for a steady turn. Let go and the tractor keeps the direction it\'s pointing. You can rock your thumb between them without lifting. (Switch back to the slider from the pause menu.)'
+        : 'Put your thumb anywhere on the <b>left half</b> of the screen and slide <b>left or right</b> to turn. Hold your thumb still for a moment and it\'s just like lifting it: the tractor stops turning and keeps the direction it\'s pointing, and the slider re-centres under your thumb.' + ' (Prefer buttons? Switch from the pause menu.)';
+    }
     const CONTROLS = {
       touch: {
         title: 'Phone controls',
         rows: [
-          ['👆', 'Steer', 'Put your thumb anywhere on the <b>left half</b> of the screen and slide <b>left or right</b> to turn. Hold your thumb still for a moment and it\'s just like lifting it: the tractor stops turning and keeps the direction it\'s pointing, and the slider re-centres under your thumb.'],
+          ['👆', 'Steer', STEER_TEXT],
           ['🚜', 'Gas', 'Automatic — you’re always on the throttle.'],
           ['🔥', 'Nitro', 'Tap <b>NITRO</b> for a burst of speed. Counter at the top right.'],
           ['🛑', 'Brake', 'Hold <b>BRAKE</b> to slow down. Keep holding when stopped to reverse out of trouble.'],
@@ -525,6 +611,7 @@
           <h2>Paused</h2>
           <button class="btn btn-primary btn-big" data-act="resume">Resume</button>
           <button class="btn btn-ghost" data-act="controls">🎮 Controls</button>
+          <button class="btn btn-ghost" data-act="steer">${steerMode === 'buttons' ? '👆 Steering: switch to slider' : '◀▶ Steering: switch to buttons'}</button>
           <button class="btn btn-ghost" data-act="view">${viewMode === 'chase' ? '🗺️ Camera: switch to whole track' : '🔍 Camera: switch to close-up'}</button>
           <button class="btn btn-ghost" data-act="restart">Restart race</button>
           <button class="btn btn-ghost" data-act="quit">Back to garage</button>
@@ -539,7 +626,7 @@
         <div class="rmodal-card controls-card">
           <h2>${c.title}</h2>
           <ul class="controls-list">
-            ${c.rows.map(([icon, name, text]) => `<li><span class="c-key">${icon}</span><span><b>${name}</b><small>${text}</small></span></li>`).join('')}
+            ${c.rows.map(([icon, name, text]) => [icon, name, text === STEER_TEXT && mode === 'touch' ? steerText() : text]).map(([icon, name, text]) => `<li><span class="c-key">${icon}</span><span><b>${name}</b><small>${text}</small></span></li>`).join('')}
           </ul>
           <p class="c-tip">${c.tip}</p>
           <p class="c-tip">${TRACK_TIPS}</p>
@@ -591,6 +678,10 @@
       else if (act === 'restart' || act === 'again') startRace();
       else if (act === 'quit' || act === 'garage') toGarage();
       else if (act === 'controls') showControls(lastInput);
+      else if (act === 'steer') {
+        setSteerMode(steerMode === 'buttons' ? 'slider' : 'buttons');
+        showPauseMenu();
+      }
       else if (act === 'view') {
         setViewMode(viewMode === 'chase' ? 'full' : 'chase');
         showPauseMenu();

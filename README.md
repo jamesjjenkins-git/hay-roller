@@ -15,7 +15,8 @@ bumps.
 - **Controls (phone):** put your thumb anywhere on the left half of the screen and slide left
   or right to steer at a steady rate (sliding further doesn't turn harder). Hold your thumb
   still for a moment and it's just like lifting it: the turn stops, the tractor keeps the
-  direction it's pointing and the slider re-centres under your thumb.
+  direction it's pointing and the slider re-centres under your thumb. Prefer buttons? Switch to
+  **◀ ▶ steering buttons** from the pause menu (tap to nudge, hold for a steady turn).
   Gas is automatic. **NITRO** and **BRAKE** (hold to reverse) sit bottom-right. Play in landscape.
 - **Two camera views**, switchable any time with the 📷 camera button at the top of the race screen, the **V**
   key, or the pause menu (the choice is remembered):

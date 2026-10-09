@@ -912,6 +912,36 @@ body.in-race .topbar { display: none; }
   box-shadow: 0 3px 0 var(--ink);
 }
 
+/* Optional left/right steering buttons (instead of the slider). */
+.steer-pad {
+  display: none;
+  position: absolute;
+  left: max(14px, env(safe-area-inset-left));
+  bottom: max(14px, env(safe-area-inset-bottom));
+  gap: 14px;
+  padding-top: 40px; /* a little extra catch area above the buttons */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.race-screen.steer-buttons .steer-pad { display: flex; }
+.race-screen.steer-buttons .stick-zone { pointer-events: none; }
+.race-screen.steer-buttons .stick-hint { display: none; }
+.sbtn {
+  width: 84px; height: 84px;
+  border-radius: 50%;
+  border: 4px solid var(--ink);
+  box-shadow: 0 5px 0 var(--ink);
+  background: radial-gradient(circle at 35% 30%, #fff3c4, var(--straw));
+  color: var(--ink);
+  font-size: 30px;
+  display: grid;
+  place-items: center;
+  opacity: 0.88;
+  pointer-events: none; /* the pad handles touches */
+}
+.sbtn.pressed { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); opacity: 1; }
+
 .race-buttons {
   position: absolute;
   right: max(14px, env(safe-area-inset-right));
@@ -1050,6 +1080,7 @@ kbd {
   .hud-view { height: 34px; font-size: 14px; padding: 0 10px 0 8px; }
   .rbtn-nitro { width: 70px; height: 70px; font-size: 14px; margin-bottom: 30px; }
   .rbtn-brake { width: 58px; height: 58px; font-size: 12px; }
+  .sbtn { width: 70px; height: 70px; font-size: 26px; }
   .results .place { font-size: 34px; }
   .r-order { font-size: 13px; }
   .r-order li { padding: 0; }
