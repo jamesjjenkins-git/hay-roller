@@ -348,7 +348,6 @@
       ctx.setTransform(v.k, 0, 0, v.k, -v.rx * v.k, -v.ry * v.k);
 
       drawFlagman(ctx, sim, view, now);
-      for (const p of sim.pickups) drawPickup(ctx, p, now);
       drawParticles('under');
 
       // Everything that stands up, back to front: walls, animals, vehicles.
@@ -363,11 +362,16 @@
         items.push({ y: w.gy, w });
       }
       for (const a of sim.animals || []) items.push({ y: a.y, a });
+      for (const p of sim.pickups) items.push({ y: p.y, p });
+      // Ramps sort a little behind their centre so anything on them is drawn on top.
+      for (const f of track.features) if (f.type === 'jump') items.push({ y: f.y - 24, f });
       for (const r of sim.racers) items.push({ y: r.y + (r.airborne ? 40 : 0), r });
       items.sort((a, b) => a.y - b.y);
       for (const it of items) {
         if (it.w) ctx.drawImage(wallSprites.get(wallKey(it.w)), it.w.x - SPR.ox, it.w.y - SPR.oy, SPR.w, SPR.h);
         else if (it.a) drawFarmAnimal(ctx, it.a, now);
+        else if (it.p) drawPickup(ctx, it.p, now);
+        else if (it.f) drawRamp(ctx, it.f, liftAt(track, it.f.idx));
         else drawTractor(ctx, it.r, now);
       }
       drawParticles('over');
@@ -700,7 +704,7 @@
   // The ground as raised/sunken land: small cells drawn back to front, each a
   // column from the ground up to its height (a grassy bank where it's higher
   // than the cell in front) with a grass top shaded by the slope.
-  const TERRAIN_CX = 4; // cell width
+  const TERRAIN_CX = 2; // cell width
   const TERRAIN_CY = 2; // cell height (fine, so slopes read smooth)
   function drawTerrain(c, t) {
     const cw = TERRAIN_CX;
@@ -747,6 +751,12 @@
         }
         c.fillStyle = top;
         c.fillRect(x, y - lift, cw + 0.5, ch + 0.5);
+        // A lighter lip along the top edge of a bank.
+        const front = grid[j + 1] ? grid[j + 1][i] : 0;
+        if (h > 0.5 && h - front > 0.35) {
+          c.fillStyle = 'rgba(200,240,150,0.55)';
+          c.fillRect(x, y - lift + ch - 1, cw + 0.5, 1.5);
+        }
       }
     }
   }
@@ -889,39 +899,282 @@
     }
   }
 
-  // Scenery heights and footprints (for the sides and ground shadows).
-  const SCENERY_SOLID = {
-    barn: { h: 24, side: '#8f2a21', foot: (c) => roundRect(c, -60, -40, 120, 80, 5) },
-    silo: { h: 40, side: '#8a949c', foot: (c) => circle(c, 0, 0, 30) },
-    hay: { h: 16, side: '#b08a30', foot: (c) => roundRect(c, -48, -28, 94, 54, 4) },
-    windmill: { h: 30, side: '#a8946a', foot: (c) => circle(c, 0, 0, 24) },
-    tree: { h: 18, side: '#6b4423', foot: (c) => circle(c, 0, 0, 7), canopy: true },
-  };
-
   function drawSceneryDepth(c, sc0, rng, ground = 0) {
     const sc = ground ? { ...sc0, y: sc0.y - ground * RAISE } : sc0;
-    const d = SCENERY_SOLID[sc.kind];
-    if (!d) {
+    const art = SCENERY_ART[sc.kind];
+    if (!art) {
       drawScenery(c, sc, rng);
       return;
     }
     const k = sc.scale || 1;
-    const h = d.h * k;
-    // Shadow on the ground, then the sides, then the top.
     c.save();
-    c.translate(sc.x + 6 * k, sc.y + 6 * k);
+    c.translate(sc.x, sc.y);
     c.scale(k, k);
-    if (d.canopy) circle(c, 0, 0, 34);
-    else d.foot(c);
-    c.fillStyle = 'rgba(0,0,0,0.2)';
-    c.fill();
+    art(c, rng);
     c.restore();
-    solid(c, sc.x, sc.y, h, d.side, (cc) => {
-      cc.scale(k, k);
-      d.foot(cc);
-    });
-    drawScenery(c, { ...sc, y: sc.y - h }, rng, { noShadow: true });
   }
+
+  // An upright cylinder seen slightly from the front: side from `y0` (base)
+  // up `h`, oval top. Returns the top's centre y.
+  function cylinder(c, r, h, col, { top = shade(col, 0.12), rings = [] } = {}) {
+    const ty = -h;
+    c.beginPath();
+    c.moveTo(-r, ty);
+    c.lineTo(-r, 0);
+    c.ellipse(0, 0, r, r * OVAL, 0, Math.PI, 0, true);
+    c.lineTo(r, ty);
+    c.closePath();
+    const g = c.createLinearGradient(-r, 0, r, 0);
+    g.addColorStop(0, shade(col, -0.22));
+    g.addColorStop(0.38, shade(col, 0.08));
+    g.addColorStop(1, shade(col, -0.3));
+    c.fillStyle = g;
+    c.fill();
+    c.lineWidth = 2 * LINE;
+    c.strokeStyle = OUTLINE;
+    c.stroke();
+    c.strokeStyle = 'rgba(0,0,0,0.22)';
+    c.lineWidth = 1.5;
+    for (const f of rings) {
+      c.beginPath();
+      c.ellipse(0, -h * f, r, r * OVAL, 0, 0, Math.PI);
+      c.stroke();
+    }
+    c.beginPath();
+    c.ellipse(0, ty, r, r * OVAL, 0, 0, Math.PI * 2);
+    fillStroke(c, top, 2);
+    return ty;
+  }
+
+  function groundShadow(c, rx, ry, dx = 8, dy = 6) {
+    c.fillStyle = 'rgba(0,0,0,0.18)';
+    c.beginPath();
+    c.ellipse(dx, dy, rx, ry, 0, 0, Math.PI * 2);
+    c.fill();
+  }
+
+  // Scenery drawn for our camera: things stand up the screen from their
+  // base, round tops are ovals, and you see the front face of buildings.
+  const SCENERY_ART = {
+    barn(c) {
+      const w = 120;
+      const d = 70; // depth (top-down)
+      const h = 26; // wall height
+      c.fillStyle = 'rgba(0,0,0,0.2)';
+      c.fillRect(-w / 2 + 10, -d / 2 + 10, w, d);
+      // Front wall with big doors and white trim.
+      c.fillStyle = '#b8352a';
+      c.fillRect(-w / 2, d / 2 - h, w, h);
+      c.strokeStyle = 'rgba(0,0,0,0.18)';
+      c.lineWidth = 1.2;
+      for (let x = -w / 2 + 8; x < w / 2; x += 8) {
+        c.beginPath();
+        c.moveTo(x, d / 2 - h);
+        c.lineTo(x, d / 2);
+        c.stroke();
+      }
+      c.fillStyle = '#8f2a21';
+      c.fillRect(-18, d / 2 - h + 4, 36, h - 4);
+      c.strokeStyle = '#fff';
+      c.lineWidth = 2.5;
+      c.strokeRect(-18, d / 2 - h + 4, 36, h - 4);
+      c.beginPath();
+      c.moveTo(-18, d / 2 - h + 4);
+      c.lineTo(18, d / 2);
+      c.moveTo(18, d / 2 - h + 4);
+      c.lineTo(-18, d / 2);
+      c.stroke();
+      c.lineWidth = 2 * LINE;
+      c.strokeStyle = OUTLINE;
+      c.strokeRect(-w / 2, d / 2 - h, w, h);
+      // Roof: two planes either side of the ridge, the near one darker.
+      const top = -d / 2 - h;
+      const ridge = top + (d * 0.5);
+      c.fillStyle = '#6a7079';
+      c.beginPath();
+      c.rect(-w / 2 - 4, top, w + 8, ridge - top);
+      c.fill();
+      c.fillStyle = '#545a63';
+      c.beginPath();
+      c.rect(-w / 2 - 4, ridge, w + 8, d / 2 - h - ridge + 4);
+      c.fill();
+      c.strokeStyle = 'rgba(255,255,255,0.12)';
+      c.lineWidth = 1;
+      for (let x = -w / 2; x < w / 2 + 4; x += 7) {
+        c.beginPath();
+        c.moveTo(x, top);
+        c.lineTo(x, d / 2 - h + 4);
+        c.stroke();
+      }
+      c.strokeStyle = '#d9d9d9';
+      c.lineWidth = 3;
+      c.beginPath();
+      c.moveTo(-w / 2 - 4, ridge);
+      c.lineTo(w / 2 + 4, ridge);
+      c.stroke();
+      c.lineWidth = 2 * LINE;
+      c.strokeStyle = OUTLINE;
+      c.strokeRect(-w / 2 - 4, top, w + 8, d / 2 - h - top + 4);
+    },
+    silo(c) {
+      groundShadow(c, 34, 20, 10, 6);
+      const ty = cylinder(c, 26, 52, '#b9c2c9', { top: '#d6dde2', rings: [0.3, 0.6] });
+      // Domed cap.
+      c.beginPath();
+      c.ellipse(0, ty, 16, 16 * OVAL, 0, 0, Math.PI * 2);
+      fillStroke(c, '#c9d1d7', 1.5);
+      c.beginPath();
+      c.ellipse(0, ty - 2, 6, 6 * OVAL, 0, 0, Math.PI * 2);
+      fillStroke(c, '#8f9aa3', 1.5);
+    },
+    windmill(c) {
+      groundShadow(c, 30, 16, 10, 6);
+      // Tapered tower.
+      c.beginPath();
+      c.moveTo(-18, 0);
+      c.lineTo(-11, -46);
+      c.lineTo(11, -46);
+      c.lineTo(18, 0);
+      c.ellipse(0, 0, 18, 18 * OVAL, 0, 0, Math.PI);
+      c.closePath();
+      const g = c.createLinearGradient(-18, 0, 18, 0);
+      g.addColorStop(0, '#a8946a');
+      g.addColorStop(0.4, '#d6c49a');
+      g.addColorStop(1, '#9a865c');
+      c.fillStyle = g;
+      c.fill();
+      c.lineWidth = 2 * LINE;
+      c.strokeStyle = OUTLINE;
+      c.stroke();
+      c.fillStyle = '#5a3a1c';
+      roundRect(c, -4, -14, 8, 14, 3);
+      c.fill();
+      // Cap and sails.
+      c.beginPath();
+      c.ellipse(0, -48, 14, 14 * OVAL, 0, 0, Math.PI * 2);
+      fillStroke(c, '#8a5a2b', 2);
+      c.save();
+      c.translate(0, -50);
+      for (let i = 0; i < 4; i++) {
+        c.save();
+        c.rotate(0.5 + (i * Math.PI) / 2);
+        roundRect(c, 4, -6, 40, 12, 3);
+        fillStroke(c, '#fff8e6', 2);
+        c.strokeStyle = 'rgba(59,42,20,0.35)';
+        c.lineWidth = 1;
+        for (let k = 12; k < 42; k += 7) {
+          c.beginPath();
+          c.moveTo(k, -5);
+          c.lineTo(k, 5);
+          c.stroke();
+        }
+        c.restore();
+      }
+      circle(c, 0, 0, 5);
+      fillStroke(c, '#5a3a1c', 1.5);
+      c.restore();
+    },
+    tree(c, rng) {
+      groundShadow(c, 34, 18, 12, 8);
+      cylinder(c, 6, 16, '#6b4423');
+      // Canopy: shaded clumps, darker underneath, lighter on top.
+      const clumps = [[0, -38, 30], [-16, -30, 18], [16, -30, 18], [-8, -50, 16], [10, -48, 15]];
+      for (const [x, y, r] of clumps) {
+        circle(c, x, y + 3, r);
+        c.fillStyle = '#2f7a2c';
+        c.fill();
+      }
+      for (const [x, y, r] of clumps) {
+        circle(c, x, y, r);
+        c.fillStyle = '#4caa44';
+        c.fill();
+      }
+      circle(c, 0, -38, 30);
+      c.lineWidth = 2 * LINE;
+      c.strokeStyle = 'rgba(30,70,25,0.6)';
+      c.stroke();
+      for (let i = 0; i < 6; i++) {
+        circle(c, (rng() - 0.5) * 34, -44 + (rng() - 0.5) * 22, 4 + rng() * 5);
+        c.fillStyle = 'rgba(160,220,120,0.55)';
+        c.fill();
+      }
+    },
+    hay(c) {
+      groundShadow(c, 56, 26, 8, 10);
+      // A stack of square bales: a row of three at the back, three at the
+      // front, and two on top - each showing its front face.
+      const bale = (x, y, z) => {
+        const h = 14;
+        c.fillStyle = '#b08a30';
+        c.fillRect(x - 15, y - 12 - z, 30, h + 12);
+        c.save();
+        c.translate(x, y - z - h);
+        c.scale(1.25, 0.9);
+        baleTop(c, Math.round(x + y));
+        c.restore();
+        c.strokeStyle = 'rgba(59,42,20,0.5)';
+        c.lineWidth = 1;
+        c.strokeRect(x - 15, y - z - h + 12, 30, h);
+      };
+      for (const x of [-32, 0, 32]) bale(x, -12, 0);
+      for (const x of [-32, 0, 32]) bale(x, 12, 0);
+      for (const x of [-16, 16]) bale(x, 0, 14);
+    },
+    pond(c, rng) {
+      // Muddy bank, then water getting deeper towards the middle, a few
+      // reeds and lily pads, and a duck.
+      c.beginPath();
+      c.ellipse(0, 0, 76, 42, 0.2, 0, Math.PI * 2);
+      c.fillStyle = '#8a6a3d';
+      c.fill();
+      c.beginPath();
+      c.ellipse(0, 0, 70, 37, 0.2, 0, Math.PI * 2);
+      const g = c.createRadialGradient(-10, -6, 6, 0, 0, 72);
+      g.addColorStop(0, '#2f86c4');
+      g.addColorStop(0.65, '#4fa9dc');
+      g.addColorStop(1, '#8fd3f2');
+      c.fillStyle = g;
+      c.fill();
+      c.lineWidth = 2 * LINE;
+      c.strokeStyle = '#2b6f9c';
+      c.stroke();
+      c.strokeStyle = 'rgba(255,255,255,0.7)';
+      c.lineWidth = 2;
+      for (let i = 0; i < 3; i++) {
+        c.beginPath();
+        c.ellipse(-20 + i * 18, -10 + i * 6, 10, 3, 0.2, Math.PI * 1.1, Math.PI * 1.9);
+        c.stroke();
+      }
+      for (const [x, y] of [[40, 14], [-46, -6], [28, -20]]) {
+        c.beginPath();
+        c.ellipse(x, y, 7, 4, 0.4, 0.3, Math.PI * 2 - 0.3);
+        c.lineTo(x, y);
+        c.fillStyle = '#5fae3a';
+        c.fill();
+      }
+      c.strokeStyle = '#4c7a2a';
+      c.lineWidth = 2;
+      for (const x of [-64, -58, -52, 60, 66]) {
+        c.beginPath();
+        c.moveTo(x, 10);
+        c.lineTo(x + (rng() - 0.5) * 4, -6);
+        c.stroke();
+        c.fillStyle = '#6b4423';
+        c.fillRect(x - 1.5, -10, 3, 6);
+      }
+      // Duck.
+      c.save();
+      c.translate(10, 6);
+      c.beginPath();
+      c.ellipse(0, 0, 9, 6, 0, 0, Math.PI * 2);
+      fillStroke(c, '#fff', 1.5);
+      circle(c, 7, -4, 4);
+      fillStroke(c, '#1f8a4c', 1.5);
+      c.fillStyle = '#f7a325';
+      c.fillRect(10, -5, 5, 2.5);
+      c.restore();
+    },
+  };
 
   // Edges that curve tighter than this (px) get oil barrels, not bales.
   const BARREL_RADIUS = 140;
@@ -1080,10 +1333,10 @@
 
   // Jump ramp: a wooden wedge rising towards its lip, with the lip face and
   // the side facing the camera showing.
-  const RAMP_H = 13;
+  const RAMP_H = 8;
   function drawRamp(c, f, lift) {
     const L = f.len;
-    const hw = f.halfWidth - 6;
+    const hw = f.halfWidth - 2;
     const ux = Math.cos(f.angle);
     const uy = Math.sin(f.angle);
     const nx = -uy;
@@ -1132,43 +1385,88 @@
   }
 
   function drawFeature(c, f, rng, lift = 0) {
-    if (f.type === 'jump') {
-      drawRamp(c, f, lift);
-      return;
-    }
+    if (f.type === 'jump') return; // drawn each frame, depth-sorted
     c.save();
     // Sits on the road surface, which may be up a hill.
     c.translate(f.x, f.y - lift);
     c.rotate(f.angle);
     if (f.type === 'mud') {
+      const rx = f.len / 2;
+      const ry = f.halfWidth;
+      // Splashed rim, the wet mud, a glossy sheen, ruts and bubbles.
+      c.fillStyle = 'rgba(100,65,30,0.55)';
+      for (let i = 0; i < 9; i++) {
+        const a = rng() * Math.PI * 2;
+        circle(c, Math.cos(a) * (rx + 3), Math.sin(a) * (ry + 2), 3 + rng() * 4);
+        c.fill();
+      }
       c.beginPath();
-      c.ellipse(0, 0, f.len / 2 + 6, f.halfWidth + 4, 0, 0, Math.PI * 2);
+      c.ellipse(0, 0, rx + 5, ry + 4, 0, 0, Math.PI * 2);
       c.fillStyle = '#7a5530';
       c.fill();
       c.beginPath();
-      c.ellipse(0, 0, f.len / 2, f.halfWidth, 0, 0, Math.PI * 2);
-      fillStroke(c, '#5e3d1d', 2, '#4a2e14');
-      c.fillStyle = 'rgba(255,255,255,0.18)';
-      for (let i = 0; i < 6; i++) {
-        c.beginPath();
-        c.ellipse((rng() - 0.5) * f.len * 0.7, (rng() - 0.5) * f.halfWidth, 6 + rng() * 6, 2 + rng() * 2, 0, 0, Math.PI * 2);
-        c.fill();
-      }
-    } else if (f.type === 'water') {
-      c.beginPath();
-      c.ellipse(0, 0, f.len / 2, f.halfWidth, 0, 0, Math.PI * 2);
-      fillStroke(c, '#4fa9dc', 2.5, '#2b6f9c');
-      c.beginPath();
-      c.ellipse(-4, -3, f.len / 2 - 10, f.halfWidth - 8, 0, 0, Math.PI * 2);
-      c.fillStyle = '#7ccaf0';
+      c.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+      const g = c.createRadialGradient(-rx * 0.2, -ry * 0.3, 2, 0, 0, rx);
+      g.addColorStop(0, '#6e4824');
+      g.addColorStop(1, '#4a2e14');
+      c.fillStyle = g;
       c.fill();
-      c.strokeStyle = 'rgba(255,255,255,0.75)';
-      c.lineWidth = 2;
-      for (let i = 0; i < 3; i++) {
+      c.lineWidth = 1.6 * LINE;
+      c.strokeStyle = '#3a2410';
+      c.stroke();
+      c.save();
+      c.beginPath();
+      c.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+      c.clip();
+      c.strokeStyle = 'rgba(40,22,8,0.55)';
+      c.lineWidth = 3;
+      for (const w of [-ry * 0.35, ry * 0.3]) {
         c.beginPath();
-        c.arc((rng() - 0.5) * f.len * 0.5, (rng() - 0.5) * f.halfWidth, 5 + rng() * 5, Math.PI * 1.1, Math.PI * 1.9);
+        c.moveTo(-rx, w);
+        c.bezierCurveTo(-rx * 0.3, w + 3, rx * 0.3, w - 3, rx, w);
         c.stroke();
       }
+      c.restore();
+      c.fillStyle = 'rgba(255,240,220,0.22)';
+      c.beginPath();
+      c.ellipse(-rx * 0.25, -ry * 0.35, rx * 0.45, ry * 0.18, 0, 0, Math.PI * 2);
+      c.fill();
+      c.strokeStyle = 'rgba(255,240,220,0.35)';
+      c.lineWidth = 1;
+      for (let i = 0; i < 4; i++) {
+        circle(c, (rng() - 0.5) * rx * 1.2, (rng() - 0.5) * ry, 1.5 + rng() * 2);
+        c.stroke();
+      }
+    } else if (f.type === 'water') {
+      const rx = f.len / 2;
+      const ry = f.halfWidth;
+      // Muddy edge, deeper blue in the middle, ripples and a sparkle.
+      c.beginPath();
+      c.ellipse(0, 0, rx + 4, ry + 3, 0, 0, Math.PI * 2);
+      c.fillStyle = '#8a6a3d';
+      c.fill();
+      c.beginPath();
+      c.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+      const g = c.createRadialGradient(0, 0, 2, 0, 0, rx);
+      g.addColorStop(0, '#2f86c4');
+      g.addColorStop(0.7, '#4fa9dc');
+      g.addColorStop(1, '#8fd3f2');
+      c.fillStyle = g;
+      c.fill();
+      c.lineWidth = 1.6 * LINE;
+      c.strokeStyle = '#2b6f9c';
+      c.stroke();
+      c.strokeStyle = 'rgba(255,255,255,0.75)';
+      c.lineWidth = 1.6;
+      for (let i = 0; i < 3; i++) {
+        c.beginPath();
+        c.ellipse((rng() - 0.5) * rx, (rng() - 0.5) * ry * 0.8, 6 + rng() * 6, 2, 0, Math.PI * 1.1, Math.PI * 1.9);
+        c.stroke();
+      }
+      c.fillStyle = 'rgba(255,255,255,0.8)';
+      c.beginPath();
+      c.ellipse(-rx * 0.35, -ry * 0.4, 4, 1.5, 0, 0, Math.PI * 2);
+      c.fill();
     } else if (f.type === 'bumps') {
       for (let x = -f.len / 2; x <= f.len / 2; x += 14) {
         const g = c.createLinearGradient(x - 6, 0, x + 6, 0);

@@ -151,6 +151,7 @@ npm start        # serves on http://localhost:8080
 
 ## Tests
 ```sh
+npm run shots    # screenshot every track into screenshots/ (needs Playwright; see scripts/track-shots.js)
 npm test         # Node 20+; covers the wallet, rewards, store, all three credit games and Tractor Rally
 ```
 

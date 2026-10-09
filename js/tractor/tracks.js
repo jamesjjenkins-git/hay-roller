@@ -29,7 +29,6 @@
         { type: 'mud', at: 0.33, off: 0, len: 90 },
         { type: 'bumps', at: 0.52, len: 70 },
         { type: 'water', at: 0.72, off: -20, len: 70 },
-        { type: 'jump', at: 0.86 },
       ],
       scenery: [
         { kind: 'barn', x: 560, y: 260 },
@@ -55,7 +54,6 @@
         [470, 450], [330, 585], [130, 510], [110, 280],
       ],
       features: [
-        { type: 'jump', at: 0.08 },
         { type: 'bumps', at: 0.22, len: 60 },
         { type: 'mud', at: 0.42, off: 10, len: 80 },
         { type: 'jump', at: 0.6 },
@@ -86,12 +84,10 @@
         [110, 230],
       ],
       features: [
-        { type: 'jump', at: 0.06 },
         { type: 'mud', at: 0.2, off: 0, len: 90 },
         { type: 'bumps', at: 0.33, len: 70 },
-        { type: 'jump', at: 0.47 },
+        { type: 'jump', at: 0.618 },
         { type: 'water', at: 0.58, off: 15, len: 80 },
-        { type: 'jump', at: 0.7 },
         { type: 'mud', at: 0.83, off: -10, len: 90 },
       ],
       scenery: [
@@ -177,7 +173,6 @@
       ],
       features: [
         { type: 'bumps', at: 0.08, len: 60 },
-        { type: 'jump', at: 0.22 },
         { type: 'water', at: 0.4, off: 0, len: 80 },
         { type: 'bumps', at: 0.6, len: 60 },
         { type: 'mud', at: 0.75, off: 0, len: 80 },
@@ -238,9 +233,8 @@
         { type: 'bumps', at: 0.1, len: 60 },
         { type: 'jump', at: 0.27 },
         { type: 'mud', at: 0.38, off: 0, len: 80 },
-        { type: 'jump', at: 0.5 },
         { type: 'water', at: 0.65, off: 0, len: 80 },
-        { type: 'jump', at: 0.82 },
+        { type: 'jump', at: 0.876 },
         { type: 'mud', at: 0.93, off: 0, len: 70 },
       ],
       scenery: [
@@ -304,14 +298,14 @@
         [600, 510], [450, 610], [200, 610], [95, 520], [300, 380], [95, 240],
       ],
       features: [
-        { type: 'jump', at: 0.07 },
+        { type: 'jump', at: 0.217 },
         { type: 'mud', at: 0.18, off: 0, len: 80 },
         { type: 'bumps', at: 0.3, len: 60 },
-        { type: 'jump', at: 0.42 },
+        { type: 'jump', at: 0.346 },
         { type: 'water', at: 0.55, off: 0, len: 80 },
-        { type: 'jump', at: 0.67 },
+        { type: 'jump', at: 0.604 },
         { type: 'mud', at: 0.8, off: 0, len: 80 },
-        { type: 'jump', at: 0.92 },
+        { type: 'jump', at: 0.931 },
       ],
       scenery: [
         { kind: 'barn', x: 449, y: 305 },
@@ -392,7 +386,7 @@
         { type: 'mud', at: 0.258, off: 0 },
         { type: 'bumps', at: 0.433 },
         { type: 'water', at: 0.6, off: 0 },
-        { type: 'jump', at: 0.871 },
+        { type: 'jump', at: 0.883 },
         { type: 'mud', at: 0.933, off: 0 },
       ],
       scenery: [
@@ -431,7 +425,7 @@
       ],
       features: [
         { type: 'bumps', at: 0.1 },
-        { type: 'jump', at: 0.283 },
+        { type: 'jump', at: 0.292 },
         { type: 'mud', at: 0.414, off: 0 },
         { type: 'water', at: 0.6, off: 0 },
         { type: 'jump', at: 0.767 },
@@ -474,7 +468,7 @@
         [340, 595], [426, 595], [513, 595],
       ],
       features: [
-        { type: 'jump', at: 0.144 },
+        { type: 'jump', at: 0.163 },
         { type: 'bumps', at: 0.32 },
         { type: 'mud', at: 0.528, off: 0 },
         { type: 'water', at: 0.68, off: 0 },
@@ -685,7 +679,7 @@
         { type: 'jump', at: 0.314 },
         { type: 'mud', at: 0.433, off: 0 },
         { type: 'water', at: 0.577, off: 0 },
-        { type: 'jump', at: 0.793 },
+        { type: 'jump', at: 0.879 },
         { type: 'water', at: 0.933, off: 0 },
       ],
       scenery: [
@@ -762,7 +756,7 @@
       const idx = Math.floor(f.at * count) % count;
       const s = samples[idx];
       const patch = f.type === 'mud' || f.type === 'water';
-      let len = (f.len || (f.type === 'jump' ? 30 : f.type === 'hill' ? HILL.len : 60)) * (patch ? PATCH_SCALE : 1);
+      let len = (f.len || (f.type === 'jump' ? 40 : f.type === 'hill' ? HILL.len : 60)) * (patch ? PATCH_SCALE : 1);
       let off = 0;
       let halfWidth = def.width / 2;
       if (patch) {
