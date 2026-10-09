@@ -17,7 +17,7 @@ bumps.
   the pause menu: slide left or right anywhere on the left half to steer at a steady rate; hold
   still for a moment and it's just like lifting your thumb.
   Gas is automatic. **NITRO** and **BRAKE** (hold to reverse) sit bottom-right. Play in landscape.
-- **2.5D view** (optional): a tilted camera with height — walls, barrels, barns, silos, trees, the windmill, the grandstand and the tractors stand up, and tractors pass in front of and behind tall scenery. Toggle from the pause menu or with **T**; works with either camera and always fits the whole track.
+- **3D view** (optional): a full 3D version of the race (three.js) with modelled tractors, hay-bale walls, oil barrels, barns, silos, trees, the windmill, corn, the grandstand crowd and the animals, real-time shadows and jump ramps. The whole-track camera looks across the stadium; the close-up camera rides behind your tractor. Toggle from the pause menu or with **T**; the 3D code (and `js/vendor/three.module.min.js`, MIT) only loads the first time you switch it on, and quality steps down automatically on slower phones.
 - **Two camera views**, switchable any time with the 📷 camera button at the top of the race screen, the **V**
   key, or the pause menu (the choice is remembered):
   - **Whole track** — the classic single-screen *Super Off Road* view.

@@ -760,6 +760,9 @@
     for (const sc of t.scenery) {
       if (!proj.on) {
         drawScenery(c, sc, rng);
+      } else if (proj.ground3d) {
+        // The 3D view builds scenery as models; only the pond lies flat.
+        if (sc.kind === 'pond') drawScenery(c, sc, rng);
       } else if (TALL[sc.kind]) {
         const k = TALL[sc.kind];
         const sz = sc.scale || 1;
@@ -1375,5 +1378,11 @@
     ctx.restore();
   }
 
-  root.TractorRender = { createRenderer, drawTractor, shade };
+  root.TractorRender = {
+    createRenderer,
+    drawTractor,
+    shade,
+    // Shared with the 3D renderer (js/tractor/render3d.js).
+    shared: { drawBackground, wallItems, drawCountdown, drawBanner, FONT, OUTLINE, W, H },
+  };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

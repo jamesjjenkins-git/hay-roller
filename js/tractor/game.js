@@ -7,7 +7,7 @@
   const SELECTED_KEY = 'farmCasino.tractor.track';
   const VIEW_KEY = 'farmCasino.tractor.view';
   const STEER_KEY = 'farmCasino.tractor.steer';
-  const TILT_KEY = 'farmCasino.tractor.tilt';
+  const VIEW3D_KEY = 'farmCasino.tractor.3d';
   const COUNTDOWN_SECONDS = 3;
 
   const ordinal = (n) => n + (['th', 'st', 'nd', 'rd'][n % 100 > 10 && n % 100 < 14 ? 0 : n % 10] || 'th');
@@ -28,7 +28,8 @@
     const raceEl = $('#race-screen');
     const canvas = $('#tractor-canvas');
     const modal = $('#race-modal');
-    const renderer = root.TractorRender.createRenderer(canvas);
+    const renderer2d = root.TractorRender.createRenderer(canvas);
+    let renderer = renderer2d;
 
     let selected = TRACKS.find((t) => t.id === localStorage.getItem(SELECTED_KEY)) || TRACKS[0];
     if (!garage.isUnlocked(selected)) selected = TRACKS[0];
@@ -39,23 +40,61 @@
     let acc = 0;
     let rafId = null;
     let lastNow = 0;
-    // Optional 2.5D view: the whole picture tipped back in perspective.
-    let tilt = false;
+    // Optional full 3D view (three.js), loaded the first time it's used.
+    let view3d = false;
+    let renderer3d = null;
+    let loading3d = null;
     try {
-      tilt = localStorage.getItem(TILT_KEY) === '1';
+      view3d = localStorage.getItem(VIEW3D_KEY) === '1';
     } catch (e) {
       // Ignore.
     }
-    renderer.setTilt(tilt);
-    function setTilt(on) {
-      tilt = on;
+    function load3d() {
+      if (!loading3d) {
+        const meta = document.querySelector('meta[name="app-version"]');
+        const v = meta && !meta.content.startsWith('__') ? `?v=${meta.content}` : '';
+        loading3d = import(`./render3d.js${v}`).then((mod) => {
+          renderer3d = mod.createRenderer3D($('#tractor-canvas-3d'), $('#tractor-overlay'));
+          return renderer3d;
+        });
+        loading3d.catch(() => {
+          loading3d = null;
+        });
+      }
+      return loading3d;
+    }
+    function useRenderer(r) {
+      renderer = r;
+      const is3d = r === renderer3d;
+      canvas.classList.toggle('hidden', is3d);
+      $('#tractor-canvas-3d').classList.toggle('hidden', !is3d);
+      $('#tractor-overlay').classList.toggle('hidden', !is3d);
+      renderer.setMode(viewMode);
+      if (sim) {
+        renderer.setTrack(sim.track);
+        renderer.clearSkids();
+      }
+      if (mounted && phase !== 'garage') layout();
+    }
+    async function setView3d(on) {
+      view3d = on;
       try {
-        localStorage.setItem(TILT_KEY, on ? '1' : '0');
+        localStorage.setItem(VIEW3D_KEY, on ? '1' : '0');
       } catch (e) {
         // Ignore.
       }
-      renderer.setTilt(on);
-      if (mounted) layout();
+      if (!on) {
+        useRenderer(renderer2d);
+        return;
+      }
+      try {
+        const r = await load3d();
+        if (view3d) useRenderer(r);
+      } catch (e) {
+        view3d = false;
+        toast('Couldn’t start the 3D view on this device — staying in 2D.', 'warn');
+        useRenderer(renderer2d);
+      }
     }
 
     let banner = null;
@@ -299,7 +338,7 @@
         return;
       }
       if (e.key === 't' || e.key === 'T') {
-        setTilt(!tilt);
+        setView3d(!view3d);
         return;
       }
       if (e.key === 'v' || e.key === 'V') {
@@ -346,7 +385,7 @@
       if (phase === 'garage') return;
       const vw = root.innerWidth;
       const vh = root.innerHeight;
-      if (viewMode === 'chase') {
+      if (viewMode === 'chase' || renderer === renderer3d) {
         renderer.resize(vw, vh);
       } else {
         // Fit the whole track (taller or shorter when tilted in 2.5D).
@@ -550,6 +589,7 @@
 
     function startRace() {
       const track = getTrack(selected);
+      if (view3d && renderer !== renderer3d) setView3d(true); // swaps in once loaded
       sim = Sim.createRace(track, {
         seed: root.FarmRng.randomSeed(),
         playerUpgrades: garage.state.upgrades,
@@ -626,7 +666,7 @@
           ['<kbd>↓</kbd>', 'Brake', 'Slow down (or <kbd>S</kbd>). Keep holding when stopped to reverse.'],
           ['<kbd>Esc</kbd>', 'Pause', 'Pause and resume (or <kbd>P</kbd>).'],
           ['<kbd>V</kbd>', 'Camera', 'Switch between the close-up camera and the whole track.'],
-          ['<kbd>T</kbd>', '2.5D', 'Tip the view back for a 2.5D look (or from the pause menu).'],
+          ['<kbd>T</kbd>', '3D', 'Switch between the 3D view and the classic 2D view (or from the pause menu).'],
         ],
         tip: 'You can also click and drag left/right on the left half of the track to steer with the mouse.',
       },
@@ -639,7 +679,7 @@
           <h2>Paused</h2>
           <button class="btn btn-primary btn-big" data-act="resume">Resume</button>
           <button class="btn btn-ghost" data-act="controls">🎮 Controls</button>
-          <button class="btn btn-ghost" data-act="tilt">${tilt ? '⬛ View: switch to flat top-down' : '🧊 View: switch to 2.5D'}</button>
+          <button class="btn btn-ghost" data-act="tilt">${view3d ? '⬛ View: switch to 2D' : '🧊 View: switch to 3D'}</button>
           <button class="btn btn-ghost" data-act="steer">${steerMode === 'buttons' ? '👆 Steering: switch to slider' : '◀▶ Steering: switch to buttons'}</button>
           <button class="btn btn-ghost" data-act="view">${viewMode === 'chase' ? '🗺️ Camera: switch to whole track' : '🔍 Camera: switch to close-up'}</button>
           <button class="btn btn-ghost" data-act="restart">Restart race</button>
@@ -708,7 +748,7 @@
       else if (act === 'quit' || act === 'garage') toGarage();
       else if (act === 'controls') showControls(lastInput);
       else if (act === 'tilt') {
-        setTilt(!tilt);
+        setView3d(!view3d).then(() => phase && phase.paused && showPauseMenu());
         showPauseMenu();
       }
       else if (act === 'steer') {
