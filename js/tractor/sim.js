@@ -335,8 +335,7 @@
       // Grip pulls a drift back in line. On firm ground the slide's speed is
       // carried forward (up to top speed), so a tidy drift doesn't cost you.
       const vlBefore = vl;
-      // Just out of a drift the tyres bite hard, snapping the slide straight.
-      vl *= Math.exp(-st.grip * gripMul * (r.snapT > 0 ? DRIFT.snapGrip : 1) * DT);
+      vl *= Math.exp(-st.grip * gripMul * DT);
       if (vf > 0 && r.surface === 'dirt') {
         vf = Math.min(Math.max(vf, top), Math.sqrt(vf * vf + vlBefore * vlBefore - vl * vl));
       }
@@ -357,10 +356,7 @@
         // A kick out of the slide, but only when you let go of DRIFT — not
         // when mud, water, a jump or a crash cuts the drift short.
         const released = !input.drift;
-        if (released) {
-          r.driftExit = DRIFT.exitTime;
-          r.snapT = DRIFT.snapTime;
-        }
+        if (released) r.driftExit = DRIFT.exitTime;
         if (released && r.driftTime > DRIFT.kickMinTime) {
           const kick = Math.min(DRIFT.kickMax, r.driftTime * DRIFT.kickPerSec);
           // Delivered as a surge over `kickTime` rather than all at once.
@@ -370,7 +366,6 @@
         }
         r.driftTime = 0;
       }
-      if (r.snapT > 0) r.snapT -= DT;
       if (r.kickT > 0) {
         r.kickT -= DT;
         vf += r.kickRate * DT;
@@ -401,8 +396,7 @@
         // Properly sideways: the tail out, a little more the harder you turn.
         wantDrift = r.driftSide * (DRIFT.kick + DRIFT.kickSteer * Math.abs(r.steer)) * (st.driftKick || 1) * Math.min(1, vf / 120);
       }
-      const driftEase = r.snapT > 0 ? DRIFT.snapEase : r.drifting || wasDrifting ? DRIFT.slideEase : DRIFT.ease;
-      r.drift += (wantDrift - r.drift) * Math.min(1, driftEase * DT);
+      r.drift += (wantDrift - r.drift) * Math.min(1, (r.drifting || wasDrifting ? DRIFT.slideEase : DRIFT.ease) * DT);
 
       // Straight-line assist (player option): with no steering input, nudge
       // the nose toward the direction of the road right here — only when
@@ -542,7 +536,6 @@
     kick: 0.66, kickSteer: 0.3, slideCarry: 0.22, turnBoost: 1.3, scrub: 0.4, topMul: 0.94, minSpeed: 50, slideEase: 4,
     exitAccel: 2, exitTime: 1.2, // quicker pick-up for a moment after letting go
     kickPerSec: 70, kickMax: 90, kickMinTime: 0.35, kickTime: 0.8, // speed surge (px/s, over kickTime s) out of a drift
-    snapTime: 0.25, snapEase: 16, snapGrip: 3, // letting go snaps the tractor straight
   };
 
   // Rumble strips only cost you if you're turning while on them.
