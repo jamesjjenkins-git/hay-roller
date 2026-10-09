@@ -181,18 +181,17 @@
         `<button class="paint ${st.paint === p.id ? 'active' : ''}" data-paint="${p.id}" style="--paint:${p.hex}" title="${p.name}" aria-label="${p.name} paint"></button>`).join('');
 
       const stats = Sim.statsFor(st.upgrades);
-      const max = Sim.statsFor({ engine: 5, gearbox: 5, tyres: 5, suspension: 5, nitro: 5 });
+      const max = Sim.statsFor({ accel: 5, speed: 5, handling: 5, boost: 5 });
       const base = Sim.statsFor({});
       const bar = (label, v, lo, hi) => {
         const pct = Math.round(15 + ((v - lo) / (hi - lo)) * 85);
         return `<div class="sbar"><span>${label}</span><div class="sbar-track"><div class="sbar-fill" style="width:${pct}%"></div></div></div>`;
       };
       $('#stat-bars').innerHTML =
-        bar('Speed', stats.topSpeed, base.topSpeed, max.topSpeed) +
         bar('Accel', stats.accel, base.accel, max.accel) +
-        bar('Grip', stats.grip, base.grip, max.grip) +
-        bar('Off-road', stats.rough, base.rough, max.rough) +
-        `<div class="sbar"><span>Nitros</span><b>${'🔥'.repeat(stats.nitros)}</b></div>`;
+        bar('Speed', stats.topSpeed, base.topSpeed, max.topSpeed) +
+        bar('Handling', stats.turnRate, base.turnRate, max.turnRate) +
+        `<div class="sbar"><span>Boosts</span><b>${'🔥'.repeat(stats.nitros)}</b></div>`;
 
       $('#upgrade-list').innerHTML = UPGRADES.map((u) => {
         const lvl = st.upgrades[u.id];
@@ -507,6 +506,8 @@
       mount() {
         mounted = true;
         phase = 'garage';
+        const refunded = garage.payRefund(wallet);
+        if (refunded) toast(`Suspension upgrades were retired — refunded 🌾${fmt(refunded)}`, 'good', 5000);
         showRaceScreen(false);
         renderGarage();
         lastNow = 0;

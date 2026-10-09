@@ -8,17 +8,18 @@
   const RADIUS = 13;
   const MAX_TIME = 240;
 
-  // Base handling. Upgrades (0..5 each) improve these.
+  // Base tractor. Four upgrades (0..5 each) improve it:
+  // accel, speed (top speed), handling (tighter turns + grip), boost (nitros).
   function statsFor(upgrades) {
-    const u = { engine: 0, gearbox: 0, tyres: 0, suspension: 0, nitro: 0, ...upgrades };
+    const u = { accel: 0, speed: 0, handling: 0, boost: 0, ...upgrades };
     return {
-      topSpeed: 165 + u.engine * 17,
-      accel: 150 + u.gearbox * 26,
-      grip: 5 + u.tyres * 1.3,
-      turnRate: 3.1 + u.tyres * 0.12,
-      // 0 = mud halves your speed, 1 = barely notice it.
-      rough: 0.15 + u.suspension * 0.16,
-      nitros: 2 + u.nitro,
+      topSpeed: 165 + u.speed * 17,
+      accel: 150 + u.accel * 26,
+      grip: 5 + u.handling * 1.3,
+      turnRate: 2.8 + u.handling * 0.3,
+      // How well it copes with mud, water and bumps (0 = badly, 1 = barely notices).
+      rough: 0.35,
+      nitros: 2 + u.boost,
     };
   }
 
@@ -27,7 +28,7 @@
     const skill = track.aiSkill + Math.min(0.5, playerLevel * 0.025);
     const spread = [1.0, 0.96, 0.92][index % 3];
     const lv = Math.max(0, Math.min(5, skill * 5 * spread + 0.3));
-    return statsFor({ engine: lv, gearbox: lv, tyres: lv, suspension: lv * 0.8, nitro: Math.round(lv / 2) });
+    return statsFor({ accel: lv, speed: lv, handling: lv, boost: Math.round(lv / 2) });
   }
 
   const DRIVERS = [

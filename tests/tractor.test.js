@@ -56,7 +56,7 @@ test('a joystick driver finishes every track and the race ends with four places'
 
 test('upgrades make the tractor faster', () => {
   const time = (lvl) => {
-    const up = { engine: lvl, gearbox: lvl, tyres: lvl, suspension: lvl, nitro: 0 };
+    const up = { accel: lvl, speed: lvl, handling: lvl, boost: 0 };
     let total = 0;
     for (const seed of [1, 2, 3]) {
       const s = Sim.createRace(Tracks.TRACKS[0], { seed, playerUpgrades: up });
@@ -86,15 +86,15 @@ test('garage buys upgrades with wallet credits and caps at max level', () => {
     canAfford: (n) => n <= balance,
     spend: (n) => { balance -= n; },
   };
-  const cost = g.nextCost('engine');
-  assert.ok(g.buy('engine', wallet));
+  const cost = g.nextCost('speed');
+  assert.ok(g.buy('speed', wallet));
   assert.strictEqual(balance, 100000 - cost);
-  for (let i = 0; i < 10; i++) g.buy('engine', wallet);
-  assert.strictEqual(g.state.upgrades.engine, Garage.MAX_LEVEL);
-  assert.strictEqual(g.nextCost('engine'), null);
-  assert.strictEqual(Garage.createGarage(store).state.upgrades.engine, Garage.MAX_LEVEL, 'persists');
+  for (let i = 0; i < 10; i++) g.buy('speed', wallet);
+  assert.strictEqual(g.state.upgrades.speed, Garage.MAX_LEVEL);
+  assert.strictEqual(g.nextCost('speed'), null);
+  assert.strictEqual(Garage.createGarage(store).state.upgrades.speed, Garage.MAX_LEVEL, 'persists');
   const broke = { canAfford: () => false, spend: () => assert.fail('should not spend') };
-  assert.strictEqual(g.buy('tyres', broke), false);
+  assert.strictEqual(g.buy('handling', broke), false);
 });
 
 test('tracks unlock by finishing high enough on the previous one', () => {
@@ -106,4 +106,28 @@ test('tracks unlock by finishing high enough on the previous one', () => {
   assert.strictEqual(g.isUnlocked(barnyard), false);
   g.recordResult('meadow', 3, 65);
   assert.strictEqual(g.isUnlocked(barnyard), true);
+});
+
+test('only the four basic upgrades exist', () => {
+  assert.deepStrictEqual(Garage.UPGRADES.map((u) => u.id), ['accel', 'speed', 'handling', 'boost']);
+});
+
+test('handling upgrades tighten turning', () => {
+  assert.ok(Sim.statsFor({ handling: 5 }).turnRate > Sim.statsFor({}).turnRate * 1.4);
+  assert.ok(Sim.statsFor({ handling: 5 }).grip > Sim.statsFor({}).grip);
+});
+
+test('old saves carry levels across and refund suspension', () => {
+  const store = memStore();
+  store.setItem('farmCasino.tractor.v1', JSON.stringify({
+    upgrades: { engine: 2, gearbox: 1, tyres: 3, suspension: 2, nitro: 1 }, paint: 'blue', best: {}, races: 3, wins: 1,
+  }));
+  const g = Garage.createGarage(store);
+  assert.deepStrictEqual(g.state.upgrades, { accel: 1, speed: 2, handling: 3, boost: 1 });
+  let credited = 0;
+  const wallet = { credit: (n) => { credited += n; } };
+  assert.strictEqual(g.payRefund(wallet), 110 + 310);
+  assert.strictEqual(credited, 420);
+  assert.strictEqual(g.payRefund(wallet), 0, 'refund is paid once');
+  assert.strictEqual(Garage.createGarage(store).state.refund, 0);
 });

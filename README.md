@@ -18,8 +18,11 @@ bumps.
 - **Controls (keyboard):** ← → steer, ↓ brake/reverse, Space nitro, Esc pause.
 - **Cash bags and nitro cans** pop up on the track. Grab them before the other tractors do.
 - **Prizes:** credits for your finishing place plus any cash bags you grabbed.
-- **The garage:** spend credits on Engine, Gearbox, Tyres, Suspension and Nitro Tank (5 levels
-  each), and choose a paint job.
+- **The garage:** spend credits on four upgrades, 5 levels each, and choose a paint job:
+  - **Acceleration** — get up to speed faster
+  - **Top Speed** — go faster flat out
+  - **Handling** — tighter turns and more grip
+  - **Boosts** — one more nitro per race
 - **Three tracks:** Muddy Meadow, Barnyard Bend and Pig Pen Pass. Finish 3rd or better to unlock
   the next one. Rival tractors get tougher on later tracks and as you upgrade.
 

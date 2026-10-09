@@ -4,11 +4,10 @@
   const MAX_LEVEL = 5;
 
   const UPGRADES = [
-    { id: 'engine', name: 'Engine', icon: '⚙️', desc: 'Higher top speed', base: 150 },
-    { id: 'gearbox', name: 'Gearbox', icon: '🔧', desc: 'Faster acceleration', base: 120 },
-    { id: 'tyres', name: 'Tyres', icon: '🛞', desc: 'More grip, sharper turns', base: 130 },
-    { id: 'suspension', name: 'Suspension', icon: '🔩', desc: 'Shrug off mud, bumps & landings', base: 110 },
-    { id: 'nitro', name: 'Nitro Tank', icon: '🔥', desc: '+1 nitro boost per race', base: 140 },
+    { id: 'accel', name: 'Acceleration', icon: '⚡', desc: 'Get up to speed faster', base: 120 },
+    { id: 'speed', name: 'Top Speed', icon: '💨', desc: 'Higher top speed', base: 150 },
+    { id: 'handling', name: 'Handling', icon: '🛞', desc: 'Tighter turns, more grip', base: 130 },
+    { id: 'boost', name: 'Boosts', icon: '🔥', desc: '+1 nitro boost per race', base: 140 },
   ];
 
   const PAINTS = [
@@ -27,11 +26,33 @@
 
   function defaults() {
     return {
-      upgrades: { engine: 0, gearbox: 0, tyres: 0, suspension: 0, nitro: 0 },
+      upgrades: { accel: 0, speed: 0, handling: 0, boost: 0 },
+      refund: 0, // credits owed back from retired upgrades, paid by the game
       paint: 'red',
       best: {}, // trackId -> { place, time }
       races: 0,
       wins: 0,
+    };
+  }
+
+  // Saves from before the upgrade list was simplified used engine/gearbox/
+  // tyres/suspension/nitro. Carry levels across; refund suspension in full.
+  const OLD_COSTS = { suspension: 110 };
+  function migrateUpgrades(p, fresh) {
+    const old = p.upgrades || {};
+    if (!('engine' in old || 'gearbox' in old || 'tyres' in old || 'suspension' in old || 'nitro' in old)) {
+      return { ...fresh, ...old };
+    }
+    let refund = 0;
+    for (let l = 0; l < (old.suspension || 0); l++) {
+      refund += Math.round((OLD_COSTS.suspension * Math.pow(l + 1, 1.5)) / 10) * 10;
+    }
+    p.refund = (p.refund || 0) + refund;
+    return {
+      accel: old.gearbox || 0,
+      speed: old.engine || 0,
+      handling: old.tyres || 0,
+      boost: old.nitro || 0,
     };
   }
 
@@ -52,7 +73,8 @@
         if (raw) {
           const d = defaults();
           const p = JSON.parse(raw);
-          return { ...d, ...p, upgrades: { ...d.upgrades, ...(p.upgrades || {}) }, best: p.best || {} };
+          const upgrades = migrateUpgrades(p, d.upgrades); // may add p.refund
+          return { ...d, ...p, upgrades, best: p.best || {} };
         }
       } catch (e) {
         // Corrupt save: fall back to a fresh garage.
@@ -91,6 +113,16 @@
         state.upgrades[id]++;
         save();
         return true;
+      },
+      // Hand any owed refund to the wallet once.
+      payRefund(wallet) {
+        const n = state.refund || 0;
+        if (n > 0) {
+          wallet.credit(n, 'Refund: Suspension upgrade retired');
+          state.refund = 0;
+          save();
+        }
+        return n;
       },
       setPaint(id) {
         if (PAINTS.some((p) => p.id === id)) {

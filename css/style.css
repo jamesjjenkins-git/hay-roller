@@ -618,7 +618,7 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px 16px 48px; }
 }
 .paint.active { outline: 4px solid var(--straw); transform: translateY(-2px); }
 .stat-bars { display: grid; gap: 6px; }
-.sbar { display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; }
+.sbar { display: grid; grid-template-columns: 82px 1fr; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; }
 .sbar-track { height: 12px; background: #eadfbf; border: 2px solid var(--ink); border-radius: 999px; overflow: hidden; }
 .sbar-fill { height: 100%; background: linear-gradient(90deg, var(--good), #8fe07a); }
 
