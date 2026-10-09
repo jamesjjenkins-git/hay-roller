@@ -559,6 +559,7 @@
     const { x, y } = sc;
     c.save();
     c.translate(x, y);
+    if (sc.scale) c.scale(sc.scale, sc.scale);
     if (sc.kind === 'barn') {
       c.fillStyle = 'rgba(0,0,0,0.22)';
       c.fillRect(-60 + 6, -40 + 6, 120, 80);
@@ -624,6 +625,60 @@
         circle(c, (rng() - 0.6) * 30, (rng() - 0.6) * 30, 10 + rng() * 6);
         c.fillStyle = 'rgba(120,200,90,0.5)';
         c.fill();
+      }
+    } else if (sc.kind === 'corn') {
+      // A patch of corn in rows.
+      roundRect(c, -72, -36, 144, 72, 6);
+      fillStroke(c, '#8a6a3d', 2.5);
+      for (let row = -28; row <= 28; row += 14) {
+        for (let col = -64; col <= 64; col += 11) {
+          circle(c, col + (rng() - 0.5) * 3, row + (rng() - 0.5) * 3, 5.5);
+          c.fillStyle = rng() < 0.15 ? '#f4c20d' : rng() < 0.5 ? '#5fae3a' : '#4c9a30';
+          c.fill();
+        }
+      }
+    } else if (sc.kind === 'windmill') {
+      c.fillStyle = 'rgba(0,0,0,0.22)';
+      circle(c, 6, 8, 24);
+      c.fill();
+      circle(c, 0, 0, 24);
+      fillStroke(c, '#c9b48a', 3);
+      for (let i = 0; i < 4; i++) {
+        c.save();
+        c.rotate(0.5 + (i * Math.PI) / 2);
+        roundRect(c, 4, -7, 46, 14, 3);
+        fillStroke(c, '#fff8e6', 2.5);
+        c.strokeStyle = 'rgba(59,42,20,0.4)';
+        c.lineWidth = 1;
+        for (let k = 14; k < 48; k += 8) {
+          c.beginPath();
+          c.moveTo(k, -6);
+          c.lineTo(k, 6);
+          c.stroke();
+        }
+        c.restore();
+      }
+      circle(c, 0, 0, 7);
+      fillStroke(c, '#8a5a2b', 2);
+    } else if (sc.kind === 'sheep') {
+      // A small flock grazing.
+      for (const [sx, sy, a] of [[-22, -12, 0.4], [14, -18, -2.6], [-6, 14, 1.4], [24, 10, 3.0]]) {
+        c.save();
+        c.translate(sx, sy);
+        c.rotate(a);
+        for (const [px, py] of [[-6, 0], [0, -5], [0, 5], [6, 0], [0, 0]]) {
+          circle(c, px, py, 6);
+          fillStroke(c, '#f6f3ea', 1.5);
+        }
+        for (const [px, py] of [[-6, 0], [0, -5], [0, 5], [6, 0], [0, 0]]) {
+          circle(c, px, py, 5);
+          c.fillStyle = '#f6f3ea';
+          c.fill();
+        }
+        c.beginPath();
+        c.ellipse(12, 0, 5, 4, 0, 0, Math.PI * 2);
+        fillStroke(c, '#2a2a2a', 1.5);
+        c.restore();
       }
     } else if (sc.kind === 'pen') {
       roundRect(c, -70, -45, 140, 90, 6);

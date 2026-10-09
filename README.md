@@ -16,6 +16,8 @@ bumps.
   where you want to go and the tractor turns to face it. Gas is automatic. **NITRO** and
   **BRAKE** (hold to reverse) sit bottom-right. Play in landscape.
 - **Controls (keyboard):** ← → steer, ↓ brake/reverse, Space nitro, Esc pause.
+- **Pause → Controls** explains the controls for the device you're playing on (phone or
+  keyboard), with a link to the other set.
 - **Cash bags and nitro cans** pop up on the track. Grab them before the other tractors do.
 - **Prizes:** credits for your finishing place plus any cash bags you grabbed.
 - **The garage:** spend credits on four upgrades, 5 levels each, and choose a paint job:
@@ -23,8 +25,10 @@ bumps.
   - **Top Speed** — go faster flat out
   - **Handling** — tighter turns and more grip
   - **Boosts** — one more nitro per race
-- **Three tracks:** Muddy Meadow, Barnyard Bend and Pig Pen Pass. Finish 3rd or better to unlock
-  the next one. Rival tractors get tougher on later tracks and as you upgrade.
+- **Ten tracks**, unlocked in order by finishing 3rd or better on the one before: Muddy Meadow,
+  Barnyard Bend, Pig Pen Pass, Duck Pond Dash, Cornfield Chase, Sheep Dip Slalom, Haystack Hill,
+  Windmill Way, Orchard Run and the Harvest Grand Prix. Rivals get faster and prizes get bigger
+  (300 → 1,400 credits for a win) as you go, and rivals also scale a little with your upgrades.
 
 ### Install on an iPhone
 Open the page in Safari, tap **Share → Add to Home Screen**. It then launches full screen in

@@ -216,11 +216,14 @@
           <span class="t-info">
             <b>${unlocked ? '' : '🔒 '}${t.name}</b>
             <small>${unlocked ? t.blurb : `Finish ${ordinal(t.unlock.place)} or better on ${need.name} to unlock`}</small>
-            <small class="t-meta">${t.laps} laps · 1st pays 🌾${fmt(t.reward[0])}${best ? ` · Best: ${ordinal(best.place)}${best.time ? ` in ${fmtTime(best.time)}` : ''}` : ''}</small>
+            <small class="t-meta">#${TRACKS.indexOf(t) + 1} · ${t.laps} laps · 1st pays 🌾${fmt(t.reward[0])}${best ? ` · Best: ${ordinal(best.place)}${best.time ? ` in ${fmtTime(best.time)}` : ''}` : ''}</small>
           </span>
         </button>`;
       }).join('');
       el.querySelectorAll('[data-thumb]').forEach((c) => drawThumb(c, getTrack(TRACKS.find((t) => t.id === c.dataset.thumb))));
+      const active = $('#track-list .track.active');
+      const list = $('#track-list');
+      if (active && list.scrollTop === 0) list.scrollTop = Math.max(0, active.offsetTop - list.offsetTop - 8);
 
       drawPreview();
     }
@@ -340,18 +343,86 @@
       }
     }
 
+    // Which controls to explain: whatever the player last used, defaulting
+    // to touch on phones/tablets and keyboard elsewhere.
+    let lastInput = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0 ? 'touch' : 'keys';
+    raceEl.addEventListener('touchstart', () => setInputMode('touch'), { passive: true });
+    root.addEventListener('keydown', () => mounted && setInputMode('keys'));
+    function setInputMode(mode) {
+      if (mode === lastInput) return;
+      lastInput = mode;
+      updateStickHint();
+    }
+    function updateStickHint() {
+      $('.stick-hint').textContent = lastInput === 'touch' ? 'Drag here to steer' : '← → steer · Space nitro · ↓ brake';
+    }
+    updateStickHint();
+
+    const CONTROLS = {
+      touch: {
+        title: 'Phone controls',
+        rows: [
+          ['👆', 'Steer', 'Drag anywhere on the <b>left half</b> of the screen. Point the stick where you want to go and the tractor turns to face that way.'],
+          ['🚜', 'Gas', 'Automatic — you’re always on the throttle.'],
+          ['🔥', 'Nitro', 'Tap <b>NITRO</b> for a burst of speed. Counter at the top right.'],
+          ['🛑', 'Brake', 'Hold <b>BRAKE</b> to slow down. Keep holding when stopped to reverse out of trouble.'],
+          ['⏸️', 'Pause', 'Tap the pause button at the top right.'],
+        ],
+        tip: 'Play with your phone sideways. Add the game to your Home Screen for full screen.',
+      },
+      keys: {
+        title: 'Keyboard controls',
+        rows: [
+          ['<kbd>←</kbd> <kbd>→</kbd>', 'Steer', 'Turn left and right (or <kbd>A</kbd> <kbd>D</kbd>).'],
+          ['🚜', 'Gas', 'Automatic — you’re always on the throttle.'],
+          ['<kbd>Space</kbd>', 'Nitro', 'Burst of speed (or <kbd>Shift</kbd>). Counter at the top right.'],
+          ['<kbd>↓</kbd>', 'Brake', 'Slow down (or <kbd>S</kbd>). Keep holding when stopped to reverse.'],
+          ['<kbd>Esc</kbd>', 'Pause', 'Pause and resume (or <kbd>P</kbd>).'],
+        ],
+        tip: 'You can also click and drag on the left half of the track to steer with the mouse.',
+      },
+    };
+    const TRACK_TIPS = 'Jumps launch you — you can’t steer in the air. Mud and water slow you down. Grab 💰 cash bags for extra credits and red <b>N</b> cans for an extra nitro.';
+
+    function showPauseMenu() {
+      modal.innerHTML = `
+        <div class="rmodal-card">
+          <h2>Paused</h2>
+          <button class="btn btn-primary btn-big" data-act="resume">Resume</button>
+          <button class="btn btn-ghost" data-act="controls">🎮 Controls</button>
+          <button class="btn btn-ghost" data-act="restart">Restart race</button>
+          <button class="btn btn-ghost" data-act="quit">Back to garage</button>
+          <p class="small">Quitting forfeits this race's prize money.</p>
+        </div>`;
+    }
+
+    function showControls(mode) {
+      const c = CONTROLS[mode];
+      const other = mode === 'touch' ? 'keys' : 'touch';
+      modal.innerHTML = `
+        <div class="rmodal-card controls-card">
+          <h2>${c.title}</h2>
+          <ul class="controls-list">
+            ${c.rows.map(([icon, name, text]) => `<li><span class="c-key">${icon}</span><span><b>${name}</b><small>${text}</small></span></li>`).join('')}
+          </ul>
+          <p class="c-tip">${c.tip}</p>
+          <p class="c-tip">${TRACK_TIPS}</p>
+          <div class="r-actions">
+            <button class="btn btn-ghost" data-act="pause-menu">← Back</button>
+            <button class="btn btn-primary" data-act="resume">Resume</button>
+          </div>
+          <button class="link-btn" data-act="controls-${other}">Show ${CONTROLS[other].title.toLowerCase()} instead</button>
+        </div>`;
+    }
+
     function togglePause() {
       if (phase === 'racing' || phase === 'countdown') {
         phase = { paused: true, resume: phase };
         sound.engineStop();
-        modal.innerHTML = `
-          <div class="rmodal-card">
-            <h2>Paused</h2>
-            <button class="btn btn-primary btn-big" data-act="resume">Resume</button>
-            <button class="btn btn-ghost" data-act="restart">Restart race</button>
-            <button class="btn btn-ghost" data-act="quit">Back to garage</button>
-            <p class="small">Quitting forfeits this race's prize money.</p>
-          </div>`;
+        stickEnd();
+        input.brake = false;
+        input.keys.clear();
+        showPauseMenu();
         modal.classList.remove('hidden');
       } else if (phase && phase.paused) {
         phase = phase.resume;
@@ -369,6 +440,10 @@
       if (act === 'resume') togglePause();
       else if (act === 'restart' || act === 'again') startRace();
       else if (act === 'quit' || act === 'garage') toGarage();
+      else if (act === 'controls') showControls(lastInput);
+      else if (act === 'controls-touch') showControls('touch');
+      else if (act === 'controls-keys') showControls('keys');
+      else if (act === 'pause-menu') showPauseMenu();
     });
 
     function toGarage() {
