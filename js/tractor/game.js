@@ -44,7 +44,7 @@
 
     // ---------- Input ----------
 
-    const input = { stickAngle: null, brake: false, nitro: false, keys: new Set() };
+    const input = { slide: 0, brake: false, nitro: false, keys: new Set() };
 
     function playerInput() {
       const me = sim.racers[0];
@@ -52,10 +52,8 @@
       const k = input.keys;
       if (k.has('ArrowLeft') || k.has('a')) steer -= 1;
       if (k.has('ArrowRight') || k.has('d')) steer += 1;
-      if (steer === 0 && input.stickAngle != null) {
-        // Point the stick where you want to go; the tractor turns to face it.
-        steer = Math.max(-1, Math.min(1, Sim.angleDiff(input.stickAngle, me.heading) * 2.5));
-      }
+      // Touch slider: left/right steers directly, like the arrow keys but analogue.
+      if (steer === 0) steer = input.slide;
       const brake = input.brake || k.has('ArrowDown') || k.has('s') ? 1 : 0;
       const nitro = input.nitro || k.has(' ') || k.has('Shift');
       input.nitro = false;
@@ -75,20 +73,21 @@
       stickBase.style.left = `${x}px`;
       stickBase.style.top = `${y}px`;
       stickBase.classList.add('active');
-      stickMove(x, y);
+      stickMove(x);
     }
-    function stickMove(x, y) {
-      const dx = x - stickOrigin.x;
-      const dy = y - stickOrigin.y;
-      const d = Math.hypot(dx, dy);
-      const max = 46;
-      const k = d > max ? max / d : 1;
-      stickKnob.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
-      input.stickAngle = d > 10 ? Math.atan2(dy, dx) : null;
+    // Horizontal slider: the further from where your thumb landed, the harder
+    // you turn. A small dead zone keeps the tractor straight when you rest.
+    const SLIDE_MAX = 60;
+    const SLIDE_DEAD = 6;
+    function stickMove(x) {
+      const dx = Math.max(-SLIDE_MAX, Math.min(SLIDE_MAX, x - stickOrigin.x));
+      stickKnob.style.transform = `translateX(${dx}px)`;
+      const mag = Math.max(0, Math.abs(dx) - SLIDE_DEAD) / (SLIDE_MAX - SLIDE_DEAD);
+      input.slide = Math.sign(dx) * mag;
     }
     function stickEnd() {
       stickTouch = null;
-      input.stickAngle = null;
+      input.slide = 0;
       stickBase.classList.remove('active');
       stickKnob.style.transform = '';
     }
@@ -105,7 +104,7 @@
       for (const t of e.changedTouches) {
         if (t.identifier === stickTouch) {
           const r = stickZone.getBoundingClientRect();
-          stickMove(t.clientX - r.left, t.clientY - r.top);
+          stickMove(t.clientX - r.left);
         }
       }
     }, { passive: false });
@@ -114,7 +113,7 @@
     };
     stickZone.addEventListener('touchend', touchEnd);
     stickZone.addEventListener('touchcancel', touchEnd);
-    // Mouse fallback so the joystick can be tried on desktop too.
+    // Mouse fallback so the slider can be tried on desktop too.
     stickZone.addEventListener('mousedown', (e) => {
       const r = stickZone.getBoundingClientRect();
       stickStart('mouse', e.clientX - r.left, e.clientY - r.top);
@@ -122,7 +121,7 @@
     root.addEventListener('mousemove', (e) => {
       if (stickTouch !== 'mouse') return;
       const r = stickZone.getBoundingClientRect();
-      stickMove(e.clientX - r.left, e.clientY - r.top);
+      stickMove(e.clientX - r.left);
     });
     root.addEventListener('mouseup', () => stickTouch === 'mouse' && stickEnd());
 
@@ -174,6 +173,13 @@
     let viewMode = localStorage.getItem(VIEW_KEY) === 'chase' ? 'chase' : 'full';
     renderer.setMode(viewMode);
 
+    // The camera button names the view it will switch *to*.
+    function renderViewButton() {
+      const toFull = viewMode === 'chase';
+      $('#btn-view .cam-label').textContent = toFull ? 'Whole track' : 'Close-up';
+      $('#btn-view').setAttribute('aria-label', toFull ? 'Switch camera to the whole track' : 'Switch camera to close-up');
+    }
+
     function setViewMode(m) {
       viewMode = m;
       try {
@@ -183,8 +189,7 @@
       }
       renderer.setMode(m);
       raceEl.classList.toggle('chase', m === 'chase');
-      $('#btn-view').textContent = m === 'chase' ? '🗺️' : '🔍';
-      $('#btn-view').setAttribute('aria-label', m === 'chase' ? 'Show whole track' : 'Zoom in (close-up camera)');
+      renderViewButton();
       layout();
     }
 
@@ -384,7 +389,7 @@
       modal.classList.add('hidden');
       showRaceScreen(true);
       raceEl.classList.toggle('chase', viewMode === 'chase');
-      $('#btn-view').textContent = viewMode === 'chase' ? '🗺️' : '🔍';
+      renderViewButton();
       layout();
       renderer.setTrack(track);
       renderer.clearSkids();
@@ -412,7 +417,7 @@
       updateStickHint();
     }
     function updateStickHint() {
-      $('.stick-hint').textContent = lastInput === 'touch' ? 'Drag here to steer' : '← → steer · Space nitro · ↓ brake';
+      $('.stick-hint').textContent = lastInput === 'touch' ? 'Slide ← → to steer' : '← → steer · Space nitro · ↓ brake';
     }
     updateStickHint();
 
@@ -420,12 +425,12 @@
       touch: {
         title: 'Phone controls',
         rows: [
-          ['👆', 'Steer', 'Drag anywhere on the <b>left half</b> of the screen. Point the stick where you want to go and the tractor turns to face that way.'],
+          ['👆', 'Steer', 'Put your thumb anywhere on the <b>left half</b> of the screen and slide <b>left or right</b>. The further you slide, the harder you turn; let go to go straight.'],
           ['🚜', 'Gas', 'Automatic — you’re always on the throttle.'],
           ['🔥', 'Nitro', 'Tap <b>NITRO</b> for a burst of speed. Counter at the top right.'],
           ['🛑', 'Brake', 'Hold <b>BRAKE</b> to slow down. Keep holding when stopped to reverse out of trouble.'],
           ['⏸️', 'Pause', 'Tap the pause button at the top right.'],
-          ['🔍', 'Camera', 'Tap 🔍 to zoom in on your tractor (close-up), or 🗺️ to see the whole track.'],
+          ['📷', 'Camera', 'Tap the 📷 button at the top of the screen to switch between the close-up camera and the whole track.'],
         ],
         tip: 'Play with your phone sideways. Add the game to your Home Screen for full screen.',
       },
@@ -439,7 +444,7 @@
           ['<kbd>Esc</kbd>', 'Pause', 'Pause and resume (or <kbd>P</kbd>).'],
           ['<kbd>V</kbd>', 'Camera', 'Switch between the close-up camera and the whole track.'],
         ],
-        tip: 'You can also click and drag on the left half of the track to steer with the mouse.',
+        tip: 'You can also click and drag left/right on the left half of the track to steer with the mouse.',
       },
     };
     const TRACK_TIPS = 'Jumps launch you — you can’t steer in the air. Mud and water slow you down. Grab 💰 cash bags for extra credits and red <b>N</b> cans for an extra nitro.';

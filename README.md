@@ -12,10 +12,10 @@ A single-screen, top-down off-road race in the style of the classic arcade *Supe
 tractors on a dirt track ringed with hay bales and tyres, with jumps, mud, water splashes and
 bumps.
 
-- **Controls (phone):** drag anywhere on the left half of the screen to steer — point the stick
-  where you want to go and the tractor turns to face it. Gas is automatic. **NITRO** and
-  **BRAKE** (hold to reverse) sit bottom-right. Play in landscape.
-- **Two camera views**, switchable any time with the 🔍/🗺️ button in the race HUD, the **V**
+- **Controls (phone):** put your thumb anywhere on the left half of the screen and slide left
+  or right to steer; the further you slide, the harder you turn, and letting go straightens up.
+  Gas is automatic. **NITRO** and **BRAKE** (hold to reverse) sit bottom-right. Play in landscape.
+- **Two camera views**, switchable any time with the 📷 camera button at the top of the race screen, the **V**
   key, or the pause menu (the choice is remembered):
   - **Whole track** — the classic single-screen *Super Off Road* view.
   - **Close-up** — a *Micro Machines*-style camera that follows your tractor with a little
