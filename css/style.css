@@ -1068,6 +1068,8 @@ body.in-race .topbar { display: none; }
 .r-order .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--ink); margin-right: 6px; vertical-align: -1px; }
 .r-money { display: grid; gap: 4px; }
 .r-money div { display: flex; justify-content: space-between; gap: 8px; font-weight: 800; font-size: 14px; }
+.r-money .r-drift span { text-align: left; }
+.r-money .r-drift small { display: block; font-size: 11.5px; opacity: 0.7; }
 .r-money .total { border-top: 2px dashed var(--ink); padding-top: 6px; font-size: 16px; }
 .r-money .total b { color: var(--good); font-family: var(--font-display); font-weight: 400; font-size: 22px; }
 .controls-card { width: min(520px, 100%); text-align: left; }

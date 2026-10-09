@@ -176,6 +176,11 @@
           tagLevel(n0, r);
         } else if (e.type === 'nitro' && r) {
           particles.push(textP(r.x, r.y - 22, 'NITRO!', '#ff7a2f', 0.8));
+        } else if (e.type === 'slide' && r && e.time >= 1) {
+          // How long that drift lasted (and whether it's the best this race).
+          const p = textP(r.x, r.y - 34 - (r.elev || 0) * RAISE, `DRIFT ${e.time.toFixed(1)}s${e.best ? ' BEST!' : ''}`, '#c9a2ff', 1.1);
+          p.lvl = levelOf(r);
+          particles.push(p);
         }
       }
     }
@@ -518,6 +523,22 @@
         ctx.strokeText('YOU', 0, -14);
         ctx.fillStyle = '#fff';
         ctx.fillText('YOU', 0, -14);
+        ctx.restore();
+      }
+
+      // Live drift counter over the player while a slide is going.
+      const slide = sim.tally && !sim.frenzy ? sim.tally.slide : 0;
+      if (slide >= 0.5 && !view.showYou) {
+        ctx.save();
+        ctx.translate(me.x, me.y - 34 - me.z - (me.elev || 0) * RAISE);
+        ctx.font = `${Math.round(14 + Math.min(6, slide * 1.5))}px ${FONT}`;
+        ctx.textAlign = 'center';
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = OUTLINE;
+        const label = `${slide.toFixed(1)}s`;
+        ctx.strokeText(label, 0, 0);
+        ctx.fillStyle = '#c9a2ff';
+        ctx.fillText(label, 0, 0);
         ctx.restore();
       }
 

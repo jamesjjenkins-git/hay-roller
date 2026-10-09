@@ -99,7 +99,7 @@ provider shows labelled placeholders; in the iPhone app
 - 500 welcome gift, 200 daily bonus (resets at local midnight), reward ads
   as above, and winnings.
 - Badges: each new badge tier pays 100 (bronze), 250 (silver) or 600 (gold)
-  Hay, once. 17 badges × 3 tiers is about 16,000 Hay over a player's whole
+  Hay, once. 19 badges × 3 tiers is about 18,000 Hay over a player's whole
   progress, a steady trickle for playing well and coming back. Badge Hay is
   not doubled by the reward ad.
 - Hay is never zero for long: the daily bonus and reward ads mean a player who
@@ -111,7 +111,11 @@ provider shows labelled placeholders; in the iPhone app
   track up to 1,500 on the bonus track; the Ironman pack pays 1,100–1,500.
 - Series multipliers: Quad Cup pays 1.6× and its upgrades cost 2×; Motorbike
   Cup pays 2.4× with upgrades at 3.5×.
-- Fastest lap bonus: a tenth of the winner's prize. Cash bags on the track add
+- Fastest lap bonus: a tenth of the winner's prize.
+- Drift bonus: drift through turns for 12 / 24 / 36 seconds in a race for 5% /
+  10% / 20% of the winning prize (holding DRIFT on straights doesn't count, so
+  it rewards skill, not button-holding). Included in the race total, so the
+  reward ad doubles it. Cash bags on the track add
   a little more.
 - **Farmyard Frenzy** (bonus round after each race): every 5 animals popped pays
   5% of the track's winning prize (15 per 5 on Muddy Meadow up to 75 per 5 on

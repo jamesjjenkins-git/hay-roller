@@ -731,3 +731,34 @@ test('the garage saves badge progress and reports new tiers once', () => {
   assert.strictEqual(again.badgeSummary().find((x) => x.badge.id === 'sides').level, 1);
   assert.strictEqual(again.recordBadges({ place: 2, trackId: 'meadow', pack: 'farm', vehicle: 'tractor', laps: 3, tally }).length, 0);
 });
+
+test('drift scoring: only drifting through turns counts, crashes end a slide, and targets pay a bonus', () => {
+  const track = Tracks.buildTrack(Tracks.TRACKS[0]);
+  const s = Sim.createRace(track, { seed: 1 });
+  const t = s.tally;
+  const me = s.racers[0];
+  // Drive the tally directly with a minimal stand-in for a race.
+  const run = (frames, state, events = []) => {
+    for (let i = 0; i < frames; i++) {
+      Object.assign(me, state);
+      s.events.length = 0;
+      s.events.push(...events);
+      Sim.tallyPlayer(s, 0);
+    }
+  };
+  run(60, { drifting: true, airborne: false, steer: 0.5 }); // 1s turning while drifting
+  run(60, { drifting: true, airborne: false, steer: 0 }); // holding DRIFT down a straight
+  assert.ok(Math.abs(t.driftTotal - 1) < 0.05, `straight drifting doesn't count (${t.driftTotal})`);
+  assert.strictEqual(t.slides, 1);
+  run(90, { drifting: true, airborne: false, steer: 0.5 });
+  run(1, { drifting: true, airborne: false, steer: 0.5 }, [{ type: 'wall', id: 0 }]); // crash mid-slide
+  assert.strictEqual(t.slides, 2);
+  assert.ok(Math.abs(t.driftBest - 1.5) < 0.05);
+  // The bonus: nothing under the first target, then a share of the winning prize.
+  t.driftTotal = 11;
+  assert.strictEqual(Sim.driftBonus(s).hay, 0);
+  t.driftTotal = 25;
+  const win = Sim.prizesFor(track, 'tractor')[0];
+  assert.strictEqual(Sim.driftBonus(s).tier, 2);
+  assert.strictEqual(Sim.driftBonus(s).hay, Math.round((win * Sim.DRIFT_SCORE.pay[1]) / 10) * 10);
+});

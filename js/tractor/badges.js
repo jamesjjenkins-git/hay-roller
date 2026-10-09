@@ -23,6 +23,8 @@
     { id: 'flag', icon: '🏁', name: 'Lights to Flag', kind: 'count', tiers: [1, 5, 15], desc: (n) => `Lead every lap and win${times(n)}` },
     { id: 'comeback', icon: '🔙', name: 'Comeback Kid', kind: 'count', tiers: [1, 3, 10], desc: (n) => `Win from last place${times(n)}` },
     { id: 'drift', icon: '🌀', name: 'Drift King', kind: 'best', tiers: [3, 6, 10], desc: (n) => `Get ${n} drift kicks in one race` },
+    { id: 'slide', icon: '〰️', name: 'Long Slide', kind: 'best', unit: 's', tiers: [2, 3, 4.5], desc: (n) => `Drift through turns for ${n} seconds without a break` },
+    { id: 'sideways', icon: '↪️', name: 'Sideways', kind: 'best', unit: 's', tiers: [20, 30, 40], desc: (n) => `Drift through turns for ${n} seconds in one race` },
     { id: 'flyer', icon: '🦘', name: 'Frequent Flyer', kind: 'best', tiers: [6, 10, 15], desc: (n) => `Take ${n} jumps in one race` },
     { id: 'laps', icon: '⏱️', name: 'Lap Record', kind: 'count', tiers: [1, 10, 30], desc: (n) => `Beat your best lap on a track${times(n)}` },
     { id: 'sweep', icon: '🎈', name: 'Pest Control', kind: 'count', tiers: [1, 3, 10], desc: (n) => `Pop every animal in Farmyard Frenzy${times(n)}` },
@@ -83,6 +85,11 @@
     v.bags = t.bags || 0;
     v.nitro = t.nitros || 0;
     v.drift = t.driftKicks || 0;
+    v.slide = Math.floor((t.driftBest || 0) * 10) / 10;
+    v.sideways = Math.floor((t.driftTotal || 0) * 10) / 10;
+    // Lifetime drifting, for the cabinet.
+    b.driftTotal = (b.driftTotal || 0) + (t.driftTotal || 0);
+    b.driftBest = Math.max(b.driftBest || 0, t.driftBest || 0);
     v.flyer = t.jumps || 0;
     v.flag = won && t.ledLaps >= ev.laps ? 1 : 0;
     v.comeback = won && t.wasLast ? 1 : 0;

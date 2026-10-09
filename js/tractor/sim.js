@@ -217,7 +217,7 @@
       events: [],
       done: false,
       // What the player did this race, for the badges.
-      tally: { walls: 0, mud: 0, water: 0, animals: 0, bags: 0, nitros: 0, driftKicks: 0, jumps: 0, ledLaps: 0, wasLast: false },
+      tally: { walls: 0, mud: 0, water: 0, animals: 0, bags: 0, nitros: 0, driftKicks: 0, jumps: 0, ledLaps: 0, wasLast: false, slide: 0, slides: 0, driftTotal: 0, driftBest: 0 },
     };
   }
 
@@ -225,17 +225,38 @@
   function tallyPlayer(s, from) {
     const t = s.tally;
     const me = s.racers[0];
-    if (!t || me.finished) return;
+    if (!t) return;
+    if (me.finished) {
+      endSlide(s);
+      return;
+    }
+    let crashed = false;
     for (let i = from; i < s.events.length; i++) {
       const e = s.events[i];
       if (e.id !== 0) continue;
-      if (e.type === 'wall') t.walls++;
+      if (e.type === 'wall') {
+        t.walls++;
+        crashed = true;
+      }
       else if (e.type === 'animal') t.animals++;
       else if (e.type === 'pickup' && e.kind === 'cash') t.bags++;
       else if (e.type === 'nitro') t.nitros++;
       else if (e.type === 'driftKick') t.driftKicks++;
       else if (e.type === 'jump') t.jumps++;
       else if (e.type === 'lap' && standings(s)[0] === 0) t.ledLaps++;
+    }
+    // Drifting: time sideways through turns (holding DRIFT down a straight
+    // doesn't count), and each unbroken slide. A crash ends a slide, and so
+    // does straightening up for more than a moment.
+    const turning = me.drifting && !me.airborne && Math.abs(me.steer) > DRIFT_SCORE.steer;
+    if (turning) {
+      t.driftTotal += DT;
+      if (crashed) endSlide(s);
+      t.slide += DT;
+      t.grace = 0;
+    } else if (t.slide > 0) {
+      t.grace = (t.grace || 0) + DT;
+      if (crashed || !me.drifting || t.grace > DRIFT_SCORE.grace) endSlide(s);
     }
     // Driving into mud or water (each splash counts once).
     if (me.surface !== t.surface && (me.surface === 'mud' || me.surface === 'water')) t[me.surface]++;
@@ -245,6 +266,33 @@
       const order = standings(s);
       if (order[order.length - 1] === 0) t.wasLast = true;
     }
+  }
+
+  // A slide just ended: count it if it was a real one, and tell the
+  // renderer (`slide` event) so it can show how long it was.
+  function endSlide(s) {
+    const t = s.tally;
+    if (t.slide >= DRIFT_SCORE.minSlide) {
+      t.slides++;
+      const best = t.slide > t.driftBest;
+      if (best) t.driftBest = t.slide;
+      s.events.push({ type: 'slide', id: 0, time: t.slide, best });
+    }
+    t.slide = 0;
+  }
+
+  // Drift bonus: drift for `targets` seconds in total during a race to earn
+  // `pay` of the track's winning prize. A slide counts from `minSlide` s.
+  // Only drifting while turning (`steer` or more) counts, with `grace` s to
+  // straighten up between bends without ending the slide.
+  const DRIFT_SCORE = { targets: [12, 24, 36], pay: [0.05, 0.1, 0.2], minSlide: 0.5, steer: 0.15, grace: 0.35 };
+  function driftBonus(s) {
+    const total = (s.tally && s.tally.driftTotal) || 0;
+    let tier = 0;
+    while (tier < DRIFT_SCORE.targets.length && total >= DRIFT_SCORE.targets[tier]) tier++;
+    const win = prizesFor(s.track, s.vehicle)[0];
+    const hay = tier ? Math.round((win * DRIFT_SCORE.pay[tier - 1]) / 10) * 10 : 0;
+    return { total, tier, hay, next: DRIFT_SCORE.targets[tier] == null ? null : DRIFT_SCORE.targets[tier], nextHay: tier < DRIFT_SCORE.pay.length ? Math.round((win * DRIFT_SCORE.pay[tier]) / 10) * 10 : null };
   }
 
   function colorDistance(a, b) {
@@ -996,6 +1044,7 @@
     const lapBonus = fastest ? Math.round(prizes[0] / 100) * 10 : 0;
     const bestLap = p.lapTimes.length ? Math.min(...p.lapTimes) : null;
     const trophy = p.place <= 3 ? ['gold', 'silver', 'bronze'][p.place - 1] : null;
+    const drift = driftBonus(s);
     return {
       place: p.place,
       placeReward,
@@ -1005,11 +1054,14 @@
       raceFastestLap: fl,
       lapBonus,
       bestLap,
-      total: placeReward + p.cash + lapBonus,
+      drift,
+      driftBest: (s.tally && s.tally.driftBest) || 0,
+      slides: (s.tally && s.tally.slides) || 0,
+      total: placeReward + p.cash + lapBonus + drift.hay,
     };
   }
 
-  const api = { VEHICLES, VEHICLE_ORDER, prizesFor, DT, RADIUS, MAX_TIME, DRIVERS, CATCHUP, ASSIST, WALL, ANIMAL, BUMPS, DRIFT, HILLS, FRENZY, frenzyRate, frenzyEarnings, animalCount, catchUpBoost, aiStats, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
+  const api = { VEHICLES, VEHICLE_ORDER, prizesFor, DT, RADIUS, MAX_TIME, DRIVERS, CATCHUP, ASSIST, WALL, ANIMAL, BUMPS, DRIFT, DRIFT_SCORE, driftBonus, tallyPlayer, HILLS, FRENZY, frenzyRate, frenzyEarnings, animalCount, catchUpBoost, aiStats, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
   root.TractorSim = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

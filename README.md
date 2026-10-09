@@ -58,11 +58,18 @@ bumps.
   the 🏆 counter in the garage to open the **Trophy Cabinet**: totals plus, for every track, your
   best finish, trophy counts, fastest-lap awards and best lap.
 
-- **Badges:** 17 challenges, each with 🥉 bronze, 🥈 silver and 🥇 gold tiers (100, 250 and
+- **Drifting:** a live counter over your vehicle shows how long the current slide has lasted,
+  with a callout when it ends (and BEST! for the longest of the race). Only drifting through
+  turns counts: holding DRIFT down a straight doesn't, and hitting a wall ends a slide. Drift
+  through turns for 12, 24 or 36 seconds in a race for a **drift bonus** of 5%, 10% or 20% of
+  the track's winning prize, shown on the results screen with the next target. The Trophy
+  Cabinet keeps your lifetime drift time and longest slide.
+- **Badges:** 19 challenges, each with 🥉 bronze, 🥈 silver and 🥇 gold tiers (100, 250 and
   600 Hay when reached): On a Roll (wins in a row), Didn't Touch the Sides (no wall hits),
   Clean Driver (no mud or water), Animal Lover (no animals hit), Money Bags (cash bags in a
   race), Speedy (nitros in a race), Lights to Flag (lead every lap and win), Comeback Kid (win
-  from last), Drift King (drift kicks in a race), Frequent Flyer (jumps in a race), Lap Record,
+  from last), Drift King (drift kicks in a race), Long Slide (longest unbroken drift), Sideways (drift time in
+  a race), Frequent Flyer (jumps in a race), Lap Record,
   Pest Control and Quick Pop (Farmyard Frenzy), Farm Champion and Ironman (wins on different
   tracks), All-Rounder (wins in each vehicle) and Regular (days raced). New tiers show on the
   results screen; the Trophy Cabinet shows every badge with progress to its next tier. Targets

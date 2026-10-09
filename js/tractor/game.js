@@ -878,7 +878,7 @@
         lapRecord: award.lapRecord,
       });
       payBadges(badges);
-      const extras = [e.cash ? `+${e.cash} cash bags` : '', e.fastestLap ? `+${e.lapBonus} fastest lap` : ''].filter(Boolean).join(', ');
+      const extras = [e.cash ? `+${e.cash} cash bags` : '', e.fastestLap ? `+${e.lapBonus} fastest lap` : '', e.drift.hay ? `+${e.drift.hay} drift bonus` : ''].filter(Boolean).join(', ');
       if (e.total > 0) wallet.credit(e.total, `Farmyard Rally — ${ordinal(e.place)} at ${selected.name}${extras ? ` (${extras})` : ''}`);
       if (e.place === 1) sound.fanfare();
       else sound.coins();
@@ -899,6 +899,7 @@
               <div><span>${ordinal(e.place)} place prize</span><b>🌾 ${fmt(e.placeReward)}</b></div>
               <div><span>Cash bags</span><b>🌾 ${fmt(e.cash)}</b></div>
               ${e.fastestLap ? `<div><span>Fastest lap bonus</span><b>🌾 ${fmt(e.lapBonus)}</b></div>` : ''}
+              ${driftRow(e)}
               <div class="total"><span>Total earned</span><b id="r-total">🌾 ${fmt(e.total)}</b></div>
               ${e.total > 0 && rewards && rewards.adsRemaining() > 0
                 ? `<button class="btn btn-ad" data-act="double">📺 Watch an ad to double it (+${fmt(e.total)})</button>`
@@ -954,6 +955,16 @@
       }, 1200);
     }
 
+    // Drift bonus: time drifting through turns this race, the Hay it earned,
+    // and the next target.
+    function driftRow(e) {
+      const d = e.drift;
+      const secs = `${d.total.toFixed(1)}s`;
+      const next = d.next != null ? ` · ${d.next}s for 🌾${fmt(d.nextHay)}` : '';
+      const best = e.driftBest >= 1 ? ` · longest ${e.driftBest.toFixed(1)}s` : '';
+      return `<div class="r-drift"><span>🌀 Drift bonus <small>${secs} drifting${best}${next}</small></span><b>🌾 ${fmt(d.hay)}</b></div>`;
+    }
+
     // New badge tiers pay Hay straight away (not doubled by the ad).
     function payBadges(earned) {
       for (const b of earned) wallet.credit(b.hay, `Badge: ${b.badge.name} (${b.tier.name})`);
@@ -986,6 +997,7 @@
     // ---------- Trophy cabinet ----------
 
     const cabinet = $('#cabinet');
+    const fmtDrift = (sec) => (sec >= 60 ? `${Math.floor(sec / 60)}m ${Math.round(sec % 60)}s` : `${sec.toFixed(1)}s`);
     const badgeCount = () => garage.badgeSummary().reduce((n, b) => n + b.level, 0);
     function openCabinet() {
       const st = garage.state;
@@ -1000,14 +1012,14 @@
             <div><span>🥉</span><b>${tot.bronze}</b><small>Bronze</small></div>
             <div><span>⏱️</span><b>${tot.fastest}</b><small>Fastest laps</small></div>
           </div>
-          <p class="cab-sub">${st.races} race${st.races === 1 ? '' : 's'} · ${st.wins} win${st.wins === 1 ? '' : 's'}</p>
+          <p class="cab-sub">${st.races} race${st.races === 1 ? '' : 's'} · ${st.wins} win${st.wins === 1 ? '' : 's'}${st.badges && st.badges.driftTotal ? ` · 🌀 ${fmtDrift(st.badges.driftTotal)} drifting, longest slide ${st.badges.driftBest.toFixed(1)}s` : ''}</p>
           <h3 class="cab-h">🎖️ Badges <small>${badgeCount()} of ${Badges.BADGES.length * 3}</small></h3>
           <div class="badge-grid">
             ${garage.badgeSummary().map((b) => `<div class="badge-tile ${b.tier ? b.tier.id : 'none'}" title="${b.badge.name}">
               <span class="b-icon">${b.badge.icon}</span>
               <span class="b-text"><b>${b.badge.name}</b><small>${b.next == null ? '✓ All tiers done' : b.desc}</small></span>
               <span class="b-tiers">${Badges.TIERS.map((t, i) => `<i class="${i < b.level ? 'on' : ''}">${t.icon}</i>`).join('')}</span>
-              ${b.next == null ? '' : `<span class="b-bar"><i style="width:${Math.min(100, Math.round((b.progress / b.next) * 100))}%"></i><em>${b.progress}/${b.next}</em></span>`}
+              ${b.next == null ? '' : `<span class="b-bar"><i style="width:${Math.min(100, Math.round((b.progress / b.next) * 100))}%"></i><em>${b.badge.unit ? `${b.progress.toFixed(1)}/${b.next}${b.badge.unit}` : `${b.progress}/${b.next}`}</em></span>`}
             </div>`).join('')}
           </div>
           <h3 class="cab-h">🏆 Trophies <small>${garage.series.name}</small></h3>
