@@ -6,8 +6,8 @@
 //   npm run shots -- iron-blaster meadow    just these tracks
 //
 // Saves screenshots/<track>.png and screenshots/index.html (all of them on
-// one page). Needs Playwright: `npm i -D playwright` (or a global install)
-// and a Chromium it can launch (`npx playwright install chromium`).
+// one page). First time: `npm run shots:setup` (installs Playwright and the
+// Chromium it drives).
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -20,9 +20,14 @@ function loadPlaywright() {
   try {
     return require('playwright');
   } catch (e) {
-    const { execSync } = require('child_process');
-    const globalRoot = execSync('npm root -g').toString().trim();
-    return require(path.join(globalRoot, 'playwright'));
+    try {
+      const { execSync } = require('child_process');
+      const globalRoot = execSync('npm root -g').toString().trim();
+      return require(path.join(globalRoot, 'playwright'));
+    } catch (e2) {
+      console.error('Playwright isn\'t installed. Run this once, then try again:\n\n  npm run shots:setup\n');
+      process.exit(1);
+    }
   }
 }
 
@@ -51,7 +56,14 @@ function serve() {
   const server = await serve();
   const base = `http://localhost:${server.address().port}/index.html`;
   const { chromium, devices } = loadPlaywright();
-  const browser = await chromium.launch();
+  let browser;
+  try {
+    browser = await chromium.launch();
+  } catch (e) {
+    console.error('Couldn\'t start Chromium. Run this once, then try again:\n\n  npm run shots:setup\n');
+    server.close();
+    process.exit(1);
+  }
   const ctx = await browser.newContext({ ...devices['iPhone 13 landscape'] });
   const errors = [];
   for (const id of ids) {
