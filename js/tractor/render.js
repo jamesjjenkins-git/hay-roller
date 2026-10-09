@@ -634,6 +634,19 @@
 
   // ---------- Background ----------
 
+  // Between two colours (`k` 0..1), then lightened or darkened like shade().
+  function mixHex(a, b, k, amt = 0) {
+    const A = parseInt(a.slice(1), 16);
+    const B = parseInt(b.slice(1), 16);
+    const ch = (sh) => Math.max(0, Math.min(255, Math.round(((A >> sh) & 255) * (1 - k) + ((B >> sh) & 255) * k + amt * 255)));
+    return `rgb(${ch(16)}, ${ch(8)}, ${ch(0)})`;
+  }
+
+  const MOWN_W = 80;
+  function mownStripe(x, k = 1) {
+    return Math.floor(x / MOWN_W) % 2 ? `rgba(255,255,255,${0.05 * k})` : `rgba(0,0,0,${0.03 * k})`;
+  }
+
   // The road's cross-section as bands (extra width over the road, colour),
   // drawn widest first: berm foot, berm top, the ridge at the road's edge,
   // then dirt getting lighter towards the worn middle.
@@ -652,21 +665,22 @@
 
     c.fillStyle = '#6fbf4f';
     c.fillRect(0, 0, W, H);
-    // Raised and sunken ground (Ironman pack), drawn before anything sits on it.
-    const groundAt = t.terrain ? (x, y) => root.TractorTracks.terrainHeight(t.terrain, x, y) : () => 0;
-    if (t.terrain) drawTerrain(c, t);
-    // Mown stripes over the ground, hills included (under the hills they
-    // stopped dead along the edge of the raised ground, in 2px steps).
+    // Mown stripes, then raised and sunken ground (Ironman pack) drawn
+    // before anything sits on it; it carries the stripes on over raised
+    // grass, and lets them fade out down into a dip.
     for (let x = 0; x < W; x += 80) {
-      c.fillStyle = (x / 80) % 2 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
+      c.fillStyle = mownStripe(x);
       c.fillRect(x, 0, 80, H);
     }
+    const groundAt = t.terrain ? (x, y) => root.TractorTracks.terrainHeight(t.terrain, x, y) : () => 0;
+    if (t.terrain) drawTerrain(c, t);
     // Tufts.
     c.strokeStyle = 'rgba(30, 100, 30, 0.35)';
     c.lineWidth = 1.5;
     for (let i = 0; i < 700; i++) {
       const x = rng() * W;
       const gy = rng() * H;
+      if (groundAt(x, gy) < -1.5) continue; // none on the bare earth of a dip
       const y = gy - groundAt(x, gy) * RAISE; // tufts sit on the raised ground
       c.beginPath();
       c.moveTo(x - 2, y + 3);
@@ -940,7 +954,9 @@
         // it matches the flat grass around it (else its edge shows in steps).
         const foot = Math.min(1, Math.abs(h) / 0.8);
         const light = Math.max(-0.14, Math.min(0.14, -(dx * 0.6 + dy) * 0.9)) * foot;
-        const top = shade('#6fbf4f', light);
+        // Sunken ground turns from grass to bare earth as it gets deeper.
+        const earth = h < 0 ? Math.max(0, Math.min(1, -h / 3)) : 0;
+        const top = earth ? mixHex('#6fbf4f', '#8a6a3d', earth, light) : shade('#6fbf4f', light);
         // Bank below (raised ground) or the far wall of a dip. Where the
         // ground only slopes gently towards the camera, the gap down to the
         // next row is more of the same slope, not a bank (else slopes come
@@ -952,11 +968,23 @@
           c.fillStyle = shade('#6fbf4f', light - 0.14 * Math.max(0, Math.min(1, (drop - 1) / 5)));
           c.fillRect(x, y - lift, cw + 0.5, ch + lift + 0.5);
         } else if (h < 0) {
-          c.fillStyle = '#7a5a32';
-          c.fillRect(x, y, cw + 0.5, -lift + ch + 0.5);
+          // The far wall of a dip, only across the drop from the row behind
+          // (drawn from ground level it covered that row's slope in 2px
+          // combs), earthier the steeper the drop.
+          const fall = (behind - h) * RAISE;
+          const top0 = y - Math.max(behind, h) * RAISE;
+          const steep = Math.max(0, Math.min(1, (fall - 1) / 4));
+          c.fillStyle = steep ? mixHex(earth ? '#8a6a3d' : '#6fbf4f', '#7a5a32', steep, light - 0.04 * steep) : top;
+          c.fillRect(x, top0, cw + 0.5, y - lift - top0 + ch + 0.5);
         }
         c.fillStyle = top;
         c.fillRect(x, y - lift, cw + 0.5, ch + 0.5);
+        // The mown stripes, on over raised grass, fading out into a dip.
+        const mown = h >= 0 ? 1 : Math.max(0, 1 + h / 1.5);
+        if (mown > 0) {
+          c.fillStyle = mownStripe(x, mown);
+          c.fillRect(x, y - lift, cw + 0.5, ch + 0.5);
+        }
         // A lighter lip along the crest of a bank (only the top row of a
         // slope, or a steep slope would be striped with them).
         const front = G(j + 1, i);
