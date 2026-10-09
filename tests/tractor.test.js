@@ -298,3 +298,24 @@ test('unlock-all opens every track and can be switched off', () => {
   g.setUnlockAll(false);
   assert.strictEqual(Tracks.TRACKS.filter((t) => !g.isUnlocked(t)).length, locked.length);
 });
+
+test('straight-line assist lines the nose up when not steering, but never fights a turn', () => {
+  const def = Tracks.TRACKS[0];
+  const run = (assist, steer, offset) => {
+    const s = Sim.createRace(def, { seed: 1 });
+    // Get rolling along the first straight.
+    for (let i = 0; i < 90; i++) {
+      const me = s.racers[0];
+      me.heading = s.track.samples[me.idx].angle;
+      Sim.step(s, { 0: { steer: 0, throttle: 1, brake: 0 } });
+    }
+    const me = s.racers[0];
+    me.heading = s.track.samples[(me.idx + 5) % s.track.count].angle + offset;
+    for (let i = 0; i < 30; i++) Sim.step(s, { 0: { steer, throttle: 1, brake: 0, assist } });
+    return Math.abs(Sim.angleDiff(s.track.samples[(me.idx + 5) % s.track.count].angle, me.heading));
+  };
+  assert.ok(run(true, 0, 0.3) < 0.08, 'small misalignment is corrected');
+  assert.ok(run(false, 0, 0.3) > 0.2, 'without assist it stays misaligned');
+  assert.ok(run(true, 0, 1.2) > 1.0, 'large angles are left alone');
+  assert.ok(run(true, 0.55, 0.3) > 0.3, 'no correction while the player is steering');
+});

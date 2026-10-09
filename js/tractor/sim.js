@@ -43,6 +43,9 @@
     return st;
   }
 
+  // Straight-line assist for touch steering (radians, radians/second).
+  const ASSIST = { maxAngle: 0.5, rate: 1.4 };
+
   // Rubber banding, player only: if you drop well behind the tractor directly
   // ahead, you get a gentle boost that fades as you close back up behind it.
   // It never helps you past anyone — only back into the fight.
@@ -271,8 +274,22 @@
       // Turning: tractors can pivot slowly even when stopped.
       const turnFactor = Math.min(1, 0.4 + speed / (st.topSpeed * 0.5));
       const dir = vf < -5 ? -1 : 1;
-      r.steer += (input.steer - r.steer) * Math.min(1, 20 * DT);
+      // Ease into a turn, but stop turning straight away when the input
+      // returns to centre, so there's no carry-over that causes overshoot.
+      const easing = Math.abs(input.steer) < Math.abs(r.steer) ? 45 : 20;
+      r.steer += (input.steer - r.steer) * Math.min(1, easing * DT);
       r.heading += r.steer * st.turnRate * turnFactor * dir * DT;
+
+      // Straight-line assist (player option): with no steering input, gently
+      // line the nose up with the road ahead — only when already nearly
+      // aligned, so it never fights a deliberate turn or recovery.
+      if (input.assist && Math.abs(input.steer) < 0.05 && speed > 30 && dir > 0) {
+        const ahead = s.track.samples[(r.idx + 5) % s.track.count];
+        const err = angleDiff(ahead.angle, r.heading);
+        if (Math.abs(err) < ASSIST.maxAngle) {
+          r.heading += Math.sign(err) * Math.min(Math.abs(err), ASSIST.rate * DT);
+        }
+      }
     }
 
     const nfx = Math.cos(r.heading);
@@ -506,7 +523,7 @@
     };
   }
 
-  const api = { DT, RADIUS, MAX_TIME, DRIVERS, CATCHUP, catchUpBoost, aiStats, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
+  const api = { DT, RADIUS, MAX_TIME, DRIVERS, CATCHUP, ASSIST, catchUpBoost, aiStats, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
   root.TractorSim = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

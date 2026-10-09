@@ -892,6 +892,17 @@ body.in-race .topbar { display: none; }
   color: rgba(59, 42, 20, 0.7);
 }
 .slide-arrow.l { left: 10px; }
+/* The straight-ahead zone in the middle of the slider. */
+.slide-centre {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  bottom: 8px;
+  width: 28px;
+  margin-left: -14px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.35);
+}
 .slide-arrow.r { right: 10px; }
 .stick-knob {
   width: 48px; height: 48px;
