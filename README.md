@@ -13,7 +13,7 @@ tractors on a dirt track ringed with hay bales and tyres, with jumps, mud, water
 bumps.
 
 - **Controls (phone):** put your thumb anywhere on the left half of the screen and slide left
-  or right to steer; the further you slide, the harder you turn, and letting go straightens up.
+  or right to steer at a steady rate (sliding further doesn't turn harder); letting go straightens up.
   Gas is automatic. **NITRO** and **BRAKE** (hold to reverse) sit bottom-right. Play in landscape.
 - **Two camera views**, switchable any time with the 📷 camera button at the top of the race screen, the **V**
   key, or the pause menu (the choice is remembered):

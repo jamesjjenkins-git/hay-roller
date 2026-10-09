@@ -223,12 +223,12 @@ test('the first track is winnable with a stock tractor', () => {
   assert.ok(wins >= 4, `stock tractor won only ${wins}/12 on Muddy Meadow`);
 });
 
-test('rivals are slower than a stock tractor on track 1 and reach full pace on the last', () => {
+test('rivals are slower than a stock tractor on track 1 and match an upgraded one on the last', () => {
   const first = Tracks.TRACKS[0];
   const last = Tracks.TRACKS[Tracks.TRACKS.length - 1];
   const stock = Sim.statsFor({});
   assert.ok(Sim.aiStats(first, 0, 0).topSpeed < stock.topSpeed * 0.95);
-  assert.ok(Sim.aiStats(last, 0, 0).topSpeed > Sim.statsFor({ speed: 4 }).topSpeed);
+  assert.ok(Sim.aiStats(last, 0, 0).topSpeed > Sim.statsFor({ speed: 3 }).topSpeed);
 });
 
 test('rubber banding only helps the player when well behind the car ahead', () => {

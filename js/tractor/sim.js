@@ -29,7 +29,7 @@
   // a stock tractor (they drive cleaner lines than a thumb can), reaching full
   // pace (a touch above a stock tractor's) by the last track.
   const AI_PACE_MIN = 0.91;
-  const AI_PACE_MAX = 1.06;
+  const AI_PACE_MAX = 0.99;
   function aiStats(track, playerLevel, index) {
     const skill = track.aiSkill + Math.min(0.5, playerLevel * 0.025);
     const spread = [1.0, 0.96, 0.92][index % 3];
@@ -265,6 +265,8 @@
       }
       if (input.throttle <= 0 && input.brake <= 0) vf -= vf * 1.2 * DT;
       vl *= Math.exp(-st.grip * gripMul * DT);
+      // Turning scrubs off a little speed, which tightens the line through corners.
+      vf -= vf * Math.abs(r.steer) * 0.8 * DT;
 
       // Turning: tractors can pivot slowly even when stopped.
       const turnFactor = Math.min(1, 0.4 + speed / (st.topSpeed * 0.5));

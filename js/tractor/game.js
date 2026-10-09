@@ -75,16 +75,18 @@
       stickBase.classList.add('active');
       stickMove(x);
     }
-    // Horizontal slider: the further from where your thumb landed, the harder
-    // you turn. A small dead zone keeps the tractor straight when you rest.
-    const SLIDE_MAX = 48;
+    // Horizontal slider with a fixed turn rate: once you're past a small dead
+    // zone it ramps up over a few pixels to one steady rate. Sliding further
+    // doesn't turn harder — it just keeps the turn going.
     const SLIDE_DEAD = 4;
+    const SLIDE_RAMP = 8;
+    const SLIDE_MAX = 48; // how far the knob can travel visually
+    const SLIDER_STEER = 0.55; // fraction of the tractor's full turn rate
     function stickMove(x) {
       const dx = Math.max(-SLIDE_MAX, Math.min(SLIDE_MAX, x - stickOrigin.x));
       stickKnob.style.transform = `translateX(${dx}px)`;
-      const mag = Math.max(0, Math.abs(dx) - SLIDE_DEAD) / (SLIDE_MAX - SLIDE_DEAD);
-      // Front-loaded curve: a small nudge already gives a useful turn.
-      input.slide = Math.sign(dx) * Math.pow(mag, 0.8);
+      const ramp = Math.min(1, Math.max(0, Math.abs(dx) - SLIDE_DEAD) / SLIDE_RAMP);
+      input.slide = Math.sign(dx) * SLIDER_STEER * ramp;
     }
     function stickEnd() {
       stickTouch = null;
@@ -442,7 +444,7 @@
       touch: {
         title: 'Phone controls',
         rows: [
-          ['👆', 'Steer', 'Put your thumb anywhere on the <b>left half</b> of the screen and slide <b>left or right</b>. The further you slide, the harder you turn; let go to go straight.'],
+          ['👆', 'Steer', 'Put your thumb anywhere on the <b>left half</b> of the screen and slide <b>left or right</b> to turn at a steady rate; let go to go straight. Turning scrubs off a little speed, so hairpins take care.'],
           ['🚜', 'Gas', 'Automatic — you’re always on the throttle.'],
           ['🔥', 'Nitro', 'Tap <b>NITRO</b> for a burst of speed. Counter at the top right.'],
           ['🛑', 'Brake', 'Hold <b>BRAKE</b> to slow down. Keep holding when stopped to reverse out of trouble.'],
