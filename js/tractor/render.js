@@ -658,9 +658,10 @@
         // On the inside of tight bends the offset edge folds back over the
         // road; don't draw anything where there's driving surface.
         if (onSurface(t, p.x, p.gy, t.halfWidth + 3)) continue;
-        // Keep clear of any other stretch of road (crossings, the mouths of
-        // junctions, hairpins), not just the bit this wall lines.
-        if (nearOtherRoad(t, i, p.x, p.gy, t.halfWidth + 16) || nearOtherRoad(t, i, p.x, p.y, t.halfWidth + 12, true)) continue;
+        // Where this wall runs across another stretch's road (a crossing),
+        // leave a gap: that's road. Only there - anywhere else the wall is
+        // real, so it must be drawn.
+        if (nearOtherRoad(t, i, p.x, p.gy, t.halfWidth + 3)) continue;
         // Local radius of this edge, from how fast it turns.
         const a0 = pts[(i - 3 + t.count) % t.count];
         const a1 = pts[(i + 3) % t.count];
