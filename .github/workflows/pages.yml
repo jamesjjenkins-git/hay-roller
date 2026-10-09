@@ -5,8 +5,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    # The old branch stays listed only until it's deleted after the switch to master.
-    branches: [master, claude/farm-casino-hay-races-jjno0j]
+    branches: [master]
   workflow_dispatch:
 
 permissions:
