@@ -69,7 +69,7 @@
       blurb: 'Big jumps and deep slop past the pig pen.',
       laps: 4,
       width: 92,
-      aiSkill: 0.24,
+      aiSkill: 0.38,
       reward: [500, 260, 130, 50],
       unlock: { track: 'barnyard', place: 3 },
       points: [
@@ -100,7 +100,7 @@
       blurb: 'Fast sweepers round the duck pond, with a splashy chicane.',
       laps: 4,
       width: 94,
-      aiSkill: 0.36,
+      aiSkill: 0.44,
       reward: [600, 320, 160, 60],
       unlock: { track: 'pigpen', place: 3 },
       points: [
@@ -127,7 +127,7 @@
       blurb: 'Wind through the corn. Two long straights for your nitro.',
       laps: 3,
       width: 94,
-      aiSkill: 0.48,
+      aiSkill: 0.5,
       reward: [700, 370, 190, 70],
       unlock: { track: 'pond', place: 3 },
       points: [
@@ -155,7 +155,7 @@
       blurb: 'Wavy straights through the sheep field. Rhythm is everything.',
       laps: 4,
       width: 92,
-      aiSkill: 0.58,
+      aiSkill: 0.56,
       reward: [800, 420, 210, 80],
       unlock: { track: 'corn', place: 3 },
       points: [
@@ -184,7 +184,7 @@
       blurb: 'A diamond round the haystacks with jumps on every side.',
       laps: 4,
       width: 92,
-      aiSkill: 0.68,
+      aiSkill: 0.6,
       reward: [900, 480, 240, 90],
       unlock: { track: 'sheep', place: 3 },
       points: [
@@ -214,7 +214,7 @@
       blurb: 'Down the big V past the windmill, then flat out home.',
       laps: 4,
       width: 92,
-      aiSkill: 0.78,
+      aiSkill: 0.66,
       reward: [1000, 530, 270, 100],
       unlock: { track: 'haystack', place: 3 },
       points: [
@@ -242,7 +242,7 @@
       blurb: 'A long serpentine through the apple trees. Handling wins here.',
       laps: 3,
       width: 92,
-      aiSkill: 0.88,
+      aiSkill: 0.85,
       reward: [1150, 610, 300, 110],
       unlock: { track: 'windmill', place: 3 },
       points: [

@@ -15,8 +15,8 @@
     return {
       topSpeed: 165 + u.speed * 17,
       accel: 150 + u.accel * 26,
-      grip: 5 + u.handling * 1.3,
-      turnRate: 2.8 + u.handling * 0.3,
+      grip: 7.5 + u.handling * 1.3,
+      turnRate: 4.3 + u.handling * 0.35,
       // How well it copes with mud, water and bumps (0 = badly, 1 = barely notices).
       rough: 0.35,
       nitros: 2 + u.boost,
@@ -27,14 +27,17 @@
   // AI rivals get tougher on later tracks and as the player upgrades.
   // `pace` scales their speed: on the first track they are clearly slower than
   // a stock tractor (they drive cleaner lines than a thumb can), reaching full
-  // pace by the last track.
+  // pace (a touch above a stock tractor's) by the last track.
   const AI_PACE_MIN = 0.91;
+  const AI_PACE_MAX = 1.06;
   function aiStats(track, playerLevel, index) {
     const skill = track.aiSkill + Math.min(0.5, playerLevel * 0.025);
     const spread = [1.0, 0.96, 0.92][index % 3];
     const lv = Math.max(0, Math.min(5, skill * 5 * spread));
     const st = statsFor({ accel: lv, speed: lv, handling: lv, boost: Math.round(lv / 2) });
-    const pace = (AI_PACE_MIN + (1 - AI_PACE_MIN) * Math.min(1, skill)) * (0.98 + spread * 0.02);
+    // Pace keeps rising a little past skill 1 so late tracks stay a fight
+    // for a well-upgraded tractor.
+    const pace = (AI_PACE_MIN + (AI_PACE_MAX - AI_PACE_MIN) * Math.min(1.3, skill)) * (0.98 + spread * 0.02);
     st.topSpeed *= pace;
     st.accel *= pace;
     return st;
@@ -197,7 +200,7 @@
     // Occasional human-ish wobble.
     r.mistakeTimer -= DT;
     if (r.mistakeTimer <= 0) {
-      r.wobble = (s.rng() - 0.5) * 1.2;
+      r.wobble = (s.rng() - 0.5) * 0.7;
       r.mistakeTimer = 2 + s.rng() * 4;
     }
     r.wobble *= 0.97;
@@ -266,7 +269,7 @@
       // Turning: tractors can pivot slowly even when stopped.
       const turnFactor = Math.min(1, 0.4 + speed / (st.topSpeed * 0.5));
       const dir = vf < -5 ? -1 : 1;
-      r.steer += (input.steer - r.steer) * Math.min(1, 12 * DT);
+      r.steer += (input.steer - r.steer) * Math.min(1, 35 * DT);
       r.heading += r.steer * st.turnRate * turnFactor * dir * DT;
     }
 
