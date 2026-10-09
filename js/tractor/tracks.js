@@ -528,7 +528,7 @@
       id: 'iron-blaster',
       pack: 'ironman',
       name: 'Blaster',
-      blurb: 'Over the long ridge again and again, crossing itself twice on the way.',
+      blurb: 'Over the long bridge again and again, crossing itself twice on the way.',
       laps: 3,
       width: 88,
       aiSkill: 0.42,
@@ -537,7 +537,6 @@
       crossings: [{ x: 643, y: 420, r: 177, bridge: true, over: 1 }, { x: 741, y: 280, r: 177, bridge: true }],
       // Ground shapes read off the NES map's shading (see terrainHeight).
       terrain: [
-        { type: 'ridge', a: [560, 540], b: [830, 150], w: 34, h: 30, fall: 60 },
         { type: 'mound', x: 160, y: 205, r: 10, h: 10, fall: 34 },
         { type: 'mound', x: 250, y: 228, r: 10, h: 10, fall: 34 },
       ],

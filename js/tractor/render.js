@@ -158,10 +158,13 @@
           // A puff of flame and dust out the back.
           const fx = Math.cos(r.heading);
           const fy = Math.sin(r.heading);
+          const lift = (r.elev || 0) * RAISE;
+          const n0 = particles.length;
           for (let i = 0; i < 5; i++) {
-            particles.push({ type: 'flame', x: r.x - fx * 16, y: r.y - fy * 16, vx: -fx * 120 + (Math.random() - 0.5) * 50, vy: -fy * 120 + (Math.random() - 0.5) * 50, life: 0.3, max: 0.3 });
+            particles.push({ type: 'flame', x: r.x - fx * 16, y: r.y - fy * 16 - lift, vx: -fx * 120 + (Math.random() - 0.5) * 50, vy: -fy * 120 + (Math.random() - 0.5) * 50, life: 0.3, max: 0.3 });
           }
-          for (let i = 0; i < 4; i++) dust(r.x - fx * 12, r.y - fy * 12, 1.2);
+          for (let i = 0; i < 4; i++) dust(r.x - fx * 12, r.y - fy * 12 - lift, 1.2);
+          tagLevel(n0, r);
         } else if (e.type === 'nitro' && r) {
           particles.push(textP(r.x, r.y - 22, 'NITRO!', '#ff7a2f', 0.8));
         }
@@ -186,9 +189,28 @@
       });
     }
 
+    // Which level of a bridge a racer's particles belong to: up on deck `k`
+    // ('k:up'), on the road under or beside it ('k:down'), or neither (null).
+    // Those are drawn with the deck, so dust and flames from below never
+    // show over it.
+    function levelOf(r) {
+      for (const dk of track.decks || []) {
+        if (dk.set.has(r.idx)) return `${dk.k}:up`;
+        const b = dk.box;
+        // Under it or behind it (in front of the deck, the normal order is right).
+        if (r.x > b.x - 20 && r.x < b.x + b.w + 20 && r.y > b.y - 20 && r.y < dk.key + 10) return `${dk.k}:down`;
+      }
+      return null;
+    }
+    function tagLevel(from, r) {
+      const lvl = levelOf(r);
+      if (lvl) for (let i = from; i < particles.length; i++) particles[i].lvl = lvl;
+    }
+
     function emitFromRacers(sim, dt) {
       const s = skid.getContext('2d');
       for (const r of sim.racers) {
+        const n0 = particles.length;
         const speed = Math.hypot(r.vx, r.vy);
         const body = r.heading + (r.drift || 0);
         const fx = Math.cos(body);
@@ -213,6 +235,7 @@
         if (Math.random() < 0.08 + speed / 3000) {
           particles.push({ type: 'smoke', x: r.x + fx * 6 - fy * 5, y: r.y + fy * 6 + fx * 5 - r.z * 0.4 - lift, vx: -fx * 10, vy: -fy * 10 - 8, life: 0.8, max: 0.8 });
         }
+        tagLevel(n0, r);
 
         // Tyre marks on the persistent skid layer.
         const marks = [-1, 1].map((side) => ({ x: rearX - fy * 9 * side, y: rearY + fx * 9 * side }));
@@ -253,8 +276,9 @@
       if (particles.length > 600) particles.splice(0, particles.length - 600);
     }
 
-    function drawParticles(layer) {
+    function drawParticles(layer, lvl = null) {
       for (const p of particles) {
+        if ((p.lvl || null) !== lvl) continue;
         const k = Math.max(0, p.life / p.max);
         if (layer === 'under') {
           if (p.type === 'dust') {
@@ -377,6 +401,7 @@
       ctx.setTransform(v.k, 0, 0, v.k, -v.rx * v.k, -v.ry * v.k);
 
       drawParticles('under');
+      for (const dk of track.decks || []) drawParticles('under', `${dk.k}:down`);
 
       // Everything that stands up, back to front: walls, animals, vehicles.
       // Up on a bridge, things are drawn after its deck (shadows too).
@@ -412,13 +437,18 @@
         else if (it.p) drawPickup(ctx, it.p, now);
         else if (it.f) drawRamp(ctx, track, it.f);
         else if (it.flag) drawFlagman(ctx, sim, view, now);
-        else if (it.dk) ctx.drawImage(it.dk.sprite, it.dk.box.x, it.dk.box.y, it.dk.sprite.width / layerScale, it.dk.sprite.height / layerScale);
+        else if (it.dk) {
+          drawParticles('over', `${it.dk.k}:down`);
+          ctx.drawImage(it.dk.sprite, it.dk.box.x, it.dk.box.y, it.dk.sprite.width / layerScale, it.dk.sprite.height / layerScale);
+          drawParticles('under', `${it.dk.k}:up`);
+        }
         else {
           if (it.up) drawShadow(ctx, it.r);
           drawTractor(ctx, it.r, now);
         }
       }
       drawParticles('over');
+      for (const dk of track.decks || []) drawParticles('over', `${dk.k}:up`);
       const sg = track.sign;
       ctx.drawImage(signSprite, sg.x - 2 * (sg.k || 1), sg.y - 2 * (sg.k || 1), signSprite.width / layerScale, signSprite.height / layerScale);
 
@@ -1939,6 +1969,7 @@
         joined.bridges.push(b);
       } else decks.push({ idx, set: new Set(idx), key, bridges: [b] });
     }
+    decks.forEach((dk, k) => (dk.k = k));
     for (const dk of decks) {
       // In order along the road.
       const base = dk.bridges[0].upper;
