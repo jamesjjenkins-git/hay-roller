@@ -69,35 +69,14 @@
     let stickTouch = null;
     let stickOrigin = null;
 
-    // Auto re-centre: if the thumb stops sliding for a moment, the turn you've
-    // put in is kept (the tractor holds the angle it's now pointing at) and the
-    // slider's centre moves to where the thumb is, so the next slide is a fresh
-    // adjustment from there — no hunting for the original centre.
-    const RECENTER_MS = 180;
-    const STILL_PX = 3;
-    let thumbX = 0;
-    let stillSince = 0;
-
-    // Rather than snapping, the centre glides to the thumb over ~0.1s, so the
-    // turn fades out smoothly instead of stopping with a notch.
-    const RECENTER_GLIDE = 12; // per second
-    let lastGlide = 0;
-    function recentreIfStill(now) {
-      const dt = Math.min(0.05, (now - lastGlide) / 1000);
-      lastGlide = now;
-      if (stickTouch == null || input.slide === 0) return;
-      if (now - stillSince < RECENTER_MS) return;
-      const gap = thumbX - stickOrigin.x;
-      stickOrigin.x = Math.abs(gap) < 0.5 ? thumbX : stickOrigin.x + gap * Math.min(1, RECENTER_GLIDE * dt);
-      stickBase.style.left = `${stickOrigin.x}px`;
-      applySlide(thumbX);
-    }
-
+    // The slider's centre follows the thumb: slide past the point where the
+    // turn is already at full rate and the centre is dragged along with you.
+    // So the turn you've dialled in is held for as long as you hold it, but
+    // there's never any extra travel stored up — reverse and the turn eases
+    // off straight away, from wherever your thumb happens to be.
     function stickStart(id, x, y) {
       stickTouch = id;
       stickOrigin = { x, y };
-      thumbX = x;
-      stillSince = performance.now();
       stickZone.classList.add('used');
       stickBase.style.left = `${x}px`;
       stickBase.style.top = `${y}px`;
@@ -109,22 +88,21 @@
     // doesn't turn harder — it just keeps the turn going.
     const SLIDE_DEAD = 8; // a resting thumb's wobble = straight ahead
     const SLIDE_RAMP = 20; // small moves give small, immediate turns
-    const SLIDE_MAX = 48; // how far the knob can travel visually
     const SLIDER_STEER = 0.55; // fraction of the tractor's full turn rate
     function stickMove(x) {
-      if (Math.abs(x - thumbX) > STILL_PX) {
-        thumbX = x;
-        stillSince = performance.now();
-      }
       applySlide(x);
     }
     function applySlide(x) {
-      const dx = Math.max(-SLIDE_MAX, Math.min(SLIDE_MAX, x - stickOrigin.x));
+      const reach = SLIDE_DEAD + SLIDE_RAMP;
+      if (x - stickOrigin.x > reach) stickOrigin.x = x - reach;
+      if (stickOrigin.x - x > reach) stickOrigin.x = x + reach;
+      stickBase.style.left = `${stickOrigin.x}px`;
+      const dx = x - stickOrigin.x;
       stickKnob.style.transform = `translateX(${dx}px)`;
-      // Smoothstep out of the dead zone: no kink where the turn begins or
-      // where it reaches full rate.
+      // Eases out of the dead zone (no kink where the turn begins) but
+      // responds straight away when you back off from a full turn.
       const t = Math.min(1, Math.max(0, Math.abs(dx) - SLIDE_DEAD) / SLIDE_RAMP);
-      const ramp = t * t * (3 - 2 * t);
+      const ramp = t * t * (2 - t);
       input.slide = ramp < 0.01 ? 0 : Math.sign(dx) * SLIDER_STEER * ramp;
     }
     function stickEnd() {
@@ -492,7 +470,7 @@
       touch: {
         title: 'Phone controls',
         rows: [
-          ['👆', 'Steer', 'Put your thumb anywhere on the <b>left half</b> of the screen and slide <b>left or right</b> to turn. Stop sliding and the tractor holds the angle it has turned to; the slider resets under your thumb, so the next slide is a fresh adjustment. For a long bend, keep easing your thumb that way.'],
+          ['👆', 'Steer', 'Put your thumb anywhere on the <b>left half</b> of the screen and slide <b>left or right</b> to turn. Hold your thumb still and the turn you\'ve dialled in is held. Sliding further doesn\'t store up extra turn, so sliding back eases off straight away. Lift your thumb to go straight.'],
           ['🚜', 'Gas', 'Automatic — you’re always on the throttle.'],
           ['🔥', 'Nitro', 'Tap <b>NITRO</b> for a burst of speed. Counter at the top right.'],
           ['🛑', 'Brake', 'Hold <b>BRAKE</b> to slow down. Keep holding when stopped to reverse out of trouble.'],
@@ -734,7 +712,6 @@
     }
 
     function frame(now) {
-      recentreIfStill(now);
       rafId = requestAnimationFrame(frame);
       const dt = lastNow ? Math.min(0.1, (now - lastNow) / 1000) : 0;
       lastNow = now;
