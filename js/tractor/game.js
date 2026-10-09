@@ -46,7 +46,7 @@
     } catch (e) {
       // Ignore.
     }
-    raceEl.classList.toggle('tilt', tilt);
+    renderer.setTilt(tilt);
     function setTilt(on) {
       tilt = on;
       try {
@@ -54,10 +54,9 @@
       } catch (e) {
         // Ignore.
       }
-      raceEl.classList.toggle('tilt', on);
+      renderer.setTilt(on);
       if (mounted) layout();
     }
-    const TILT_OVERSIZE = 1.5;
 
     let banner = null;
     let finalLapShown = false;
@@ -347,13 +346,12 @@
       const vw = root.innerWidth;
       const vh = root.innerHeight;
       if (viewMode === 'chase') {
-        // Tilted, the canvas is drawn oversized (not scaled up) so it still
-        // fills the screen and stays sharp.
-        const k = tilt ? TILT_OVERSIZE : 1;
-        renderer.resize(Math.round(vw * k), Math.round(vh * k));
+        renderer.resize(vw, vh);
       } else {
-        const k = Math.min(vw / WORLD.width, vh / WORLD.height);
-        renderer.resize(Math.floor(WORLD.width * k), Math.floor(WORLD.height * k));
+        // Fit the whole track (taller or shorter when tilted in 2.5D).
+        const aspect = renderer.aspect;
+        const k = Math.min(vw / aspect, vh);
+        renderer.resize(Math.floor(k * aspect), Math.floor(k));
       }
       raceEl.classList.toggle('portrait', vh > vw);
     }
@@ -567,8 +565,8 @@
       showRaceScreen(true);
       raceEl.classList.toggle('chase', viewMode === 'chase');
       renderViewButton();
-      layout();
       renderer.setTrack(track);
+      layout(); // after the track: a tilted track's shape depends on it
       renderer.clearSkids();
       stickEnd();
       input.brake = false;

@@ -786,17 +786,8 @@ body.in-race .topbar { display: none; }
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
-#tractor-canvas { display: block; transition: transform 0.35s ease; }
+#tractor-canvas { display: block; }
 .race-screen { overflow: hidden; }
-/* 2.5D: tip the table back so the far side of the track recedes. */
-.race-screen.tilt #tractor-canvas {
-  transform: perspective(1100px) rotateX(34deg) scale(1.08);
-  transform-origin: 50% 55%;
-}
-.race-screen.tilt.chase #tractor-canvas {
-  transform: perspective(1300px) rotateX(38deg);
-  transform-origin: 50% 50%;
-}
 
 .hud {
   position: absolute;

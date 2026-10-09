@@ -17,6 +17,12 @@
     let particles = [];
     let lastTime = 0;
     let lastSkid = new Map();
+    // 2.5D: a tilted camera. World (x, y, z) lands at (x, y·C + top − z·S) in
+    // "projected" units; flat top-down is C = 1, S = 0, top = 0.
+    let proj = FLAT;
+    let tilted = false;
+    let tallProps = []; // pre-rendered tall scenery, depth-sorted each frame
+    const PH = () => H * proj.C + proj.top; // projected world height
 
     // In chase view this many world pixels fit top-to-bottom on screen.
     const CHASE_VIEW_H = 300;
@@ -30,6 +36,13 @@
       canvas.width = Math.round(cssW * dpr);
       canvas.height = Math.round(cssH * dpr);
       if (track) buildLayers();
+    }
+
+    function setTilt(on) {
+      if (on === tilted) return;
+      tilted = on;
+      cam = null;
+      if (track) buildLayers(true);
     }
 
     function setMode(m) {
@@ -49,7 +62,8 @@
 
     // Layers are drawn once at a resolution sharp enough for the current view.
     function buildLayers(force) {
-      const full = Math.min(canvas.width / W, canvas.height / H);
+      proj = tilted ? tiltFor(track) : FLAT;
+      const full = Math.min(canvas.width / W, canvas.height / PH());
       const want = mode === 'chase' ? canvas.height / CHASE_VIEW_H : full;
       const next = Math.min(Math.max(full, want), MAX_LAYER_W / W);
       const keepSkids = skid.width && Math.abs(next - layerScale) < 1e-6;
@@ -57,12 +71,17 @@
       if (keepSkids && !force) return;
       for (const c of [bg, skid]) {
         c.width = Math.round(W * layerScale);
-        c.height = Math.round(H * layerScale);
+        c.height = Math.round(PH() * layerScale);
       }
       const b = bg.getContext('2d');
-      b.setTransform(layerScale, 0, 0, layerScale, 0, 0);
-      drawBackground(b, track);
-      skid.getContext('2d').setTransform(layerScale, 0, 0, layerScale, 0, 0);
+      groundTransform(b, layerScale, proj);
+      drawBackground(b, track, proj);
+      tallProps = [];
+      if (proj.on) {
+        drawRaisedStatics(b, track, layerScale, proj);
+        tallProps = buildTallProps(track, layerScale, proj);
+      }
+      groundTransform(skid.getContext('2d'), layerScale, proj);
       lastSkid = new Map();
     }
 
@@ -230,6 +249,10 @@
           starPath(ctx, p.x, p.y, 7, 16, 7);
           fillStroke(ctx, '#fff6a8', 2, '#e09a14');
         } else if (p.type === 'text') {
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          unsquash(ctx, proj, 0);
+          ctx.translate(-p.x, -p.y);
           ctx.globalAlpha = Math.min(1, k * 2.5);
           ctx.font = `20px ${FONT}`;
           ctx.textAlign = 'center';
@@ -239,6 +262,7 @@
           ctx.strokeText(p.text, p.x, p.y);
           ctx.fillStyle = p.color;
           ctx.fillText(p.text, p.x, p.y);
+          ctx.restore();
         }
         ctx.globalAlpha = 1;
       }
@@ -250,11 +274,12 @@
     function viewRect(sim, dt) {
       const cw = canvas.width;
       const ch = canvas.height;
+      const ph = PH();
       if (mode === 'full') {
-        const k = Math.min(cw / W, ch / H);
+        const k = Math.min(cw / W, ch / ph);
         const rw = cw / k;
         const rh = ch / k;
-        return { k, rx: (W - rw) / 2, ry: (H - rh) / 2, rw, rh };
+        return { k, rx: (W - rw) / 2, ry: (ph - rh) / 2, rw, rh };
       }
       const k = ch / CHASE_VIEW_H;
       const rw = cw / k;
@@ -262,13 +287,13 @@
       const me = sim.racers[0];
       // Look ahead in the direction of travel, like Micro Machines.
       const tx = me.x + me.vx * 0.45;
-      const ty = me.y + me.vy * 0.45;
+      const ty = (me.y + me.vy * 0.45) * proj.C + proj.top;
       if (!cam) cam = { x: tx, y: ty };
       const f = 1 - Math.exp(-dt * 5);
       cam.x += (tx - cam.x) * f;
       cam.y += (ty - cam.y) * f;
       const clampAxis = (c, size, world) => (size >= world ? (world - size) / 2 : Math.max(0, Math.min(world - size, c - size / 2)));
-      return { k, rx: clampAxis(cam.x, rw, W), ry: clampAxis(cam.y, rh, H), rw, rh };
+      return { k, rx: clampAxis(cam.x, rw, W), ry: clampAxis(cam.y, rh, ph), rw, rh };
     }
 
     // Copy the visible part of a pre-rendered layer to the canvas.
@@ -276,7 +301,7 @@
       const x0 = Math.max(0, v.rx);
       const y0 = Math.max(0, v.ry);
       const x1 = Math.min(W, v.rx + v.rw);
-      const y1 = Math.min(H, v.ry + v.rh);
+      const y1 = Math.min(PH(), v.ry + v.rh);
       if (x1 <= x0 || y1 <= y0) return;
       ctx.drawImage(
         layer,
@@ -305,16 +330,31 @@
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       blitLayer(bg, v);
       blitLayer(skid, v);
-      ctx.setTransform(v.k, 0, 0, v.k, -v.rx * v.k, -v.ry * v.k);
+      const world = () => ctx.setTransform(v.k, 0, 0, v.k * proj.C, -v.rx * v.k, (proj.top - v.ry) * v.k);
+      world();
 
       drawFlagman(ctx, sim, view, now);
       for (const p of sim.pickups) drawPickup(ctx, p, now);
       drawParticles('under');
 
       const order = sim.racers.slice().sort((a, b) => a.z - b.z || a.y - b.y);
-      for (const a of sim.animals || []) drawFarmAnimal(ctx, a, now);
-      for (const r of order) drawShadow(ctx, r);
-      for (const r of order) drawTractor(ctx, r, now);
+      for (const r of order) drawShadow(ctx, r, proj);
+      if (!proj.on) {
+        for (const a of sim.animals || []) drawFarmAnimal(ctx, a, now, proj);
+        for (const r of order) drawTractor(ctx, r, now, proj);
+      } else {
+        // Everything with height, back to front.
+        const items = [
+          ...order.map((r) => ({ y: r.y, draw: () => drawTractor(ctx, r, now, proj) })),
+          ...(sim.animals || []).map((a) => ({ y: a.y, draw: () => drawFarmAnimal(ctx, a, now, proj) })),
+          ...tallProps.map((tp) => ({ y: tp.y, draw: () => {
+            ctx.setTransform(v.k, 0, 0, v.k, -v.rx * v.k, -v.ry * v.k);
+            ctx.drawImage(tp.img, tp.px, tp.py, tp.pw, tp.ph);
+            world();
+          } })),
+        ].sort((a, b) => a.y - b.y);
+        for (const it of items) it.draw();
+      }
       drawParticles('over');
 
       // Marker over the player for the first moments of the race.
@@ -322,7 +362,9 @@
       if (view.showYou) {
         const bob = Math.sin(now / 150) * 3;
         ctx.save();
-        ctx.translate(me.x, me.y - 30 - me.z + bob);
+        ctx.translate(me.x, me.y);
+        unsquash(ctx, proj, me.z + (proj.on ? TRACTOR_H : 0));
+        ctx.translate(0, -30 - (proj.on ? 0 : me.z) + bob);
         ctx.beginPath();
         ctx.moveTo(-8, -6);
         ctx.lineTo(8, -6);
@@ -360,7 +402,7 @@
       for (const r of sim.racers) {
         if (r.isPlayer) continue;
         const sx = (r.x - v.rx) * v.k;
-        const sy = (r.y - v.ry) * v.k;
+        const sy = (r.y * proj.C + proj.top - v.ry) * v.k;
         if (sx > 0 && sx < cw && sy > 0 && sy < ch) continue;
         const dx = sx - cx;
         const dy = sy - cy;
@@ -423,7 +465,12 @@
       ctx.globalAlpha = 1;
     }
 
-    return { resize, setTrack, setMode, draw, addEvents, clearSkids, get mode() { return mode; } };
+    return {
+      resize, setTrack, setMode, setTilt, draw, addEvents, clearSkids,
+      get mode() { return mode; },
+      // Width ÷ height of the whole (possibly tilted) world, for sizing.
+      get aspect() { return W / PH(); },
+    };
   }
 
   // ---------- Drawing helpers ----------
@@ -479,15 +526,219 @@
 
   // ---------- Background ----------
 
-  function drawBackground(c, t) {
+  // Hay bales with tyre stacks along both edges. Items are spaced by
+  // distance along the edge itself, so they don't bunch up on the inside of
+  // bends; where the edge curves tightly, round oil barrels replace the
+  // long bales.
+  function wallItems(t) {
+    const items = [];
+    for (const side of [-1, 1]) {
+      const off = side * (t.halfWidth + 7);
+      const pts = t.samples.map((s) => ({ x: s.x + s.nx * off, y: s.y + s.ny * off, angle: s.angle }));
+      let travelled = 0;
+      let nextAt = 0;
+      let placed = 0;
+      for (let i = 0; i < t.count; i++) {
+        const p = pts[i];
+        const prev = pts[(i - 1 + t.count) % t.count];
+        if (i > 0) travelled += Math.hypot(p.x - prev.x, p.y - prev.y);
+        if (travelled < nextAt) continue;
+        if (p.x < -10 || p.x > W + 10 || p.y < -10 || p.y > H + 10) continue;
+        // On the inside of tight bends the offset edge folds back over the
+        // road; don't put anything where there's driving surface.
+        if (onSurface(t, p.x, p.y, t.halfWidth + 3)) continue;
+        // Local radius of this edge, from how fast it turns.
+        const a0 = pts[(i - 3 + t.count) % t.count];
+        const a1 = pts[(i + 3) % t.count];
+        let turn = a1.angle - a0.angle;
+        while (turn > Math.PI) turn -= Math.PI * 2;
+        while (turn < -Math.PI) turn += Math.PI * 2;
+        const edgeLen = Math.hypot(a1.x - a0.x, a1.y - a0.y);
+        const tight = edgeLen / Math.max(0.001, Math.abs(turn)) < BARREL_RADIUS;
+        let kind;
+        if (placed % 9 === 0) {
+          kind = 'tyre';
+          nextAt = travelled + 20;
+        } else if (tight) {
+          kind = 'barrel';
+          nextAt = travelled + 18;
+        } else {
+          kind = 'bale';
+          nextAt = travelled + 25;
+        }
+        items.push({ kind, x: p.x, y: p.y, angle: p.angle, n: placed });
+        placed++;
+      }
+    }
+    return items;
+  }
+
+  const WALL_HEIGHT = { bale: 9, tyre: 12, barrel: 14 };
+  const WALL_SIDE = { bale: '#a8842f', tyre: '#151515', barrel: null };
+
+  // The footprint of a wall item, as a path at the origin.
+  function wallFootprint(c, it) {
+    if (it.kind === 'bale') {
+      c.rotate(it.angle);
+      roundRect(c, -12, -7, 24, 14, 3);
+    } else {
+      circle(c, 0, 0, it.kind === 'tyre' ? 8 : 9);
+    }
+  }
+
+  function drawWallTop(c, it) {
+    if (it.kind === 'tyre') {
+      drawTyreStack(c, it.x, it.y, Math.floor(it.n / 9) % 2);
+    } else if (it.kind === 'barrel') {
+      drawBarrel(c, it.x, it.y, it.n);
+    } else {
+      c.save();
+      c.translate(it.x, it.y);
+      c.rotate(it.angle);
+      roundRect(c, -12, -7, 24, 14, 3);
+      fillStroke(c, it.n % 2 ? '#e6bd55' : '#dcb04a', 1.8);
+      c.strokeStyle = 'rgba(120,80,20,0.6)';
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(-4, -6);
+      c.lineTo(-4, 6);
+      c.moveTo(4, -6);
+      c.lineTo(4, 6);
+      c.stroke();
+      c.restore();
+    }
+  }
+
+  // ---------- 2.5D projection ----------
+
+  const FLAT = { on: false, C: 1, S: 0, top: 0 };
+  const TILT_ANGLE = 0.72; // radians the camera tips back from straight down
+  const TRACTOR_H = 7; // body height of a tractor in the 2.5D view
+
+  // Tall scenery: how high it stands, its footprint, side colour and the
+  // radius of its picture (for the pre-rendered sprite).
+  const TALL = {
+    barn: { h: 42, r: 66, side: '#8f2a21', foot: (c) => roundRect(c, -60, -40, 120, 80, 5) },
+    silo: { h: 70, r: 34, side: '#8a949c', foot: (c) => circle(c, 0, 0, 30) },
+    hay: { h: 24, r: 54, side: '#b08a30', foot: (c) => roundRect(c, -48, -28, 94, 54, 4) },
+    tree: { h: 46, r: 42, side: '#2f7a2c', trunk: { r: 7, h: 20, side: '#6b4423' }, foot: (c) => circle(c, 0, 0, 36) },
+    windmill: { h: 58, r: 56, side: '#a8946a', foot: (c) => circle(c, 0, 0, 15) },
+  };
+  const LOW = { corn: { h: 10, side: '#5d7d2a', foot: (c) => roundRect(c, -72, -36, 144, 72, 6) } };
+
+  function tiltFor(t) {
+    const C = Math.cos(TILT_ANGLE);
+    const S = Math.sin(TILT_ANGLE);
+    // Room at the top for the grandstand and anything tall near the edge.
+    let top = 34 * S + 6;
+    for (const sc of t.scenery) {
+      const k = TALL[sc.kind];
+      if (!k) continue;
+      const sz = sc.scale || 1;
+      top = Math.max(top, k.h * sz * S + k.r * sz * C - sc.y * C + 4);
+    }
+    return { on: true, C, S, top };
+  }
+
+  // Ground-plane drawing transform for a canvas at `scale` px per unit.
+  function groundTransform(c, scale, p, z = 0) {
+    c.setTransform(scale, 0, 0, scale * p.C, 0, (p.top - z * p.S) * scale);
+  }
+
+  // At the current origin, undo the ground squash (for upright text and
+  // markers) and lift by z.
+  function unsquash(ctx, p, z) {
+    if (!p.on) return;
+    ctx.scale(1, 1 / p.C);
+    ctx.translate(0, -z * p.S);
+  }
+
+  // Draws a solid: `foot` (a path at the origin) stacked from z0 up to z1 in
+  // the side colour, then `top` drawn at z1.
+  function extrude(c, scale, p, x, y, z0, z1, side, foot, top) {
+    const step = Math.max(0.35, 1 / (p.S * scale));
+    c.fillStyle = side;
+    for (let z = z0; z < z1; z += step) {
+      groundTransform(c, scale, p, z);
+      c.translate(x, y);
+      foot(c);
+      c.fill();
+    }
+    if (top) {
+      groundTransform(c, scale, p, z1);
+      c.translate(x, y);
+      top(c);
+    }
+  }
+
+  // Grandstand, low crops and the walls go straight into the background.
+  function drawRaisedStatics(c, t, scale, p) {
+    const rng = root.FarmRng.mulberry32(t.id.length * 7919 + t.count);
+    extrude(c, scale, p, 0, 0, 0, 34, '#6e4520', (cc) => { cc.beginPath(); cc.rect(300, -3, 600, 49); }, (cc) => drawGrandstand(cc, rng));
+    for (const sc of t.scenery) {
+      const k = LOW[sc.kind];
+      if (!k) continue;
+      const sz = sc.scale || 1;
+      extrude(c, scale, p, sc.x, sc.y, 0, k.h * sz, k.side, (cc) => { cc.scale(sz, sz); k.foot(cc); }, (cc) => {
+        cc.translate(-sc.x, -sc.y);
+        drawScenery(cc, sc, rng, { noShadow: true });
+      });
+    }
+    const items = wallItems(t).sort((a, b) => a.y - b.y);
+    for (const it of items) {
+      const side = WALL_SIDE[it.kind] || shade(['#2f6fd0', '#e2412f', '#2e9a47'][it.n % 3], -0.22);
+      extrude(c, scale, p, it.x, it.y, 0, WALL_HEIGHT[it.kind], side, (cc) => wallFootprint(cc, it), (cc) => {
+        cc.translate(-it.x, -it.y);
+        drawWallTop(cc, it);
+      });
+    }
+    groundTransform(c, scale, p);
+  }
+
+  // Barns, silos, trees, haystacks and windmills are pre-rendered one by
+  // one, so tractors can pass in front of and behind them.
+  function buildTallProps(t, scale, p) {
+    const rng = root.FarmRng.mulberry32(t.id.length * 4241 + t.count);
+    const out = [];
+    for (const sc of t.scenery) {
+      const k = TALL[sc.kind];
+      if (!k) continue;
+      const sz = sc.scale || 1;
+      const r = k.r * sz;
+      const h = k.h * sz;
+      const pw = r * 2;
+      const ph = r * 2 * p.C + h * p.S;
+      const img = document.createElement('canvas');
+      img.width = Math.ceil(pw * scale);
+      img.height = Math.ceil(ph * scale);
+      const c = img.getContext('2d');
+      // Local projection: the item's base centre sits at (r, r·C + h·S).
+      const local = { ...p, top: r * p.C + h * p.S };
+      const foot = (cc) => { cc.scale(sz, sz); k.foot(cc); };
+      const top = (cc) => drawScenery(cc, { ...sc, x: 0, y: 0 }, rng, { noShadow: true });
+      if (k.trunk) {
+        const tr = k.trunk;
+        extrude(c, scale, local, r, 0, 0, tr.h * sz, tr.side, (cc) => { cc.scale(sz, sz); circle(cc, 0, 0, tr.r); }, null);
+        extrude(c, scale, local, r, 0, tr.h * sz, h, k.side, foot, top);
+      } else {
+        extrude(c, scale, local, r, 0, 0, h, k.side, foot, top);
+      }
+      out.push({ img, y: sc.y, px: sc.x - r, py: sc.y * p.C + p.top - r * p.C - h * p.S, pw, ph });
+    }
+    return out;
+  }
+
+  function drawBackground(c, t, proj = FLAT) {
     const rng = root.FarmRng.mulberry32(t.id.length * 7919 + t.count);
 
+    // In 2.5D the grass also runs up behind the grandstand.
+    const y0 = proj.on ? -proj.top / proj.C : 0;
     c.fillStyle = '#6fbf4f';
-    c.fillRect(0, 0, W, H);
+    c.fillRect(0, y0, W, H - y0);
     // Mown stripes and tufts.
     for (let x = 0; x < W; x += 80) {
       c.fillStyle = (x / 80) % 2 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
-      c.fillRect(x, 0, 80, H);
+      c.fillRect(x, y0, 80, H - y0);
     }
     c.strokeStyle = 'rgba(30, 100, 30, 0.35)';
     c.lineWidth = 1.5;
@@ -502,10 +753,27 @@
     }
 
     // Grandstand with crowd along the top edge.
-    drawGrandstand(c, rng);
+    if (!proj.on) drawGrandstand(c, rng);
 
-    // Scenery in the infield and margins.
-    for (const sc of t.scenery) drawScenery(c, sc, rng);
+    // Scenery in the infield and margins (in 2.5D, only what lies flat;
+    // tall things get a shadow here and are stood up separately).
+    for (const sc of t.scenery) {
+      if (!proj.on) {
+        drawScenery(c, sc, rng);
+      } else if (TALL[sc.kind]) {
+        const k = TALL[sc.kind];
+        const sz = sc.scale || 1;
+        c.save();
+        c.translate(sc.x + k.h * sz * 0.35, sc.y + k.h * sz * 0.25);
+        c.scale(sz * 1.05, sz * 1.05);
+        k.foot(c);
+        c.fillStyle = 'rgba(0,0,0,0.2)';
+        c.fill();
+        c.restore();
+      } else if (!LOW[sc.kind]) {
+        drawScenery(c, sc, rng);
+      }
+    }
 
     // Track: outer berm, then dirt.
     c.lineJoin = 'round';
@@ -562,59 +830,8 @@
     }
     c.restore();
 
-    // Walls: hay bales with tyre stacks along both edges. Items are spaced
-    // by distance along the edge itself, so they don't bunch up on the
-    // inside of bends; where the edge curves tightly, round oil barrels
-    // replace the long bales.
-    for (const side of [-1, 1]) {
-      const off = side * (t.halfWidth + 7);
-      const pts = t.samples.map((s) => ({ x: s.x + s.nx * off, y: s.y + s.ny * off, angle: s.angle }));
-      let travelled = 0;
-      let nextAt = 0;
-      let placed = 0;
-      for (let i = 0; i < t.count; i++) {
-        const p = pts[i];
-        const prev = pts[(i - 1 + t.count) % t.count];
-        if (i > 0) travelled += Math.hypot(p.x - prev.x, p.y - prev.y);
-        if (travelled < nextAt) continue;
-        if (p.x < -10 || p.x > W + 10 || p.y < -10 || p.y > H + 10) continue;
-        // On the inside of tight bends the offset edge folds back over the
-        // road; don't draw anything where there's driving surface.
-        if (onSurface(t, p.x, p.y, t.halfWidth + 3)) continue;
-        // Local radius of this edge, from how fast it turns.
-        const a0 = pts[(i - 3 + t.count) % t.count];
-        const a1 = pts[(i + 3) % t.count];
-        let turn = a1.angle - a0.angle;
-        while (turn > Math.PI) turn -= Math.PI * 2;
-        while (turn < -Math.PI) turn += Math.PI * 2;
-        const edgeLen = Math.hypot(a1.x - a0.x, a1.y - a0.y);
-        const tight = edgeLen / Math.max(0.001, Math.abs(turn)) < BARREL_RADIUS;
-        if (placed % 9 === 0) {
-          drawTyreStack(c, p.x, p.y, Math.floor(placed / 9) % 2);
-          nextAt = travelled + 20;
-        } else if (tight) {
-          drawBarrel(c, p.x, p.y, placed);
-          nextAt = travelled + 18;
-        } else {
-          c.save();
-          c.translate(p.x, p.y);
-          c.rotate(p.angle);
-          roundRect(c, -12, -7, 24, 14, 3);
-          fillStroke(c, placed % 2 ? '#e6bd55' : '#dcb04a', 1.8);
-          c.strokeStyle = 'rgba(120,80,20,0.6)';
-          c.lineWidth = 1;
-          c.beginPath();
-          c.moveTo(-4, -6);
-          c.lineTo(-4, 6);
-          c.moveTo(4, -6);
-          c.lineTo(4, 6);
-          c.stroke();
-          c.restore();
-          nextAt = travelled + 25;
-        }
-        placed++;
-      }
-    }
+    // Walls (flat view only; the 2.5D view raises them separately).
+    if (!proj.on) for (const it of wallItems(t)) drawWallTop(c, it);
 
     // Title sign.
     c.save();
@@ -764,14 +981,15 @@
     c.restore();
   }
 
-  function drawScenery(c, sc, rng) {
+  function drawScenery(c, sc, rng, opts = {}) {
     const { x, y } = sc;
+    const shadows = !opts.noShadow;
     c.save();
     c.translate(x, y);
     if (sc.scale) c.scale(sc.scale, sc.scale);
     if (sc.kind === 'barn') {
       c.fillStyle = 'rgba(0,0,0,0.22)';
-      c.fillRect(-60 + 6, -40 + 6, 120, 80);
+      if (shadows) c.fillRect(-60 + 6, -40 + 6, 120, 80);
       roundRect(c, -60, -40, 120, 80, 5);
       fillStroke(c, '#c8382c', 3);
       c.fillStyle = '#e04a3c';
@@ -793,7 +1011,7 @@
     } else if (sc.kind === 'silo') {
       c.fillStyle = 'rgba(0,0,0,0.22)';
       circle(c, 5, 6, 30);
-      c.fill();
+      if (shadows) c.fill();
       circle(c, 0, 0, 30);
       fillStroke(c, '#b9c2c9', 3);
       circle(c, 0, 0, 18);
@@ -827,7 +1045,7 @@
     } else if (sc.kind === 'tree') {
       c.fillStyle = 'rgba(0,0,0,0.2)';
       circle(c, 8, 10, 36);
-      c.fill();
+      if (shadows) c.fill();
       circle(c, 0, 0, 36);
       fillStroke(c, '#3f9a3a', 3);
       for (let i = 0; i < 5; i++) {
@@ -849,7 +1067,7 @@
     } else if (sc.kind === 'windmill') {
       c.fillStyle = 'rgba(0,0,0,0.22)';
       circle(c, 6, 8, 24);
-      c.fill();
+      if (shadows) c.fill();
       circle(c, 0, 0, 24);
       fillStroke(c, '#c9b48a', 3);
       for (let i = 0; i < 4; i++) {
@@ -953,12 +1171,19 @@
 
   // Escaped animals reuse the Hay Bale Derby artwork, a bit smaller.
   const ANIMAL_SCALE = 0.47;
-  function drawFarmAnimal(ctx, a, now) {
+  function drawFarmAnimal(ctx, a, now, p = FLAT) {
     const art = root.HayRender && root.HayRender.drawAnimal;
     if (!art) return;
     ctx.save();
     ctx.translate(a.x, a.y);
-    if (a.z > 0) {
+    if (p.on) {
+      // Shadow on the ground, animal standing a little above it.
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      ctx.beginPath();
+      ctx.ellipse(2, 3, a.r * 1.1, a.r * 0.85, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.translate(0, -((a.z + 6) * p.S) / p.C);
+    } else if (a.z > 0) {
       ctx.fillStyle = 'rgba(0,0,0,0.2)';
       ctx.beginPath();
       ctx.ellipse(a.z * 0.3, a.z * 0.5, a.r, a.r * 0.75, 0, 0, Math.PI * 2);
@@ -980,10 +1205,11 @@
     ctx.restore();
   }
 
-  function drawShadow(ctx, r) {
-    const s = 1 + r.z / 120;
+  function drawShadow(ctx, r, p = FLAT) {
+    const s = p.on ? 1 + r.z / 300 : 1 + r.z / 120;
     ctx.save();
-    ctx.translate(r.x + 4 + r.z * 0.35, r.y + 5 + r.z * 0.6);
+    if (p.on) ctx.translate(r.x + 3, r.y + 4);
+    else ctx.translate(r.x + 4 + r.z * 0.35, r.y + 5 + r.z * 0.6);
     ctx.rotate(r.heading + (r.drift || 0));
     ctx.globalAlpha = Math.max(0.12, 0.3 - r.z / 300);
     roundRect(ctx, -18 * s, -13 * s, 36 * s, 26 * s, 8);
@@ -999,13 +1225,35 @@
   }
 
   // Tractor drawn facing +x: big rear wheels at the back, small steerable fronts.
-  function drawTractor(ctx, r, now) {
-    const s = 1 + r.z / 120;
+  function drawTractor(ctx, r, now, p = FLAT) {
     const shake = r.bump > 0 ? Math.sin(now / 18 + r.id) * r.bump * 1.5 : 0;
+    const body = r.heading + (r.drift || 0);
     ctx.save();
-    ctx.translate(r.x, r.y - r.z * 0.4 + shake);
-    ctx.rotate(r.heading + (r.drift || 0));
-    ctx.scale(s, s);
+    if (p.on) {
+      // Stand the tractor up: a dark body block, then the tractor on top.
+      const lift = (z) => -(z * p.S) / p.C;
+      ctx.translate(r.x, r.y + shake);
+      for (let z = 0; z < TRACTOR_H; z += 1) {
+        ctx.save();
+        ctx.translate(0, lift(r.z + z));
+        ctx.rotate(body);
+        // Big tyres at the back, the body in a darker shade of the paint.
+        ctx.fillStyle = '#1e1e1e';
+        roundRect(ctx, -17, -16, 16, 32, 3);
+        ctx.fill();
+        ctx.fillStyle = shade(r.color, -0.3);
+        roundRect(ctx, -2, -7, 20, 14, 4);
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.translate(0, lift(r.z + TRACTOR_H));
+      ctx.rotate(body);
+    } else {
+      const s = 1 + r.z / 120;
+      ctx.translate(r.x, r.y - r.z * 0.4 + shake);
+      ctx.rotate(body);
+      ctx.scale(s, s);
+    }
 
     // Rear wheels with tread.
     for (const side of [-1, 1]) {
