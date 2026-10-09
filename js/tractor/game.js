@@ -267,9 +267,10 @@
       if (padTouches.delete('mouse')) updatePad();
     });
 
-    let steerMode = 'slider';
+    // Buttons are the default; the slider is the alternative.
+    let steerMode = 'buttons';
     try {
-      if (localStorage.getItem(STEER_KEY) === 'buttons') steerMode = 'buttons';
+      if (localStorage.getItem(STEER_KEY) === 'slider') steerMode = 'slider';
     } catch (e) {
       // Ignore.
     }
@@ -601,7 +602,7 @@
     function steerText() {
       return steerMode === 'buttons'
         ? 'Hold <b>◀</b> or <b>▶</b> at the bottom left to turn — tap for a small nudge, hold for a steady turn. Let go and the tractor keeps the direction it\'s pointing. You can rock your thumb between them without lifting. (Switch back to the slider from the pause menu.)'
-        : 'Put your thumb anywhere on the <b>left half</b> of the screen and slide <b>left or right</b> to turn. Hold your thumb still for a moment and it\'s just like lifting it: the tractor stops turning and keeps the direction it\'s pointing, and the slider re-centres under your thumb.' + ' (Prefer buttons? Switch from the pause menu.)';
+        : 'Put your thumb anywhere on the <b>left half</b> of the screen and slide <b>left or right</b> to turn. Hold your thumb still for a moment and it\'s just like lifting it: the tractor stops turning and keeps the direction it\'s pointing, and the slider re-centres under your thumb.' + ' (Switch back to buttons from the pause menu.)';
     }
     const CONTROLS = {
       touch: {

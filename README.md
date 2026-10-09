@@ -12,11 +12,10 @@ A single-screen, top-down off-road race in the style of the classic arcade *Supe
 tractors on a dirt track ringed with hay bales and tyres, with jumps, mud, water splashes and
 bumps.
 
-- **Controls (phone):** put your thumb anywhere on the left half of the screen and slide left
-  or right to steer at a steady rate (sliding further doesn't turn harder). Hold your thumb
-  still for a moment and it's just like lifting it: the turn stops, the tractor keeps the
-  direction it's pointing and the slider re-centres under your thumb. Prefer buttons? Switch to
-  **◀ ▶ steering buttons** from the pause menu (tap to nudge, hold for a steady turn).
+- **Controls (phone):** hold the **◀ ▶ steering buttons** bottom-left to turn (tap to nudge, hold
+  for a steady turn; rock your thumb between them without lifting). Prefer a slider? Switch from
+  the pause menu: slide left or right anywhere on the left half to steer at a steady rate; hold
+  still for a moment and it's just like lifting your thumb.
   Gas is automatic. **NITRO** and **BRAKE** (hold to reverse) sit bottom-right. Play in landscape.
 - **2.5D view** (optional): a tilted camera with height — walls, barrels, barns, silos, trees, the windmill, the grandstand and the tractors stand up, and tractors pass in front of and behind tall scenery. Toggle from the pause menu or with **T**; works with either camera and always fits the whole track.
 - **Two camera views**, switchable any time with the 📷 camera button at the top of the race screen, the **V**
