@@ -1668,9 +1668,14 @@
     // Lift each point with the road beside it, smooth, and lay pieces along.
     const walls = [];
     const SIZE = { bale: 13, tyre: 9, barrel: 10 };
-    // Pieces at different heights (a bridge's end over the road below)
-    // need more room, or they look stacked on each other.
-    const clashes = (x, y, r, lift = 0) => walls.some((w) => Math.hypot(w.x - x, w.y - y) < r + SIZE[w.kind] - 3 + (Math.abs(w.gy - w.y - lift) > 8 ? 10 : 0));
+    // Pieces from another stretch of road (where two stretches' walls meet,
+    // as at a bridge's end) or at another height need more room, or they
+    // look stacked on each other.
+    const apart = (a, b) => {
+      const d = Math.abs(a - b);
+      return Math.min(d, t.count - d) > 12;
+    };
+    const clashes = (x, y, r, lift = 0, si = -1) => walls.some((w) => Math.hypot(w.x - x, w.y - y) < r + SIZE[w.kind] - 3 + (Math.abs(w.gy - w.y - lift) > 8 || (si >= 0 && apart(w.si, si)) ? 16 : 0));
     let placed = 0;
     for (const raw of lines) {
       const n = raw.length;
@@ -1720,7 +1725,7 @@
         // A bridge deck has railings instead.
         const dk = deckOf(t, p.si);
         if (dk && dk.slab(p.si)) continue;
-        if (clashes(p.x, p.y, SIZE[kind], p.gy - p.y)) {
+        if (clashes(p.x, p.y, SIZE[kind], p.gy - p.y, p.si)) {
           nextAt = travelled + 4;
           continue;
         }
