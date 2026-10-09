@@ -521,7 +521,7 @@
     drawGrandstand(c, rng);
 
     // Scenery in the infield and margins.
-    for (const sc of t.scenery) drawScenery(c, sc, rng);
+    for (const sc of t.scenery.slice().sort((a, b) => a.y - b.y)) drawSceneryDepth(c, sc, rng);
 
     // Track: outer berm, then dirt.
     c.lineJoin = 'round';
@@ -585,6 +585,7 @@
     // by distance along the edge itself, so they don't bunch up on the
     // inside of bends; where the edge curves tightly, round oil barrels
     // replace the long bales.
+    const walls = [];
     for (const side of [-1, 1]) {
       const off = side * (t.halfWidth + 7);
       const pts = t.samples.map((s) => ({ x: s.x + s.nx * off, y: s.y + s.ny * off, angle: s.angle }));
@@ -610,31 +611,21 @@
         const tight = edgeLen / Math.max(0.001, Math.abs(turn)) < BARREL_RADIUS;
         const py = p.y - liftAt(t, i);
         if (placed % 9 === 0) {
-          drawTyreStack(c, p.x, py, Math.floor(placed / 9) % 2);
+          walls.push({ kind: 'tyre', x: p.x, y: py, n: Math.floor(placed / 9) });
           nextAt = travelled + 20;
         } else if (tight) {
-          drawBarrel(c, p.x, py, placed);
+          walls.push({ kind: 'barrel', x: p.x, y: py, n: placed });
           nextAt = travelled + 18;
         } else {
-          c.save();
-          c.translate(p.x, py);
-          c.rotate(p.angle);
-          roundRect(c, -12, -7, 24, 14, 3);
-          fillStroke(c, placed % 2 ? '#e6bd55' : '#dcb04a', 1.8);
-          c.strokeStyle = 'rgba(120,80,20,0.6)';
-          c.lineWidth = 1;
-          c.beginPath();
-          c.moveTo(-4, -6);
-          c.lineTo(-4, 6);
-          c.moveTo(4, -6);
-          c.lineTo(4, 6);
-          c.stroke();
-          c.restore();
+          walls.push({ kind: 'bale', x: p.x, y: py, n: placed, angle: p.angle });
           nextAt = travelled + 25;
         }
         placed++;
       }
     }
+    // Back to front, so nearer walls overlap the ones behind them.
+    walls.sort((a, b) => a.y - b.y);
+    for (const w of walls) drawWallSolid(c, w);
 
     // Title sign.
     c.save();
@@ -648,6 +639,113 @@
     c.textBaseline = 'middle';
     c.fillText(label, W - w / 2 - 14, H - 22);
     c.restore();
+  }
+
+  // ---------- Depth ----------
+  // Things are drawn the Super Off Road way: a darker side stacked up from
+  // the ground, with the top face `h` px up the screen, so you see their
+  // front and how tall they are.
+  function solid(c, x, y, h, side, foot) {
+    c.fillStyle = side;
+    for (let z = 0; z < h; z += 1) {
+      c.save();
+      c.translate(x, y - z);
+      foot(c);
+      c.fill();
+      c.restore();
+    }
+  }
+
+  const WALL_H = { bale: 9, tyre: 13, barrel: 15 };
+  const BARREL_COLORS = ['#2f6fd0', '#e2412f', '#2e9a47'];
+
+  function drawWallSolid(c, w) {
+    const h = WALL_H[w.kind];
+    // Ground shadow.
+    c.fillStyle = 'rgba(0,0,0,0.18)';
+    c.beginPath();
+    c.ellipse(w.x + 3, w.y + 3, w.kind === 'bale' ? 13 : 10, 7, w.angle || 0, 0, Math.PI * 2);
+    c.fill();
+    if (w.kind === 'bale') {
+      solid(c, w.x, w.y, h, '#a8842f', (cc) => {
+        cc.rotate(w.angle);
+        roundRect(cc, -12, -7, 24, 14, 3);
+      });
+      // Outline down the visible side.
+      c.save();
+      c.translate(w.x, w.y);
+      c.rotate(w.angle);
+      roundRect(c, -12, -7, 24, 14, 3);
+      c.restore();
+      c.strokeStyle = 'rgba(59,42,20,0.5)';
+      c.lineWidth = 1;
+      c.stroke();
+      c.save();
+      c.translate(w.x, w.y - h);
+      c.rotate(w.angle);
+      roundRect(c, -12, -7, 24, 14, 3);
+      fillStroke(c, w.n % 2 ? '#e6bd55' : '#dcb04a', 1.8);
+      c.strokeStyle = 'rgba(120,80,20,0.6)';
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(-4, -6);
+      c.lineTo(-4, 6);
+      c.moveTo(4, -6);
+      c.lineTo(4, 6);
+      c.stroke();
+      c.restore();
+    } else if (w.kind === 'tyre') {
+      // Three tyres stacked: dark rubber with a lighter band between each.
+      for (let z = 0; z < h; z += 1) {
+        circle(c, w.x, w.y - z, 8);
+        c.fillStyle = z % 4 === 3 ? '#4a4a4a' : '#1d1d1d';
+        c.fill();
+      }
+      drawTyreStack(c, w.x, w.y - h, w.n % 2);
+    } else {
+      const col = BARREL_COLORS[w.n % 3];
+      solid(c, w.x, w.y, h, shade(col, -0.22), (cc) => circle(cc, 0, 0, 9));
+      // A rib round the middle of the drum.
+      c.strokeStyle = shade(col, -0.4);
+      c.lineWidth = 1.2;
+      c.beginPath();
+      c.ellipse(w.x, w.y - h / 2, 9, 3, 0, 0, Math.PI);
+      c.stroke();
+      drawBarrel(c, w.x, w.y - h, w.n);
+    }
+  }
+
+  // Scenery heights and footprints (for the sides and ground shadows).
+  const SCENERY_SOLID = {
+    barn: { h: 24, side: '#8f2a21', foot: (c) => roundRect(c, -60, -40, 120, 80, 5) },
+    silo: { h: 40, side: '#8a949c', foot: (c) => circle(c, 0, 0, 30) },
+    hay: { h: 16, side: '#b08a30', foot: (c) => roundRect(c, -48, -28, 94, 54, 4) },
+    windmill: { h: 30, side: '#a8946a', foot: (c) => circle(c, 0, 0, 24) },
+    tree: { h: 18, side: '#6b4423', foot: (c) => circle(c, 0, 0, 7), canopy: true },
+  };
+
+  function drawSceneryDepth(c, sc, rng) {
+    const d = SCENERY_SOLID[sc.kind];
+    if (!d) {
+      drawScenery(c, sc, rng);
+      return;
+    }
+    const k = sc.scale || 1;
+    const h = d.h * k;
+    // Shadow on the ground, then the sides, then the top.
+    c.save();
+    c.translate(sc.x + 6 * k, sc.y + 6 * k);
+    c.scale(k, k);
+    if (d.canopy) circle(c, 0, 0, 34);
+    else d.foot(c);
+    c.fillStyle = 'rgba(0,0,0,0.2)';
+    c.fill();
+    c.restore();
+    solid(c, sc.x, sc.y, h, d.side, (cc) => {
+      cc.scale(k, k);
+      d.foot(cc);
+    });
+    drawScenery(c, { ...sc, y: sc.y - h }, rng, { noShadow: true });
   }
 
   // Edges that curve tighter than this (px) get oil barrels, not bales.
@@ -862,14 +960,15 @@
     c.restore();
   }
 
-  function drawScenery(c, sc, rng) {
+  function drawScenery(c, sc, rng, opts = {}) {
     const { x, y } = sc;
+    const shadows = !opts.noShadow;
     c.save();
     c.translate(x, y);
     if (sc.scale) c.scale(sc.scale, sc.scale);
     if (sc.kind === 'barn') {
       c.fillStyle = 'rgba(0,0,0,0.22)';
-      c.fillRect(-60 + 6, -40 + 6, 120, 80);
+      if (shadows) c.fillRect(-60 + 6, -40 + 6, 120, 80);
       roundRect(c, -60, -40, 120, 80, 5);
       fillStroke(c, '#c8382c', 3);
       c.fillStyle = '#e04a3c';
@@ -891,7 +990,7 @@
     } else if (sc.kind === 'silo') {
       c.fillStyle = 'rgba(0,0,0,0.22)';
       circle(c, 5, 6, 30);
-      c.fill();
+      if (shadows) c.fill();
       circle(c, 0, 0, 30);
       fillStroke(c, '#b9c2c9', 3);
       circle(c, 0, 0, 18);
@@ -925,7 +1024,7 @@
     } else if (sc.kind === 'tree') {
       c.fillStyle = 'rgba(0,0,0,0.2)';
       circle(c, 8, 10, 36);
-      c.fill();
+      if (shadows) c.fill();
       circle(c, 0, 0, 36);
       fillStroke(c, '#3f9a3a', 3);
       for (let i = 0; i < 5; i++) {
@@ -947,7 +1046,7 @@
     } else if (sc.kind === 'windmill') {
       c.fillStyle = 'rgba(0,0,0,0.22)';
       circle(c, 6, 8, 24);
-      c.fill();
+      if (shadows) c.fill();
       circle(c, 0, 0, 24);
       fillStroke(c, '#c9b48a', 3);
       for (let i = 0; i < 4; i++) {
@@ -1051,6 +1150,7 @@
 
   // Escaped animals reuse the Hay Bale Derby artwork, a bit smaller.
   const ANIMAL_SCALE = 0.47;
+  const ANIMAL_SIDE = { pig: '#c97a8d', sheep: '#bdb6a2', cow: '#8f8f8f' };
   function drawFarmAnimal(ctx, a, now) {
     const art = root.HayRender && root.HayRender.drawAnimal;
     if (!art) return;
@@ -1063,6 +1163,15 @@
       ctx.fill();
       ctx.translate(0, -a.z);
     }
+    // Depth: the animal's body seen side-on below its back, legs to the ground.
+    const AH = 5;
+    ctx.fillStyle = ANIMAL_SIDE[a.kind] || '#999';
+    for (let z = 0; z < AH; z += 1) {
+      ctx.beginPath();
+      ctx.ellipse(0, -z, a.r * 1.05, a.r * 0.78, a.heading, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.translate(0, -AH);
     ctx.scale(ANIMAL_SCALE, ANIMAL_SCALE);
     art(ctx, { ...a, mode: a.mode === 'flee' ? 'walk' : a.mode, x: 0, y: 0, r: a.r / ANIMAL_SCALE, id: a.id + 1 }, now);
     if (a.startle > 0 && a.mode !== 'tumble') {
@@ -1097,14 +1206,72 @@
     return `rgb(${f(n >> 16)}, ${f((n >> 8) & 255)}, ${f(n & 255)})`;
   }
 
+  // Height of each vehicle's sides, and what they look like (facing +x).
+  const VEHICLE_DEPTH = {
+    tractor: {
+      h: 7,
+      sides(ctx, r) {
+        ctx.fillStyle = '#141414';
+        for (const side of [-1, 1]) {
+          roundRect(ctx, -17, side * 11.5 - 4.5, 16, 9, 3);
+          ctx.fill();
+          roundRect(ctx, 6.5, side * 9 - 3, 9, 6, 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = shade(r.color, -0.32);
+        roundRect(ctx, -17, -8, 35, 16, 4);
+        ctx.fill();
+      },
+    },
+    quad: {
+      h: 5,
+      sides(ctx, r) {
+        ctx.fillStyle = '#141414';
+        for (const [x, y] of [[-9, -10], [-9, 10], [11, -9.5], [11, 9.5]]) {
+          roundRect(ctx, x - 5, y - 3, 10, 6, 2.4);
+          ctx.fill();
+        }
+        ctx.fillStyle = shade(r.color, -0.32);
+        roundRect(ctx, -12, -8, 26, 16, 6);
+        ctx.fill();
+      },
+    },
+    motorbike: {
+      h: 5,
+      sides(ctx, r) {
+        ctx.fillStyle = '#141414';
+        roundRect(ctx, -19.5, -2.5, 13, 5, 2);
+        ctx.fill();
+        roundRect(ctx, 8, -2.2, 12, 4.5, 2);
+        ctx.fill();
+        ctx.fillStyle = shade(r.color, -0.32);
+        roundRect(ctx, -8, -4.5, 20, 9, 4);
+        ctx.fill();
+      },
+    },
+  };
+
   // Tractor drawn facing +x: big rear wheels at the back, small steerable fronts.
   function drawTractor(ctx, r, now) {
     // Higher up (in the air, or on a hill) = a little bigger, closer to camera.
     const s = 1 + r.z / 120 + (r.elev || 0) / 160;
     const shake = r.bump > 0 ? Math.sin(now / 18 + r.id) * r.bump * 1.5 : 0;
+    const body = r.heading + (r.drift || 0);
+    const baseY = r.y - r.z * 0.4 - (r.elev || 0) * RAISE + shake;
+    // Depth: the vehicle's sides (tyres and a darker body), stacked up from
+    // the ground, then the top-down art on top.
+    const depth = VEHICLE_DEPTH[r.vehicle] || VEHICLE_DEPTH.tractor;
+    for (let z = 0; z < depth.h; z += 1) {
+      ctx.save();
+      ctx.translate(r.x, baseY - z * s);
+      ctx.rotate(body);
+      ctx.scale(s, s);
+      depth.sides(ctx, r);
+      ctx.restore();
+    }
     ctx.save();
-    ctx.translate(r.x, r.y - r.z * 0.4 - (r.elev || 0) * RAISE + shake);
-    ctx.rotate(r.heading + (r.drift || 0));
+    ctx.translate(r.x, baseY - depth.h * s);
+    ctx.rotate(body);
     ctx.scale(s, s);
     if (r.vehicle === 'quad' || r.vehicle === 'motorbike') {
       (r.vehicle === 'quad' ? drawQuadBody : drawBikeBody)(ctx, r);
