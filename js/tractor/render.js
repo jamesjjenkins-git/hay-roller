@@ -138,8 +138,9 @@
         const body = r.heading + (r.drift || 0);
         const fx = Math.cos(body);
         const fy = Math.sin(body);
+        const lift = (r.elev || 0) * RAISE;
         const rearX = r.x - fx * 10;
-        const rearY = r.y - fy * 10;
+        const rearY = r.y - fy * 10 - lift;
         const slip = Math.abs(-r.vx * fy + r.vy * fx);
 
         if (!r.airborne && speed > 30) {
@@ -151,11 +152,11 @@
           }
         }
         if ((r.nitroTime > 0 && Math.random() < 0.8) || (r.kickT > 0 && Math.random() < 0.5)) {
-          particles.push({ type: 'flame', x: r.x - fx * 18, y: r.y - fy * 18, vx: -fx * 90 + (Math.random() - 0.5) * 30, vy: -fy * 90 + (Math.random() - 0.5) * 30, life: 0.25, max: 0.25 });
+          particles.push({ type: 'flame', x: r.x - fx * 18, y: r.y - fy * 18 - lift, vx: -fx * 90 + (Math.random() - 0.5) * 30, vy: -fy * 90 + (Math.random() - 0.5) * 30, life: 0.25, max: 0.25 });
         }
         // Exhaust puffs.
         if (Math.random() < 0.08 + speed / 3000) {
-          particles.push({ type: 'smoke', x: r.x + fx * 6 - fy * 5, y: r.y + fy * 6 + fx * 5 - r.z * 0.4, vx: -fx * 10, vy: -fy * 10 - 8, life: 0.8, max: 0.8 });
+          particles.push({ type: 'smoke', x: r.x + fx * 6 - fy * 5, y: r.y + fy * 6 + fx * 5 - r.z * 0.4 - lift, vx: -fx * 10, vy: -fy * 10 - 8, life: 0.8, max: 0.8 });
         }
 
         // Tyre marks on the persistent skid layer.
@@ -335,7 +336,7 @@
       if (view.showYou) {
         const bob = Math.sin(now / 150) * 3;
         ctx.save();
-        ctx.translate(me.x, me.y - 30 - me.z + bob);
+        ctx.translate(me.x, me.y - 30 - me.z - (me.elev || 0) * RAISE + bob);
         ctx.beginPath();
         ctx.moveTo(-8, -6);
         ctx.lineTo(8, -6);
@@ -561,7 +562,7 @@
     }
 
     // Hills: lit on the climb, shaded on the way down, with contour lines.
-    for (const f of t.features) if (f.type === 'hill') drawHill(c, t, f);
+    if (t.features.some((f) => f.type === 'hill')) drawRaisedRoad(c, t, rng);
 
     // Features.
     for (const f of t.features) drawFeature(c, f, rng);
@@ -607,15 +608,16 @@
         while (turn < -Math.PI) turn += Math.PI * 2;
         const edgeLen = Math.hypot(a1.x - a0.x, a1.y - a0.y);
         const tight = edgeLen / Math.max(0.001, Math.abs(turn)) < BARREL_RADIUS;
+        const py = p.y - liftAt(t, i);
         if (placed % 9 === 0) {
-          drawTyreStack(c, p.x, p.y, Math.floor(placed / 9) % 2);
+          drawTyreStack(c, p.x, py, Math.floor(placed / 9) % 2);
           nextAt = travelled + 20;
         } else if (tight) {
-          drawBarrel(c, p.x, p.y, placed);
+          drawBarrel(c, p.x, py, placed);
           nextAt = travelled + 18;
         } else {
           c.save();
-          c.translate(p.x, p.y);
+          c.translate(p.x, py);
           c.rotate(p.angle);
           roundRect(c, -12, -7, 24, 14, 3);
           fillStroke(c, placed % 2 ? '#e6bd55' : '#dcb04a', 1.8);
@@ -705,34 +707,76 @@
     }
   }
 
-  function drawHill(c, t, f) {
-    const n = Math.round(f.len / root.TractorTracks.SAMPLE_STEP);
-    const edge = t.halfWidth + 14;
-    for (let k = -n / 2; k < n / 2; k++) {
-      const i0 = (f.idx + Math.round(k) + t.count) % t.count;
-      const i1 = (i0 + 1) % t.count;
-      const a = t.samples[i0];
-      const b = t.samples[i1];
-      const { slope, h } = root.TractorTracks.elevationAt(t, i0);
-      const shade = Math.min(0.5, Math.abs(slope) * 1.4);
+  // Screen px a hill lifts the road per px of height (Super Off Road style:
+  // higher ground is drawn further up the screen, with an earth bank below).
+  const RAISE = 1.4;
+  const liftAt = (t, i) => root.TractorTracks.elevationAt(t, i).h * RAISE;
+
+  // Hills: the road is drawn lifted up the screen by its height, with a
+  // bank of earth filling the gap down to the ground, then the raised
+  // surface on top — lit on the climb, shaded on the way down, with
+  // contour lines.
+  function drawRaisedRoad(c, t, rng) {
+    const n = t.count;
+    const lift = t.samples.map((_, i) => liftAt(t, i));
+    const outer = t.halfWidth + 13;
+    const quad = (i, w, la, lb) => {
+      const a = t.samples[i];
+      const b = t.samples[(i + 1) % n];
       c.beginPath();
-      c.moveTo(a.x + a.nx * edge, a.y + a.ny * edge);
-      c.lineTo(b.x + b.nx * edge, b.y + b.ny * edge);
-      c.lineTo(b.x - b.nx * edge, b.y - b.ny * edge);
-      c.lineTo(a.x - a.nx * edge, a.y - a.ny * edge);
+      c.moveTo(a.x + a.nx * w, a.y + a.ny * w - la);
+      c.lineTo(b.x + b.nx * w, b.y + b.ny * w - lb);
+      c.lineTo(b.x - b.nx * w, b.y - b.ny * w - lb);
+      c.lineTo(a.x - a.nx * w, a.y - a.ny * w - la);
       c.closePath();
-      // The sun is behind the start line: climbs catch the light.
+    };
+    const raised = [];
+    for (let i = 0; i < n; i++) if (lift[i] > 0.3 || lift[(i + 1) % n] > 0.3) raised.push(i);
+    // Bank: stack the road's footprint from the ground up to the surface.
+    for (const i of raised) {
+      const la = lift[i];
+      const lb = lift[(i + 1) % n];
+      const top = Math.max(la, lb);
+      for (let z = 0; z < top; z += 1) {
+        const k = z / Math.max(1, top);
+        c.fillStyle = `rgb(${Math.round(96 + 42 * k)}, ${Math.round(60 + 30 * k)}, ${Math.round(28 + 14 * k)})`;
+        quad(i, outer, Math.min(z, la), Math.min(z, lb));
+        c.fill();
+      }
+    }
+    // The raised surface: berm, dirt and the worn centre, like the flat road.
+    for (const [w, col] of [[outer, '#8a5a2b'], [t.halfWidth, '#c98f52'], [t.halfWidth - 8, '#d9a066']]) {
+      c.fillStyle = col;
+      c.strokeStyle = col;
+      c.lineWidth = 1;
+      for (const i of raised) {
+        quad(i, w, lift[i], lift[(i + 1) % n]);
+        c.fill();
+        c.stroke();
+      }
+    }
+    // Light and shade by slope, contour lines and a little dirt speckle.
+    for (const i of raised) {
+      const { slope, h } = root.TractorTracks.elevationAt(t, i);
+      const shade = Math.min(0.45, Math.abs(slope) * 1.3);
       c.fillStyle = slope > 0 ? `rgba(255, 245, 210, ${shade})` : `rgba(70, 40, 10, ${shade})`;
+      quad(i, outer, lift[i], lift[(i + 1) % n]);
       c.fill();
-      // Contour line every few px of height.
-      const h1 = root.TractorTracks.elevationAt(t, i1).h;
+      const h1 = root.TractorTracks.elevationAt(t, (i + 1) % n).h;
       if (Math.floor(h / 4) !== Math.floor(h1 / 4)) {
+        const a = t.samples[i];
         c.strokeStyle = 'rgba(90, 55, 20, 0.35)';
         c.lineWidth = 1.5;
         c.beginPath();
-        c.moveTo(a.x + a.nx * (t.halfWidth - 2), a.y + a.ny * (t.halfWidth - 2));
-        c.lineTo(a.x - a.nx * (t.halfWidth - 2), a.y - a.ny * (t.halfWidth - 2));
+        c.moveTo(a.x + a.nx * (t.halfWidth - 2), a.y + a.ny * (t.halfWidth - 2) - lift[i]);
+        c.lineTo(a.x - a.nx * (t.halfWidth - 2), a.y - a.ny * (t.halfWidth - 2) - lift[i]);
         c.stroke();
+      }
+      const a = t.samples[i];
+      for (let k = 0; k < 3; k++) {
+        const off = (rng() - 0.5) * t.width;
+        c.fillStyle = rng() < 0.5 ? 'rgba(120,70,30,0.25)' : 'rgba(255,230,180,0.25)';
+        c.fillRect(a.x + a.nx * off, a.y + a.ny * off - lift[i], 2 + rng() * 2, 2 + rng() * 2);
       }
     }
   }
@@ -966,7 +1010,7 @@
   function drawPickup(ctx, p, now) {
     const bob = Math.sin(now / 200 + p.id) * 3;
     ctx.save();
-    ctx.translate(p.x, p.y);
+    ctx.translate(p.x, p.y - (p.elev || 0) * RAISE);
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.beginPath();
     ctx.ellipse(3, 6, 10, 5, 0, 0, Math.PI * 2);
@@ -1007,7 +1051,7 @@
     const art = root.HayRender && root.HayRender.drawAnimal;
     if (!art) return;
     ctx.save();
-    ctx.translate(a.x, a.y);
+    ctx.translate(a.x, a.y - (a.elev || 0) * RAISE);
     if (a.z > 0) {
       ctx.fillStyle = 'rgba(0,0,0,0.2)';
       ctx.beginPath();
@@ -1033,7 +1077,7 @@
   function drawShadow(ctx, r) {
     const s = 1 + r.z / 120 + (r.elev || 0) / 160;
     ctx.save();
-    ctx.translate(r.x + 4 + r.z * 0.35, r.y + 5 + r.z * 0.6);
+    ctx.translate(r.x + 4 + r.z * 0.35, r.y + 5 + r.z * 0.6 - (r.elev || 0) * RAISE);
     ctx.rotate(r.heading + (r.drift || 0));
     ctx.globalAlpha = Math.max(0.12, 0.3 - r.z / 300);
     const [sw, sh] = r.vehicle === 'motorbike' ? [34, 12] : r.vehicle === 'quad' ? [32, 24] : [36, 26];
@@ -1055,7 +1099,7 @@
     const s = 1 + r.z / 120 + (r.elev || 0) / 160;
     const shake = r.bump > 0 ? Math.sin(now / 18 + r.id) * r.bump * 1.5 : 0;
     ctx.save();
-    ctx.translate(r.x, r.y - r.z * 0.4 + shake);
+    ctx.translate(r.x, r.y - r.z * 0.4 - (r.elev || 0) * RAISE + shake);
     ctx.rotate(r.heading + (r.drift || 0));
     ctx.scale(s, s);
     if (r.vehicle === 'quad' || r.vehicle === 'motorbike') {

@@ -677,6 +677,7 @@
     const { track, rng } = s;
     if (s.frenzy) s.animals = s.animals.filter((a) => !a.popped);
     for (const a of s.animals) {
+      a.elev = Tracks.elevationAt(track, a.idx).h;
       a.hitCooldown = Math.max(0, a.hitCooldown - DT);
       a.startle = Math.max(0, a.startle - DT);
       if (s.frenzy && a.mode !== 'tumble') {
@@ -821,6 +822,7 @@
       const off = (rng() - 0.5) * track.halfWidth * 1.1;
       s.pickups.push({
         id: s.pickupId++,
+        elev: Tracks.elevationAt(track, idx).h,
         type: rng() < 0.55 ? 'cash' : 'nitro',
         value: 25 + Math.floor(rng() * 4) * 25,
         x: sm.x + sm.nx * off,
