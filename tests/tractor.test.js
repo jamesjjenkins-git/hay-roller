@@ -595,3 +595,35 @@ test('the drift kick only comes from letting go, not from hitting water mid-drif
   assert.ok(wet, 'reached the pond');
   assert.equal(kicks.length, 0, 'no kick from the pond ending the drift');
 });
+
+test('sliding into the outside wall mid-drift costs less than a normal knock', () => {
+  const knock = (drift, steerSign) => {
+    const s = Sim.createRace(Tracks.TRACKS[0], { seed: 1 });
+    s.animals = [];
+    const me = s.racers[0];
+    const c = s.track.samples[40];
+    me.x = c.x + c.nx * (s.track.halfWidth - 16);
+    me.y = c.y + c.ny * (s.track.halfWidth - 16);
+    const into = Math.sign(Sim.angleDiff(Math.atan2(c.ny, c.nx), c.angle));
+    me.heading = c.angle + 0.35 * into;
+    me.vx = Math.cos(me.heading) * 160;
+    me.vy = Math.sin(me.heading) * 160;
+    me.idx = Tracks.nearestGlobal(s.track, me.x, me.y);
+    me.drifting = drift;
+    me.driftSide = steerSign * into;
+    me.drift = drift ? 0.6 * me.driftSide : 0;
+    for (let i = 0; i < 40; i++) {
+      const v0 = Math.hypot(me.vx, me.vy);
+      const w0 = me.wallHit;
+      Sim.step(s, { 0: { steer: 0.2 * me.driftSide, throttle: 1, brake: 0, nitro: false, drift } });
+      if (me.wallHit > w0) return 1 - Math.hypot(me.vx, me.vy) / v0;
+    }
+    return null;
+  };
+  const normal = knock(false, 1);
+  const outside = knock(true, -1);
+  const inside = knock(true, 1);
+  assert.ok(normal && outside && inside);
+  assert.ok(outside < normal * 0.7, `outside ${outside.toFixed(3)} vs normal ${normal.toFixed(3)}`);
+  assert.ok(inside > outside, 'the inside wall still bites');
+});

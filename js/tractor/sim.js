@@ -70,7 +70,9 @@
   // speed reflected; loss = speed lost on a head-on knock (less for a
   // glancing one); scrape = friction per second while touching.
   // deflect = how far (radians) the nose is turned away from the wall on contact.
-  const WALL = { bounce: 0.2, deflect: 0.12, loss: 0.18, scrape: 1.5 };
+  // driftKiss = fraction of the usual loss when you slide into the outside
+  // wall mid-drift.
+  const WALL = { bounce: 0.2, deflect: 0.12, loss: 0.18, scrape: 1.5, driftKiss: 0.35 };
 
   // Straight-line assist for touch steering (radians, radians/second).
   // Deliberately weak: it only steadies you on straights and can't follow a
@@ -472,9 +474,13 @@
           const turnAway = Math.sign(angleDiff(away, tangent)) * WALL.deflect;
           r.heading = tangent + turnAway;
         }
+        // Sliding into the wall on the outside of a drift just kisses it:
+        // a much smaller penalty than an ordinary knock.
+        const wallLat = -Math.sin(r.heading) * c.nx * side + Math.cos(r.heading) * c.ny * side;
+        const kiss = r.drifting && Math.sign(wallLat) === -r.driftSide ? WALL.driftKiss : 1;
         // One small speed penalty per knock, bigger the more head-on it was.
         if (r.wallHit <= 0) {
-          const keep = 1 - Math.min(0.6, WALL.loss * (st.knock || 1) * (0.6 + 0.4 * headOn));
+          const keep = 1 - Math.min(0.6, WALL.loss * (st.knock || 1) * (0.6 + 0.4 * headOn) * kiss);
           r.vx *= keep;
           r.vy *= keep;
           r.wallHit = 0.3;
@@ -483,8 +489,8 @@
           }
         } else {
           // Scraping along: a little friction, never a dead stop.
-          r.vx *= 1 - WALL.scrape * DT;
-          r.vy *= 1 - WALL.scrape * DT;
+          r.vx *= 1 - WALL.scrape * kiss * DT;
+          r.vy *= 1 - WALL.scrape * kiss * DT;
         }
       }
     }
