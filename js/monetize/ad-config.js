@@ -17,7 +17,8 @@
       banner: 'ca-app-pub-3653000407024097/9028163924', // Home banner
       rewarded: 'ca-app-pub-3653000407024097/7017998123', // Free Hay
     },
-    testDevices: [],
+    // James's iPhone: always test ads, so tapping them can't flag the account.
+    testDevices: ['faa6cd82b13b319dff934a605c2fb47d'],
     // A cartoon farm game: keep ads suitable for a family audience.
     maxAdContentRating: 'ParentalGuidance',
   };
