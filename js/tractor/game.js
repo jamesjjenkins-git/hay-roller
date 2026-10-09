@@ -5,6 +5,7 @@
   const { UPGRADES, PAINTS, TROPHIES, MAX_LEVEL, createGarage } = root.TractorGarage;
   const TROPHY_ICON = { gold: '🥇', silver: '🥈', bronze: '🥉' };
   const SELECTED_KEY = 'farmCasino.tractor.track';
+  const VIEW_KEY = 'farmCasino.tractor.view';
 
   const ordinal = (n) => n + (['th', 'st', 'nd', 'rd'][n % 100 > 10 && n % 100 < 14 ? 0 : n % 10] || 'th');
   const fmt = (n) => n.toLocaleString('en-GB');
@@ -153,6 +154,10 @@
         togglePause();
         return;
       }
+      if (e.key === 'v' || e.key === 'V') {
+        setViewMode(viewMode === 'chase' ? 'full' : 'chase');
+        return;
+      }
       input.keys.add(e.key.length === 1 ? e.key.toLowerCase() : e.key);
     });
     root.addEventListener('keyup', (e) => input.keys.delete(e.key.length === 1 ? e.key.toLowerCase() : e.key));
@@ -164,14 +169,41 @@
 
     // ---------- Layout ----------
 
+    // 'full' shows the whole track (Super Off Road); 'chase' is a zoomed
+    // camera that follows you and fills the screen (Micro Machines).
+    let viewMode = localStorage.getItem(VIEW_KEY) === 'chase' ? 'chase' : 'full';
+    renderer.setMode(viewMode);
+
+    function setViewMode(m) {
+      viewMode = m;
+      try {
+        localStorage.setItem(VIEW_KEY, m);
+      } catch (e) {
+        // Ignore.
+      }
+      renderer.setMode(m);
+      raceEl.classList.toggle('chase', m === 'chase');
+      $('#btn-view').textContent = m === 'chase' ? '🗺️' : '🔍';
+      $('#btn-view').setAttribute('aria-label', m === 'chase' ? 'Show whole track' : 'Zoom in (close-up camera)');
+      layout();
+    }
+
     function layout() {
       if (phase === 'garage') return;
       const vw = root.innerWidth;
       const vh = root.innerHeight;
-      const k = Math.min(vw / WORLD.width, vh / WORLD.height);
-      renderer.resize(Math.floor(WORLD.width * k), Math.floor(WORLD.height * k));
+      if (viewMode === 'chase') {
+        renderer.resize(vw, vh);
+      } else {
+        const k = Math.min(vw / WORLD.width, vh / WORLD.height);
+        renderer.resize(Math.floor(WORLD.width * k), Math.floor(WORLD.height * k));
+      }
       raceEl.classList.toggle('portrait', vh > vw);
     }
+    $('#btn-view').addEventListener('click', () => {
+      sound.click();
+      setViewMode(viewMode === 'chase' ? 'full' : 'chase');
+    });
     root.addEventListener('resize', () => mounted && layout());
     root.addEventListener('orientationchange', () => setTimeout(() => mounted && layout(), 200));
 
@@ -351,6 +383,8 @@
       lapFlash = null;
       modal.classList.add('hidden');
       showRaceScreen(true);
+      raceEl.classList.toggle('chase', viewMode === 'chase');
+      $('#btn-view').textContent = viewMode === 'chase' ? '🗺️' : '🔍';
       layout();
       renderer.setTrack(track);
       renderer.clearSkids();
@@ -391,6 +425,7 @@
           ['🔥', 'Nitro', 'Tap <b>NITRO</b> for a burst of speed. Counter at the top right.'],
           ['🛑', 'Brake', 'Hold <b>BRAKE</b> to slow down. Keep holding when stopped to reverse out of trouble.'],
           ['⏸️', 'Pause', 'Tap the pause button at the top right.'],
+          ['🔍', 'Camera', 'Tap 🔍 to zoom in on your tractor (close-up), or 🗺️ to see the whole track.'],
         ],
         tip: 'Play with your phone sideways. Add the game to your Home Screen for full screen.',
       },
@@ -402,6 +437,7 @@
           ['<kbd>Space</kbd>', 'Nitro', 'Burst of speed (or <kbd>Shift</kbd>). Counter at the top right.'],
           ['<kbd>↓</kbd>', 'Brake', 'Slow down (or <kbd>S</kbd>). Keep holding when stopped to reverse.'],
           ['<kbd>Esc</kbd>', 'Pause', 'Pause and resume (or <kbd>P</kbd>).'],
+          ['<kbd>V</kbd>', 'Camera', 'Switch between the close-up camera and the whole track.'],
         ],
         tip: 'You can also click and drag on the left half of the track to steer with the mouse.',
       },
@@ -414,6 +450,7 @@
           <h2>Paused</h2>
           <button class="btn btn-primary btn-big" data-act="resume">Resume</button>
           <button class="btn btn-ghost" data-act="controls">🎮 Controls</button>
+          <button class="btn btn-ghost" data-act="view">${viewMode === 'chase' ? '🗺️ Camera: switch to whole track' : '🔍 Camera: switch to close-up'}</button>
           <button class="btn btn-ghost" data-act="restart">Restart race</button>
           <button class="btn btn-ghost" data-act="quit">Back to garage</button>
           <p class="small">Quitting forfeits this race's prize money.</p>
@@ -479,6 +516,10 @@
       else if (act === 'restart' || act === 'again') startRace();
       else if (act === 'quit' || act === 'garage') toGarage();
       else if (act === 'controls') showControls(lastInput);
+      else if (act === 'view') {
+        setViewMode(viewMode === 'chase' ? 'full' : 'chase');
+        showPauseMenu();
+      }
       else if (act === 'controls-touch') showControls('touch');
       else if (act === 'controls-keys') showControls('keys');
       else if (act === 'pause-menu') showPauseMenu();

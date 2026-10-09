@@ -10,11 +10,18 @@
     const ctx = canvas.getContext('2d');
     const bg = document.createElement('canvas');
     const skid = document.createElement('canvas');
-    let scale = 1;
+    let layerScale = 1; // pixels per world unit in the pre-rendered layers
+    let mode = 'full'; // 'full' = whole track on one screen; 'chase' = zoomed camera
+    let cam = null;
     let track = null;
     let particles = [];
     let lastTime = 0;
     let lastSkid = new Map();
+
+    // In chase view this many world pixels fit top-to-bottom on screen.
+    const CHASE_VIEW_H = 300;
+    // Keep the off-screen layers under iOS's canvas size limits.
+    const MAX_LAYER_W = 3000;
 
     function resize(cssW, cssH) {
       const dpr = Math.min(root.devicePixelRatio || 1, 2);
@@ -22,7 +29,13 @@
       canvas.style.height = `${cssH}px`;
       canvas.width = Math.round(cssW * dpr);
       canvas.height = Math.round(cssH * dpr);
-      scale = canvas.width / W;
+      if (track) buildLayers();
+    }
+
+    function setMode(m) {
+      if (m === mode) return;
+      mode = m;
+      cam = null;
       if (track) buildLayers();
     }
 
@@ -30,18 +43,27 @@
       track = t;
       particles = [];
       lastSkid = new Map();
-      buildLayers();
+      cam = null;
+      buildLayers(true);
     }
 
-    function buildLayers() {
+    // Layers are drawn once at a resolution sharp enough for the current view.
+    function buildLayers(force) {
+      const full = Math.min(canvas.width / W, canvas.height / H);
+      const want = mode === 'chase' ? canvas.height / CHASE_VIEW_H : full;
+      const next = Math.min(Math.max(full, want), MAX_LAYER_W / W);
+      const keepSkids = skid.width && Math.abs(next - layerScale) < 1e-6;
+      layerScale = next;
+      if (keepSkids && !force) return;
       for (const c of [bg, skid]) {
-        c.width = canvas.width;
-        c.height = canvas.height;
+        c.width = Math.round(W * layerScale);
+        c.height = Math.round(H * layerScale);
       }
       const b = bg.getContext('2d');
-      b.setTransform(scale, 0, 0, scale, 0, 0);
+      b.setTransform(layerScale, 0, 0, layerScale, 0, 0);
       drawBackground(b, track);
-      skid.getContext('2d').setTransform(scale, 0, 0, scale, 0, 0);
+      skid.getContext('2d').setTransform(layerScale, 0, 0, layerScale, 0, 0);
+      lastSkid = new Map();
     }
 
     function clearSkids() {
@@ -223,6 +245,51 @@
 
     // ---------- Frame ----------
 
+    // The rectangle of the world on screen, and world→canvas pixel scale.
+    function viewRect(sim, dt) {
+      const cw = canvas.width;
+      const ch = canvas.height;
+      if (mode === 'full') {
+        const k = Math.min(cw / W, ch / H);
+        const rw = cw / k;
+        const rh = ch / k;
+        return { k, rx: (W - rw) / 2, ry: (H - rh) / 2, rw, rh };
+      }
+      const k = ch / CHASE_VIEW_H;
+      const rw = cw / k;
+      const rh = ch / k;
+      const me = sim.racers[0];
+      // Look ahead in the direction of travel, like Micro Machines.
+      const tx = me.x + me.vx * 0.45;
+      const ty = me.y + me.vy * 0.45;
+      if (!cam) cam = { x: tx, y: ty };
+      const f = 1 - Math.exp(-dt * 5);
+      cam.x += (tx - cam.x) * f;
+      cam.y += (ty - cam.y) * f;
+      const clampAxis = (c, size, world) => (size >= world ? (world - size) / 2 : Math.max(0, Math.min(world - size, c - size / 2)));
+      return { k, rx: clampAxis(cam.x, rw, W), ry: clampAxis(cam.y, rh, H), rw, rh };
+    }
+
+    // Copy the visible part of a pre-rendered layer to the canvas.
+    function blitLayer(layer, v) {
+      const x0 = Math.max(0, v.rx);
+      const y0 = Math.max(0, v.ry);
+      const x1 = Math.min(W, v.rx + v.rw);
+      const y1 = Math.min(H, v.ry + v.rh);
+      if (x1 <= x0 || y1 <= y0) return;
+      ctx.drawImage(
+        layer,
+        x0 * layerScale, y0 * layerScale, (x1 - x0) * layerScale, (y1 - y0) * layerScale,
+        (x0 - v.rx) * v.k, (y0 - v.ry) * v.k, (x1 - x0) * v.k, (y1 - y0) * v.k,
+      );
+    }
+
+    // Overlays (countdown, banners) use world-sized fonts centred on screen.
+    function screenSpace() {
+      const s0 = Math.min(canvas.width / W, canvas.height / H);
+      ctx.setTransform(s0, 0, 0, s0, (canvas.width - W * s0) / 2, (canvas.height - H * s0) / 2);
+    }
+
     function draw(sim, view, now) {
       const dt = lastTime ? Math.min(0.05, (now - lastTime) / 1000) : 0;
       lastTime = now;
@@ -231,10 +298,13 @@
         updateParticles(dt);
       }
 
+      const v = viewRect(sim, dt);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.drawImage(bg, 0, 0);
-      ctx.drawImage(skid, 0, 0);
-      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+      ctx.fillStyle = '#5aa83f';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      blitLayer(bg, v);
+      blitLayer(skid, v);
+      ctx.setTransform(v.k, 0, 0, v.k, -v.rx * v.k, -v.ry * v.k);
 
       drawFlagman(ctx, sim, view, now);
       for (const p of sim.pickups) drawPickup(ctx, p, now);
@@ -267,11 +337,91 @@
         ctx.restore();
       }
 
+      if (mode === 'chase') {
+        drawRivalArrows(sim, v);
+        drawMinimap(sim);
+      }
+
+      screenSpace();
       if (view.countdown > 0) drawCountdown(ctx, view.countdown);
       if (view.banner) drawBanner(ctx, view.banner.text, view.banner.t);
     }
 
-    return { resize, setTrack, draw, addEvents, clearSkids };
+    // Arrows on the screen edge pointing at rivals that are out of view.
+    function drawRivalArrows(sim, v) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      const cw = canvas.width;
+      const ch = canvas.height;
+      const pad = 26 * (canvas.height / 400);
+      const cx = cw / 2;
+      const cy = ch / 2;
+      for (const r of sim.racers) {
+        if (r.isPlayer) continue;
+        const sx = (r.x - v.rx) * v.k;
+        const sy = (r.y - v.ry) * v.k;
+        if (sx > 0 && sx < cw && sy > 0 && sy < ch) continue;
+        const dx = sx - cx;
+        const dy = sy - cy;
+        const t = Math.min((cw / 2 - pad) / Math.abs(dx || 1e-6), (ch / 2 - pad) / Math.abs(dy || 1e-6));
+        const ax = cx + dx * t;
+        const ay = cy + dy * t;
+        const size = 11 * (canvas.height / 400);
+        ctx.save();
+        ctx.translate(ax, ay);
+        ctx.rotate(Math.atan2(dy, dx));
+        ctx.beginPath();
+        ctx.moveTo(size, 0);
+        ctx.lineTo(-size * 0.8, -size * 0.8);
+        ctx.lineTo(-size * 0.4, 0);
+        ctx.lineTo(-size * 0.8, size * 0.8);
+        ctx.closePath();
+        ctx.fillStyle = r.color;
+        ctx.fill();
+        ctx.lineWidth = size * 0.25;
+        ctx.strokeStyle = OUTLINE;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // Small whole-track map, bottom centre, with every tractor as a dot.
+    function drawMinimap(sim) {
+      const t = sim.track;
+      const mw = Math.min(canvas.width * 0.24, canvas.height * 0.5);
+      const ms = mw / W;
+      const mh = H * ms;
+      const x0 = (canvas.width - mw) / 2;
+      const y0 = canvas.height - mh - 10 * (canvas.height / 400);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalAlpha = 0.75;
+      ctx.fillStyle = 'rgba(40, 70, 30, 0.5)';
+      roundRect(ctx, x0 - 6, y0 - 6, mw + 12, mh + 12, 10);
+      ctx.fill();
+      ctx.setTransform(ms, 0, 0, ms, x0, y0);
+      trackPath(ctx, t);
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#e6c08a';
+      ctx.lineWidth = t.width * 0.7;
+      ctx.stroke();
+      const s0 = t.samples[0];
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 10;
+      ctx.beginPath();
+      ctx.moveTo(s0.x - s0.nx * t.halfWidth, s0.y - s0.ny * t.halfWidth);
+      ctx.lineTo(s0.x + s0.nx * t.halfWidth, s0.y + s0.ny * t.halfWidth);
+      ctx.stroke();
+      for (const r of sim.racers.slice().sort((a, b) => a.isPlayer - b.isPlayer)) {
+        circle(ctx, r.x, r.y, r.isPlayer ? 34 : 26);
+        ctx.fillStyle = r.color;
+        ctx.fill();
+        ctx.lineWidth = 8;
+        ctx.strokeStyle = r.isPlayer ? '#fff' : OUTLINE;
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    return { resize, setTrack, setMode, draw, addEvents, clearSkids, get mode() { return mode; } };
   }
 
   // ---------- Drawing helpers ----------
@@ -418,6 +568,9 @@
         const x = s.x + s.nx * off;
         const y = s.y + s.ny * off;
         if (x < -10 || x > W + 10 || y < -10 || y > H + 10) continue;
+        // On the inside of tight bends the offset edge folds back over the
+        // road; don't draw bales where there's driving surface.
+        if (onSurface(t, x, y, t.halfWidth + 3)) continue;
         if ((i / 3) % 9 === 0) {
           circle(c, x, y, 8);
           fillStroke(c, '#2a2a2a', 2);
@@ -455,6 +608,16 @@
     c.textBaseline = 'middle';
     c.fillText(label, W - w / 2 - 14, H - 22);
     c.restore();
+  }
+
+  function onSurface(t, x, y, within) {
+    const lim = within * within;
+    for (const s of t.samples) {
+      const dx = s.x - x;
+      const dy = s.y - y;
+      if (dx * dx + dy * dy < lim) return true;
+    }
+    return false;
   }
 
   function drawGrandstand(c, rng) {

@@ -15,6 +15,12 @@ bumps.
 - **Controls (phone):** drag anywhere on the left half of the screen to steer — point the stick
   where you want to go and the tractor turns to face it. Gas is automatic. **NITRO** and
   **BRAKE** (hold to reverse) sit bottom-right. Play in landscape.
+- **Two camera views**, switchable any time with the 🔍/🗺️ button in the race HUD, the **V**
+  key, or the pause menu (the choice is remembered):
+  - **Whole track** — the classic single-screen *Super Off Road* view.
+  - **Close-up** — a *Micro Machines*-style camera that follows your tractor with a little
+    look-ahead and fills the whole screen, with edge arrows pointing to off-screen rivals and a
+    minimap of the track.
 - **Controls (keyboard):** ← → steer, ↓ brake/reverse, Space nitro, Esc pause.
 - **Pause → Controls** explains the controls for the device you're playing on (phone or
   keyboard), with a link to the other set.
