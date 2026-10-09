@@ -48,8 +48,12 @@
     let bannerEl = null;
     let syncing = Promise.resolve();
     plugin.addListener(EV.bannerSize, (size) => {
-      // Reserve the banner's height in the page so it never covers content.
-      if (bannerEl) bannerEl.style.height = size && size.height ? `${size.height}px` : '';
+      // Reserve the banner's height in the page so it never covers content;
+      // with no ad to show (size 0), don't leave an empty bar.
+      if (!bannerEl) return;
+      const h = size && size.height;
+      bannerEl.style.height = h ? `${h}px` : '';
+      bannerEl.style.display = h ? '' : 'none';
     });
     function syncBanner() {
       syncing = syncing.then(async () => {
@@ -60,7 +64,10 @@
         } else if (!wantBanner && bannerUp) {
           await plugin.removeBanner();
           bannerUp = false;
-          if (bannerEl) bannerEl.style.height = '';
+          if (bannerEl) {
+            bannerEl.style.height = '';
+            bannerEl.style.display = '';
+          }
         }
       }).catch((e) => {
         bannerUp = false;
