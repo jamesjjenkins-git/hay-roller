@@ -7,6 +7,7 @@
   const SELECTED_KEY = 'farmCasino.tractor.track';
   const VIEW_KEY = 'farmCasino.tractor.view';
   const STEER_KEY = 'farmCasino.tractor.steer';
+  const TILT_KEY = 'farmCasino.tractor.tilt';
   const COUNTDOWN_SECONDS = 3;
 
   const ordinal = (n) => n + (['th', 'st', 'nd', 'rd'][n % 100 > 10 && n % 100 < 14 ? 0 : n % 10] || 'th');
@@ -38,6 +39,26 @@
     let acc = 0;
     let rafId = null;
     let lastNow = 0;
+    // Optional 2.5D view: the whole picture tipped back in perspective.
+    let tilt = false;
+    try {
+      tilt = localStorage.getItem(TILT_KEY) === '1';
+    } catch (e) {
+      // Ignore.
+    }
+    raceEl.classList.toggle('tilt', tilt);
+    function setTilt(on) {
+      tilt = on;
+      try {
+        localStorage.setItem(TILT_KEY, on ? '1' : '0');
+      } catch (e) {
+        // Ignore.
+      }
+      raceEl.classList.toggle('tilt', on);
+      if (mounted) layout();
+    }
+    const TILT_OVERSIZE = 1.5;
+
     let banner = null;
     let finalLapShown = false;
     let lapFlash = null;
@@ -277,6 +298,10 @@
         togglePause();
         return;
       }
+      if (e.key === 't' || e.key === 'T') {
+        setTilt(!tilt);
+        return;
+      }
       if (e.key === 'v' || e.key === 'V') {
         setViewMode(viewMode === 'chase' ? 'full' : 'chase');
         return;
@@ -322,7 +347,10 @@
       const vw = root.innerWidth;
       const vh = root.innerHeight;
       if (viewMode === 'chase') {
-        renderer.resize(vw, vh);
+        // Tilted, the canvas is drawn oversized (not scaled up) so it still
+        // fills the screen and stays sharp.
+        const k = tilt ? TILT_OVERSIZE : 1;
+        renderer.resize(Math.round(vw * k), Math.round(vh * k));
       } else {
         const k = Math.min(vw / WORLD.width, vh / WORLD.height);
         renderer.resize(Math.floor(WORLD.width * k), Math.floor(WORLD.height * k));
@@ -599,6 +627,7 @@
           ['<kbd>↓</kbd>', 'Brake', 'Slow down (or <kbd>S</kbd>). Keep holding when stopped to reverse.'],
           ['<kbd>Esc</kbd>', 'Pause', 'Pause and resume (or <kbd>P</kbd>).'],
           ['<kbd>V</kbd>', 'Camera', 'Switch between the close-up camera and the whole track.'],
+          ['<kbd>T</kbd>', '2.5D', 'Tip the view back for a 2.5D look (or from the pause menu).'],
         ],
         tip: 'You can also click and drag left/right on the left half of the track to steer with the mouse.',
       },
@@ -611,6 +640,7 @@
           <h2>Paused</h2>
           <button class="btn btn-primary btn-big" data-act="resume">Resume</button>
           <button class="btn btn-ghost" data-act="controls">🎮 Controls</button>
+          <button class="btn btn-ghost" data-act="tilt">${tilt ? '⬛ View: switch to flat top-down' : '🧊 View: switch to 2.5D'}</button>
           <button class="btn btn-ghost" data-act="steer">${steerMode === 'buttons' ? '👆 Steering: switch to slider' : '◀▶ Steering: switch to buttons'}</button>
           <button class="btn btn-ghost" data-act="view">${viewMode === 'chase' ? '🗺️ Camera: switch to whole track' : '🔍 Camera: switch to close-up'}</button>
           <button class="btn btn-ghost" data-act="restart">Restart race</button>
@@ -678,6 +708,10 @@
       else if (act === 'restart' || act === 'again') startRace();
       else if (act === 'quit' || act === 'garage') toGarage();
       else if (act === 'controls') showControls(lastInput);
+      else if (act === 'tilt') {
+        setTilt(!tilt);
+        showPauseMenu();
+      }
       else if (act === 'steer') {
         setSteerMode(steerMode === 'buttons' ? 'slider' : 'buttons');
         showPauseMenu();
