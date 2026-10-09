@@ -103,6 +103,7 @@
         cv.height = Math.ceil(h * layerScale);
         const cc = cv.getContext('2d');
         cc.setTransform(layerScale, 0, 0, layerScale, -x * layerScale, -y * layerScale);
+        drawDeckSupports(cc, track, dk);
         drawRaisedRoad(cc, track, root.FarmRng.mulberry32(dk.idx[0] + 1), { only: dk.idx, slab: dk.slab });
         dk.sprite = cv;
       }
@@ -707,6 +708,7 @@
     t.decks = bridgeDecks(t);
     const onDeck = new Set();
     for (const dk of t.decks) dk.idx.forEach((i) => onDeck.add(i));
+    for (const dk of t.decks) drawDeckShadow(c, t, dk);
     if (t.elev && t.elev.some((h) => Math.abs(h) > 0.3)) drawRaisedRoad(c, t, rng, { skip: onDeck });
 
     // Features.
@@ -1801,7 +1803,10 @@
         // A bridge deck: a timber slab with the road running underneath.
         for (let z = Math.min(la, lb) - BRIDGE_SLAB; z < Math.min(la, lb); z += 1) {
           const k = (z - (Math.min(la, lb) - BRIDGE_SLAB)) / BRIDGE_SLAB;
-          c.fillStyle = Math.floor(k * BRIDGE_SLAB) % 4 === 3 ? '#5a3a1c' : shade('#8a5a30', k * 0.12);
+          // A beam: dark along its bottom edge, a groove between planks,
+          // lit along the top where it meets the deck.
+          const row = Math.floor(k * BRIDGE_SLAB);
+          c.fillStyle = row === 0 ? '#3b2a14' : row === BRIDGE_SLAB - 1 ? '#b07a44' : row % 4 === 3 ? '#5a3a1c' : shade('#8a5a30', k * 0.12);
           quad(i, outer, z, z);
           c.fill();
         }
@@ -1983,6 +1988,80 @@
       dk.box = { x: Math.floor(x0), y: Math.floor(y0), w: Math.ceil(x1 - x0) + 2, h: Math.ceil(y1 - y0) + 2 };
     }
     return decks;
+  }
+
+  // The deck's shadow on the ground and the road beneath, cast like
+  // everything else's: the slab's footprint moved right and down by its
+  // height.
+  function drawDeckShadow(c, t, dk) {
+    const outer = t.halfWidth + 13;
+    c.fillStyle = 'rgba(0,0,0,0.2)';
+    c.beginPath();
+    const n = t.count;
+    for (const i of dk.idx) {
+      if (!dk.slab(i)) continue;
+      const a = t.samples[i];
+      const b = t.samples[(i + 1) % n];
+      const la = liftAt(t, i);
+      const lb = liftAt(t, (i + 1) % n);
+      const P = (s, l, w) => [s.x + s.nx * w + l * SHADOW.x, s.y + s.ny * w + l * SHADOW.y];
+      const pts = [P(a, la, outer), P(b, lb, outer), P(b, lb, -outer), P(a, la, -outer)];
+      // Same winding for every piece, so overlaps don't darken twice.
+      const area = pts.reduce((acc, [x, y], k) => acc + x * pts[(k + 1) % 4][1] - pts[(k + 1) % 4][0] * y, 0);
+      if (area < 0) pts.reverse();
+      pts.forEach(([x, y], k) => (k ? c.lineTo(x, y) : c.moveTo(x, y)));
+      c.closePath();
+    }
+    c.fill();
+  }
+
+  // Timber trestles holding a deck up: a leg at each edge every few metres,
+  // from the ground to the underside of the slab, braced across. None stand
+  // on the road below.
+  function drawDeckSupports(c, t, dk) {
+    const outer = t.halfWidth + 13;
+    const slabIdx = dk.idx.filter((i) => dk.slab(i));
+    const legs = [];
+    for (let k = 0; k < slabIdx.length; k += 5) {
+      const i = slabIdx[k];
+      const s = t.samples[i];
+      const L = liftAt(t, i);
+      if (L < BRIDGE_SLAB + 6) continue;
+      for (const side of [-1, 1]) {
+        const gx = s.x + s.nx * side * (outer - 5);
+        const gy = s.y + s.ny * side * (outer - 5);
+        if (nearOtherRoad(t, i, gx, gy, t.halfWidth + 10)) continue;
+        legs.push({ side, k, x: gx, gy, top: gy - L + BRIDGE_SLAB });
+      }
+    }
+    // Far legs first, so the near ones stand in front.
+    legs.sort((p, q) => p.gy - q.gy);
+    for (const g of legs) {
+      c.fillStyle = 'rgba(0,0,0,0.18)';
+      c.beginPath();
+      c.ellipse(g.x + 3, g.gy + 1, 5, 2.5, 0, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = '#6b4423';
+      c.fillRect(g.x - 2.5, g.top, 5, g.gy - g.top);
+      c.fillStyle = 'rgba(255,220,170,0.25)';
+      c.fillRect(g.x - 2.5, g.top, 1.6, g.gy - g.top);
+      c.strokeStyle = OUTLINE;
+      c.lineWidth = 1.4 * LINE;
+      c.strokeRect(g.x - 2.5, g.top, 5, g.gy - g.top);
+    }
+    // Braces between neighbouring legs on the same side.
+    c.strokeStyle = '#5a3a1c';
+    c.lineWidth = 2;
+    for (const g of legs) {
+      const next = legs.find((q) => q.side === g.side && q.k === g.k + 5);
+      if (!next) continue;
+      c.beginPath();
+      c.moveTo(g.x, g.top + 2);
+      c.lineTo(next.x, next.gy - 4);
+      c.moveTo(next.x, next.top + 2);
+      c.lineTo(g.x, g.gy - 4);
+      c.stroke();
+    }
   }
 
   // Which bridge deck (if any) the thing at sample `i` is up on.
