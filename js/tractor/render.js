@@ -104,7 +104,15 @@
         const cc = cv.getContext('2d');
         cc.setTransform(layerScale, 0, 0, layerScale, -x * layerScale, -y * layerScale);
         drawDeckSupports(cc, track, dk);
-        drawRaisedRoad(cc, track, root.FarmRng.mulberry32(dk.idx[0] + 1), { only: dk.idx, slab: dk.slab });
+        // The deck's surface runs one step onto the ramp at each end, over
+        // the ramp in the background, so there's no seam where they meet.
+        const n = track.count;
+        const slabIdx = dk.idx.filter(dk.slab);
+        const lap = new Set();
+        for (const i of slabIdx) {
+          for (const j of [(i - 1 + n) % n, (i + 1) % n]) if (!dk.slab(j)) lap.add(j);
+        }
+        drawRaisedRoad(cc, track, root.FarmRng.mulberry32(dk.idx[0] + 1), { only: [...slabIdx, ...lap], slab: dk.slab, noBank: lap });
         dk.sprite = cv;
       }
     }
@@ -196,8 +204,9 @@
     // show over it.
     function levelOf(r) {
       for (const dk of track.decks || []) {
-        if (dk.set.has(r.idx)) return `${dk.k}:up`;
         const b = dk.box;
+        const high = (r.elev || 0) * RAISE > BRIDGE_SLAB + 4 && r.x > b.x && r.x < b.x + b.w && r.y > b.y && r.y < b.y + b.h;
+        if (dk.set.has(r.idx) || high) return `${dk.k}:up`;
         // Under it or behind it (in front of the deck, the normal order is right).
         if (r.x > b.x - 20 && r.x < b.x + b.w + 20 && r.y > b.y - 20 && r.y < dk.key + 10) return `${dk.k}:down`;
       }
@@ -406,15 +415,21 @@
 
       // Everything that stands up, back to front: walls, animals, vehicles.
       // Up on a bridge, things are drawn after its deck (shadows too).
-      const upOn = (it, i) => {
-        const dk = deckOf(track, i);
+      // Up on a deck, or on a ramp right beside it at well above the road
+      // below (else the deck's end is drawn over a vehicle just short of it).
+      const deckAbove = (i, x, y, lift) => deckOf(track, i) || (track.decks || []).find((dk) => {
+        const b = dk.box;
+        return lift > BRIDGE_SLAB + 4 && x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h;
+      });
+      const upOn = (it, i, x, y, lift = 0) => {
+        const dk = deckAbove(i, x, y, lift);
         if (dk) {
           it.up = true;
           it.y = Math.max(it.y, dk.key) + 0.001 * (it.y / H);
         }
         return it;
       };
-      for (const r of sim.racers) if (!deckOf(track, r.idx)) drawShadow(ctx, r);
+      for (const r of sim.racers) if (!deckAbove(r.idx, r.x, r.y, (r.elev || 0) * RAISE)) drawShadow(ctx, r);
       const items = [];
       for (const dk of track.decks || []) items.push({ y: dk.key, dk });
       const x0 = v.rx - 30;
@@ -445,13 +460,13 @@
       };
       for (const w of track.wallItems || []) {
         if (w.x < x0 || w.x > x1 || w.y < y0 || w.y > y1) continue;
-        items.push(upOn({ y: besideKey(w), w }, w.si));
+        items.push(upOn({ y: besideKey(w), w }, w.si, w.x, w.gy, w.gy - w.y));
       }
-      for (const a of sim.animals || []) items.push(upOn({ y: a.y, a }, a.idx));
-      for (const p of sim.pickups) items.push(upOn({ y: p.y, p }, p.idx));
+      for (const a of sim.animals || []) items.push(upOn({ y: a.y, a }, a.idx, a.x, a.y, (a.elev || 0) * RAISE));
+      for (const p of sim.pickups) items.push(upOn({ y: p.y, p }, p.idx, p.x, p.y, (p.elev || 0) * RAISE));
       // Ramps sort a little behind their centre so anything on them is drawn on top.
       for (const f of track.features) if (f.type === 'jump') items.push({ y: f.y - 24, f });
-      for (const r of sim.racers) items.push(upOn({ y: r.y + (r.airborne ? 40 : 0), r }, r.idx));
+      for (const r of sim.racers) items.push(upOn({ y: r.y + (r.airborne ? 40 : 0), r }, r.idx, r.x, r.y, (r.elev || 0) * RAISE));
       items.push({ y: flagmanSpot(track).y, flag: true });
       items.sort((a, b) => a.y - b.y);
       for (const it of items) {
@@ -742,8 +757,11 @@
 
     // Hills: lit on the climb, shaded on the way down, with contour lines.
     t.decks = bridgeDecks(t);
+    // Only the timber deck itself is drawn each frame; the earth ramps up to
+    // it stay in the background, so a vehicle on a ramp beside the deck is
+    // never painted over by it (and there's no seam where they meet).
     const onDeck = new Set();
-    for (const dk of t.decks) dk.idx.forEach((i) => onDeck.add(i));
+    for (const dk of t.decks) dk.idx.forEach((i) => dk.slab(i) && onDeck.add(i));
     for (const dk of t.decks) drawDeckShadow(c, t, dk);
     if (t.elev && t.elev.some((h) => Math.abs(h) > 0.3)) drawRaisedRoad(c, t, rng, { skip: onDeck });
 
@@ -1861,6 +1879,7 @@
       const la = lift[i];
       const lb = lift[(i + 1) % n];
       const hi = Math.max(0, la, lb);
+      if (opts.noBank && opts.noBank.has(i)) continue;
       if (slab(i)) {
         // A bridge deck: a timber slab with the road running underneath.
         for (let z = Math.min(la, lb) - BRIDGE_SLAB; z < Math.min(la, lb); z += 1) {
@@ -1952,7 +1971,9 @@
       for (const i of raised) {
         quad(i, w, lift[i], lift[(i + 1) % n]);
         c.fill();
-        c.stroke();
+        // (Not where a deck laps over the ramp in the background: the
+        // outline would poke past it as a light line.)
+        if (!(opts.noBank && opts.noBank.has(i))) c.stroke();
       }
     }
     // Light and shade by slope, contour lines and a little dirt speckle.
