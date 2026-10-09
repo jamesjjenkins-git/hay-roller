@@ -116,6 +116,7 @@
         vy: 0,
         heading: start.angle,
         steer: 0,
+        drift: 0,
         idx: Tracks.nearestGlobal(track, x, y),
         progress: 0,
         lap: 0,
@@ -280,7 +281,13 @@
         vf = Math.max(vf, -st.topSpeed * 0.4);
       }
       if (input.throttle <= 0 && input.brake <= 0) vf -= vf * 1.2 * DT;
+      // Grip pulls a drift back in line. On firm ground the slide's speed is
+      // carried forward (up to top speed), so a tidy drift doesn't cost you.
+      const vlBefore = vl;
       vl *= Math.exp(-st.grip * gripMul * DT);
+      if (vf > 0 && r.surface === 'dirt') {
+        vf = Math.min(Math.max(vf, top), Math.sqrt(vf * vf + vlBefore * vlBefore - vl * vl));
+      }
       // Turning scrubs off a little speed, which tightens the line through corners.
       vf -= vf * Math.abs(r.steer) * 0.8 * DT;
 
@@ -291,7 +298,17 @@
       // but unwind a little quicker than it winds on to avoid overshoot.
       const easing = Math.abs(input.steer) < Math.abs(r.steer) ? 20 : 15;
       r.steer += (input.steer - r.steer) * Math.min(1, easing * DT);
-      r.heading += r.steer * st.turnRate * turnFactor * dir * DT;
+      const turn = r.steer * st.turnRate * turnFactor * dir * DT;
+      r.heading += turn;
+      // Drift: the travel direction lags a touch behind the nose, and the
+      // back end swings out (r.drift, drawn only) in proportion to how hard
+      // you're turning at speed, easing back as you straighten up.
+      vl -= vf * Math.sin(turn) * DRIFT.carry;
+      vf -= vf * (1 - Math.cos(turn)) * DRIFT.carry;
+      const wantDrift = r.surface === 'water' || r.surface === 'mud'
+        ? 0
+        : r.steer * DRIFT.swing * Math.min(1, Math.max(0, vf) / st.topSpeed) * (1.4 - 0.4 * gripMul);
+      r.drift += (wantDrift - r.drift) * Math.min(1, DRIFT.ease * DT);
 
       // Straight-line assist (player option): with no steering input, nudge
       // the nose toward the direction of the road right here — only when
@@ -417,6 +434,11 @@
       }
     }
   }
+
+  // Drift: `carry` is how much of each turn the travel direction lags behind
+  // the nose (0 = on rails, 1 = ice); grip then pulls the slide back in line.
+  // `swing` is how far (radians, at full turn and speed) the tail swings out.
+  const DRIFT = { carry: 0.08, swing: 0.4, ease: 6 };
 
   // Rumble strips only cost you if you're turning while on them.
   const BUMPS = { loss: 0.35, fullAt: 0.35 };
@@ -729,7 +751,7 @@
     };
   }
 
-  const api = { DT, RADIUS, MAX_TIME, DRIVERS, CATCHUP, ASSIST, WALL, ANIMAL, BUMPS, animalCount, catchUpBoost, aiStats, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
+  const api = { DT, RADIUS, MAX_TIME, DRIVERS, CATCHUP, ASSIST, WALL, ANIMAL, BUMPS, DRIFT, animalCount, catchUpBoost, aiStats, statsFor, createRace, step, standings, earnings, fastestLap, angleDiff };
   root.TractorSim = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -122,8 +122,9 @@
       const s = skid.getContext('2d');
       for (const r of sim.racers) {
         const speed = Math.hypot(r.vx, r.vy);
-        const fx = Math.cos(r.heading);
-        const fy = Math.sin(r.heading);
+        const body = r.heading + (r.drift || 0);
+        const fx = Math.cos(body);
+        const fy = Math.sin(body);
         const rearX = r.x - fx * 10;
         const rearY = r.y - fy * 10;
         const slip = Math.abs(-r.vx * fy + r.vy * fx);
@@ -150,7 +151,7 @@
         if (prev && !r.airborne && speed > 15) {
           let alpha = 0.06;
           let color = '60, 35, 15';
-          if (slip > 35) alpha = Math.min(0.35, 0.08 + slip / 400);
+          if (slip > 18) alpha = Math.min(0.35, 0.06 + slip / 300);
           if (r.surface === 'mud') { alpha = 0.3; color = '50, 30, 10'; }
           if (r.surface === 'water') alpha = 0;
           if (alpha > 0) {
@@ -939,7 +940,7 @@
     const s = 1 + r.z / 120;
     ctx.save();
     ctx.translate(r.x + 4 + r.z * 0.35, r.y + 5 + r.z * 0.6);
-    ctx.rotate(r.heading);
+    ctx.rotate(r.heading + (r.drift || 0));
     ctx.globalAlpha = Math.max(0.12, 0.3 - r.z / 300);
     roundRect(ctx, -18 * s, -13 * s, 36 * s, 26 * s, 8);
     ctx.fillStyle = '#000';
@@ -959,7 +960,7 @@
     const shake = r.bump > 0 ? Math.sin(now / 18 + r.id) * r.bump * 1.5 : 0;
     ctx.save();
     ctx.translate(r.x, r.y - r.z * 0.4 + shake);
-    ctx.rotate(r.heading);
+    ctx.rotate(r.heading + (r.drift || 0));
     ctx.scale(s, s);
 
     // Rear wheels with tread.
