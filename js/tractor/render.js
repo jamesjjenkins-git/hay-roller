@@ -630,63 +630,8 @@
     }
     c.restore();
 
-    // Walls: hay bales with tyre stacks along both edges. Items are spaced
-    // by distance along the edge itself, so they don't bunch up on the
-    // inside of bends; where the edge curves tightly, round oil barrels
-    // replace the long bales.
-    const walls = [];
-    // Placed on the road's on-screen shape (lifted by hills), so pieces
-    // follow a slope instead of skewing, and no piece is placed on top of
-    // another (where two stretches of wall meet at corners and crossings).
-    const SIZE = { bale: 13, tyre: 9, barrel: 10 };
-    const clashes = (x, y, r) => walls.some((w) => Math.hypot(w.x - x, w.y - y) < r + SIZE[w.kind] - 2);
-    for (const side of [-1, 1]) {
-      const off = side * (t.halfWidth + 7);
-      const pts = t.samples.map((s, i) => {
-        const lift = liftAt(t, i);
-        return { x: s.x + s.nx * off, gy: s.y + s.ny * off, y: s.y + s.ny * off - lift, angle: s.angle };
-      });
-      let travelled = 0;
-      let nextAt = 0;
-      let placed = 0;
-      for (let i = 0; i < t.count; i++) {
-        const p = pts[i];
-        const prev = pts[(i - 1 + t.count) % t.count];
-        if (i > 0) travelled += Math.hypot(p.x - prev.x, p.y - prev.y);
-        if (travelled < nextAt) continue;
-        if (p.x < -10 || p.x > W + 10 || p.gy < -10 || p.gy > H + 10) continue;
-        // On the inside of tight bends the offset edge folds back over the
-        // road; don't draw anything where there's driving surface.
-        if (onSurface(t, p.x, p.gy, t.halfWidth + 3)) continue;
-        // Where this wall runs across another stretch's road (a crossing),
-        // leave a gap: that's road. Only there - anywhere else the wall is
-        // real, so it must be drawn.
-        if (nearOtherRoad(t, i, p.x, p.gy, t.halfWidth + 3)) continue;
-        // Local radius of this edge, from how fast it turns.
-        const a0 = pts[(i - 3 + t.count) % t.count];
-        const a1 = pts[(i + 3) % t.count];
-        let turn = a1.angle - a0.angle;
-        while (turn > Math.PI) turn -= Math.PI * 2;
-        while (turn < -Math.PI) turn += Math.PI * 2;
-        const edgeLen = Math.hypot(a1.x - a0.x, a1.gy - a0.gy);
-        const tight = edgeLen / Math.max(0.001, Math.abs(turn)) < BARREL_RADIUS;
-        const kind = placed % 9 === 0 ? 'tyre' : tight ? 'barrel' : 'bale';
-        if (clashes(p.x, p.y, SIZE[kind])) {
-          nextAt = travelled + 6;
-          continue;
-        }
-        // The bale lies along the edge as it appears on screen.
-        const ahead = pts[(i + 2) % t.count];
-        const behind = pts[(i - 2 + t.count) % t.count];
-        const angle = Math.atan2(ahead.y - behind.y, ahead.x - behind.x);
-        walls.push({ kind, x: p.x, y: p.y, gy: p.gy, n: kind === 'tyre' ? Math.floor(placed / 9) : placed, angle });
-        nextAt = travelled + (kind === 'tyre' ? 20 : kind === 'barrel' ? 18 : 25);
-        placed++;
-      }
-    }
-    // Back to front, so nearer walls overlap the ones behind them.
-    // Drawn each frame, depth-sorted with the vehicles (see the renderer).
-    t.wallItems = walls;
+    t.wallItems = placeWalls(t);
+
 
     // Title sign.
     c.save();
@@ -1204,6 +1149,150 @@
   }
 
   // `screen`: compare against where the road is drawn (lifted by hills).
+  // ---------- Wall placement ----------
+  // Walls run round the outline of all the road together (every stretch at
+  // once), 7px outside its edge: one continuous line of bales with clean
+  // corners at junctions and crossing mouths, and no piece ever on the road.
+  const WALL_OFF = 7;
+  const WALL_CELL = 4;
+  function placeWalls(t) {
+    const cs = WALL_CELL;
+    const cols = Math.ceil(W / cs) + 3;
+    const rows = Math.ceil(H / cs) + 3;
+    const ox = -cs;
+    const oy = -cs;
+    // Distance from the road edge (negative on the road), and the nearest
+    // centre-line sample, on a grid.
+    const D = new Float32Array(cols * rows);
+    const NI = new Int32Array(cols * rows);
+    const S = t.samples;
+    for (let j = 0; j < rows; j++) {
+      for (let i = 0; i < cols; i++) {
+        const x = ox + i * cs;
+        const y = oy + j * cs;
+        let best = Infinity;
+        let bi = 0;
+        for (let k = 0; k < S.length; k++) {
+          const dx = S[k].x - x;
+          const dy = S[k].y - y;
+          const d = dx * dx + dy * dy;
+          if (d < best) {
+            best = d;
+            bi = k;
+          }
+        }
+        D[j * cols + i] = Math.sqrt(best) - t.halfWidth - WALL_OFF;
+        NI[j * cols + i] = bi;
+      }
+    }
+    // Marching squares at D = 0, chaining the pieces into lines.
+    const edgePoint = (i0, j0, i1, j1) => {
+      const a = D[j0 * cols + i0];
+      const b = D[j1 * cols + i1];
+      const f = a / (a - b);
+      return [ox + (i0 + (i1 - i0) * f) * cs, oy + (j0 + (j1 - j0) * f) * cs];
+    };
+    const ekey = (i0, j0, i1, j1) => (i0 < i1 || j0 < j1 ? `${i0},${j0},${i1},${j1}` : `${i1},${j1},${i0},${j0}`);
+    const links = new Map();
+    const link = (k1, p1, k2, p2) => {
+      if (!links.has(k1)) links.set(k1, { p: p1, to: [] });
+      if (!links.has(k2)) links.set(k2, { p: p2, to: [] });
+      links.get(k1).to.push(k2);
+      links.get(k2).to.push(k1);
+    };
+    for (let j = 0; j < rows - 1; j++) {
+      for (let i = 0; i < cols - 1; i++) {
+        const v = [D[j * cols + i], D[j * cols + i + 1], D[(j + 1) * cols + i + 1], D[(j + 1) * cols + i]];
+        const corners = [[i, j], [i + 1, j], [i + 1, j + 1], [i, j + 1]];
+        const crossings = [];
+        for (let e = 0; e < 4; e++) {
+          const a = v[e];
+          const b = v[(e + 1) % 4];
+          if ((a < 0) !== (b < 0)) {
+            const [i0, j0] = corners[e];
+            const [i1, j1] = corners[(e + 1) % 4];
+            crossings.push([ekey(i0, j0, i1, j1), edgePoint(i0, j0, i1, j1)]);
+          }
+        }
+        if (crossings.length === 2) link(crossings[0][0], crossings[0][1], crossings[1][0], crossings[1][1]);
+        else if (crossings.length === 4) {
+          link(crossings[0][0], crossings[0][1], crossings[1][0], crossings[1][1]);
+          link(crossings[2][0], crossings[2][1], crossings[3][0], crossings[3][1]);
+        }
+      }
+    }
+    const lines = [];
+    const seen = new Set();
+    for (const [start] of links) {
+      if (seen.has(start)) continue;
+      const line = [];
+      let cur = start;
+      let prev = null;
+      while (cur && !seen.has(cur)) {
+        seen.add(cur);
+        const node = links.get(cur);
+        line.push(node.p);
+        const nxt = node.to.find((k) => k !== prev && !seen.has(k));
+        prev = cur;
+        cur = nxt;
+      }
+      if (line.length > 8) lines.push(line);
+    }
+    // Lift each point with the road beside it, smooth, and lay pieces along.
+    const walls = [];
+    const SIZE = { bale: 13, tyre: 9, barrel: 10 };
+    const clashes = (x, y, r) => walls.some((w) => Math.hypot(w.x - x, w.y - y) < r + SIZE[w.kind] - 3);
+    let placed = 0;
+    for (const raw of lines) {
+      const n = raw.length;
+      const pts = raw.map((p, k) => {
+        // Light smoothing (closed line).
+        let sx = 0;
+        let sy = 0;
+        for (let q = -2; q <= 2; q++) {
+          const r = raw[(k + q + n) % n];
+          sx += r[0];
+          sy += r[1];
+        }
+        const x = sx / 5;
+        const gy = sy / 5;
+        const ci = Math.max(0, Math.min(cols - 1, Math.round((x - ox) / cs)));
+        const cj = Math.max(0, Math.min(rows - 1, Math.round((gy - oy) / cs)));
+        const si = NI[cj * cols + ci];
+        // On shaped ground, sit at the height of the ground drawn there.
+        const lift = t.terrain ? root.TractorTracks.terrainHeight(t.terrain, x, gy) * RAISE : liftAt(t, si);
+        return { x, gy, y: gy - lift };
+      });
+      let travelled = 0;
+      let nextAt = 0;
+      for (let k = 0; k < n; k++) {
+        const p = pts[k];
+        if (k > 0) travelled += Math.hypot(p.x - pts[k - 1].x, p.y - pts[k - 1].y);
+        if (travelled < nextAt) continue;
+        if (p.x < -10 || p.x > W + 10 || p.gy < -10 || p.gy > H + 10) continue;
+        const ahead = pts[(k + 3) % n];
+        const behind = pts[(k - 3 + n) % n];
+        const angle = Math.atan2(ahead.y - behind.y, ahead.x - behind.x);
+        const a0 = pts[(k - 6 + n) % n];
+        const a1 = pts[(k + 6) % n];
+        let turn = Math.atan2(a1.gy - p.gy, a1.x - p.x) - Math.atan2(p.gy - a0.gy, p.x - a0.x);
+        while (turn > Math.PI) turn -= Math.PI * 2;
+        while (turn < -Math.PI) turn += Math.PI * 2;
+        const span = Math.hypot(a1.x - a0.x, a1.gy - a0.gy);
+        const tight = span / Math.max(0.001, Math.abs(turn)) < BARREL_RADIUS * 0.6;
+        const kind = placed % 9 === 0 ? 'tyre' : tight ? 'barrel' : 'bale';
+        if (clashes(p.x, p.y, SIZE[kind])) {
+          nextAt = travelled + 4;
+          continue;
+        }
+        walls.push({ kind, x: p.x, y: p.y, gy: p.gy, n: kind === 'tyre' ? Math.floor(placed / 9) : placed, angle });
+        nextAt = travelled + (kind === 'tyre' ? 20 : kind === 'barrel' ? 18 : 25);
+        placed++;
+      }
+    }
+    return walls;
+  }
+
   function nearOtherRoad(t, i, x, y, within, screen) {
     const lim = within * within;
     const skip = Math.ceil((t.width * 1.5) / root.TractorTracks.SAMPLE_STEP);
