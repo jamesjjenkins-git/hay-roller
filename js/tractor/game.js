@@ -67,9 +67,28 @@
     let stickTouch = null;
     let stickOrigin = null;
 
+    // Auto re-centre: if the thumb stops sliding for a moment, the slider's
+    // centre moves to where the thumb now is (as if you'd lifted and put it
+    // back down), so a resting thumb always means straight ahead.
+    const RECENTER_MS = 180;
+    const STILL_PX = 3;
+    let thumbX = 0;
+    let stillSince = 0;
+
+    function recentreIfStill(now) {
+      if (stickTouch == null || input.slide === 0) return;
+      if (now - stillSince < RECENTER_MS) return;
+      stickOrigin.x = thumbX;
+      stickBase.style.left = `${thumbX}px`;
+      stickKnob.style.transform = '';
+      input.slide = 0;
+    }
+
     function stickStart(id, x, y) {
       stickTouch = id;
       stickOrigin = { x, y };
+      thumbX = x;
+      stillSince = performance.now();
       stickZone.classList.add('used');
       stickBase.style.left = `${x}px`;
       stickBase.style.top = `${y}px`;
@@ -84,6 +103,10 @@
     const SLIDE_MAX = 48; // how far the knob can travel visually
     const SLIDER_STEER = 0.55; // fraction of the tractor's full turn rate
     function stickMove(x) {
+      if (Math.abs(x - thumbX) > STILL_PX) {
+        thumbX = x;
+        stillSince = performance.now();
+      }
       const dx = Math.max(-SLIDE_MAX, Math.min(SLIDE_MAX, x - stickOrigin.x));
       stickKnob.style.transform = `translateX(${dx}px)`;
       const ramp = Math.min(1, Math.max(0, Math.abs(dx) - SLIDE_DEAD) / SLIDE_RAMP);
@@ -454,7 +477,7 @@
       touch: {
         title: 'Phone controls',
         rows: [
-          ['👆', 'Steer', 'Put your thumb anywhere on the <b>left half</b> of the screen and slide <b>left or right</b> to turn at a steady rate; let go to go straight. Turning scrubs off a little speed, so hairpins take care.'],
+          ['👆', 'Steer', 'Put your thumb anywhere on the <b>left half</b> of the screen and slide <b>left or right</b> to turn. Stop sliding (or let go) and you go straight — no need to find the middle again. For a long bend, keep easing your thumb that way.'],
           ['🚜', 'Gas', 'Automatic — you’re always on the throttle.'],
           ['🔥', 'Nitro', 'Tap <b>NITRO</b> for a burst of speed. Counter at the top right.'],
           ['🛑', 'Brake', 'Hold <b>BRAKE</b> to slow down. Keep holding when stopped to reverse out of trouble.'],
@@ -696,6 +719,7 @@
     }
 
     function frame(now) {
+      recentreIfStill(now);
       rafId = requestAnimationFrame(frame);
       const dt = lastNow ? Math.min(0.1, (now - lastNow) / 1000) : 0;
       lastNow = now;
