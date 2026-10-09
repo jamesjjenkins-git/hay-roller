@@ -58,7 +58,9 @@
       const brake = input.brake || k.has('ArrowDown') || k.has('s') ? 1 : 0;
       const nitro = input.nitro || k.has(' ') || k.has('Shift');
       input.nitro = false;
-      return { steer, throttle: brake ? 0 : 1, brake, nitro, assist: true };
+      // While a thumb is on the slider, the angle you've turned to is held
+      // exactly; the straight-line assist only helps when you've let go.
+      return { steer, throttle: brake ? 0 : 1, brake, nitro, assist: stickTouch == null };
     }
 
     const stickZone = $('#stick-zone');
@@ -67,9 +69,10 @@
     let stickTouch = null;
     let stickOrigin = null;
 
-    // Auto re-centre: if the thumb stops sliding for a moment, the slider's
-    // centre moves to where the thumb now is (as if you'd lifted and put it
-    // back down), so a resting thumb always means straight ahead.
+    // Auto re-centre: if the thumb stops sliding for a moment, the turn you've
+    // put in is kept (the tractor holds the angle it's now pointing at) and the
+    // slider's centre moves to where the thumb is, so the next slide is a fresh
+    // adjustment from there — no hunting for the original centre.
     const RECENTER_MS = 180;
     const STILL_PX = 3;
     let thumbX = 0;
@@ -477,7 +480,7 @@
       touch: {
         title: 'Phone controls',
         rows: [
-          ['👆', 'Steer', 'Put your thumb anywhere on the <b>left half</b> of the screen and slide <b>left or right</b> to turn. Stop sliding (or let go) and you go straight — no need to find the middle again. For a long bend, keep easing your thumb that way.'],
+          ['👆', 'Steer', 'Put your thumb anywhere on the <b>left half</b> of the screen and slide <b>left or right</b> to turn. Stop sliding and the tractor holds the angle it has turned to; the slider resets under your thumb, so the next slide is a fresh adjustment. For a long bend, keep easing your thumb that way.'],
           ['🚜', 'Gas', 'Automatic — you’re always on the throttle.'],
           ['🔥', 'Nitro', 'Tap <b>NITRO</b> for a burst of speed. Counter at the top right.'],
           ['🛑', 'Brake', 'Hold <b>BRAKE</b> to slow down. Keep holding when stopped to reverse out of trouble.'],
