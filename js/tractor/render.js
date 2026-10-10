@@ -365,7 +365,9 @@
       if (mode === 'full') {
         // The whole track, centred in the part of the screen clear of the
         // notch / Dynamic Island and the home bar.
-        const sf = safeInsets();
+        // The home bar (bottom inset) is only a thin line over the game and
+        // iOS changes its inset after a rotation, so it's not kept clear.
+        const sf = { ...safeInsets(), b: 0 };
         const aw = cw - sf.l - sf.r;
         const ah = ch - sf.t - sf.b;
         const k = Math.min(aw / W, ah / H);
@@ -626,7 +628,7 @@
     // Small whole-track map, bottom centre, with every tractor as a dot.
     function drawMinimap(sim) {
       const t = sim.track;
-      const mw = Math.min(canvas.width * 0.24, canvas.height * 0.5);
+      const mw = Math.min(canvas.width * 0.18, canvas.height * 0.375);
       const ms = mw / W;
       const mh = H * ms;
       const x0 = (canvas.width - mw) / 2;
