@@ -632,7 +632,8 @@
       const ms = mw / W;
       const mh = H * ms;
       const x0 = (canvas.width - mw) / 2;
-      const y0 = canvas.height - mh - 10 * (canvas.height / 400) - safeInsets().b;
+      // Close to the bottom edge (the gap is 30% of the margin plus home bar).
+      const y0 = canvas.height - mh - 0.3 * (10 * (canvas.height / 400) + safeInsets().b);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalAlpha = 0.75;
       ctx.fillStyle = 'rgba(40, 70, 30, 0.5)';
