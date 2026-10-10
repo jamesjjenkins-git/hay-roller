@@ -715,8 +715,11 @@
       sound.engineStart();
       updateHud();
       // Try to get rid of browser chrome on Android; iOS needs "Add to Home Screen".
+      // Not in the app: it's already full screen, and iOS WebKit would lay its
+      // own exit-fullscreen ✕ over the top-left corner.
       const fs = document.documentElement.requestFullscreen;
-      if (fs && !document.fullscreenElement && matchMedia('(pointer: coarse)').matches) {
+      const native = document.documentElement.classList.contains('native-app');
+      if (fs && !native && !document.fullscreenElement && matchMedia('(pointer: coarse)').matches) {
         document.documentElement.requestFullscreen().catch(() => {});
       }
     }
