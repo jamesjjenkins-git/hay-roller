@@ -94,8 +94,7 @@ prompt.
   press Race. Turn the phone sideways to race.
 
   Hay is free play money with no cash value; it can't be bought with real money, sold or
-  withdrawn. The three casino-style mini games (Hay Bale Derby, Piggy Bank Slots, Egg Roulette)
-  use Hay only, so no real money is ever wagered.
+  withdrawn.
 
   In-app purchases: tap the 🪙 Gold counter at the top of any screen to open the store (three
   Gold packs and Remove ads), with Restore purchases underneath. Gold is spent in the garage on
@@ -110,5 +109,7 @@ prompt.
 
 ## Screenshots
 
-iPhone 6.9" (iPhone 18 Pro Max simulator), taken with `xcrun simctl io … screenshot`: home,
-garage, a race in landscape, Farmyard Frenzy, and the Gold store. No test-ad banners.
+iPhone 18 Pro Max simulator, taken with `xcrun simctl io … screenshot` (portrait): home,
+garage and the Gold store, no mini games and no test-ad banners. Uploaded to the iPhone
+medium-display slot at 1206 × 2622 (`screenshots/appstore/iphone63/`), which App Store Connect
+scales to the other iPhone sizes.
