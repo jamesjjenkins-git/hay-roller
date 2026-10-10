@@ -287,6 +287,11 @@
       openWallet,
     }),
   };
+  // The iPhone app leaves out the casino-style mini games, which would give
+  // it an 18+ App Store rating; only the web version has them.
+  if (document.documentElement.classList.contains('native-app')) {
+    for (const g of ['slots', 'egg-roulette', 'hay-derby']) delete games[g];
+  }
   let current = null;
 
   function route() {

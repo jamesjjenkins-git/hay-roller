@@ -606,7 +606,7 @@
           toast(`${UPGRADES.find((u) => u.id === id).name} upgraded to level ${garage.upgrades[id]}!`, 'good');
         } else {
           sound.click();
-          toast(`You need 🌾${fmt(cost - wallet.balance)} more Hay. Win races, try the mini games, or get free Hay in your wallet.`, 'warn');
+          toast(`You need 🌾${fmt(cost - wallet.balance)} more Hay. Win races${document.documentElement.classList.contains('native-app') ? '' : ', try the mini games'}, or get free Hay in your wallet.`, 'warn');
         }
         renderGarage();
       } else if (paint) {

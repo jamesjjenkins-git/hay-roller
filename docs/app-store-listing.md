@@ -32,14 +32,13 @@ PLAY BETWEEN RACES
 • Farmyard Frenzy: after every race, 100 escaped animals and one minute to pop as many as you
   can.
 • Badges, trophies, fastest laps and personal bests on every track.
-• Three farmyard mini games — Hay Bale Derby, Piggy Bank Slots and Egg Roulette — for extra Hay.
 
 UPGRADE AND CUSTOMISE
 • Spend the Hay you win on acceleration, top speed, handling and boosts.
 • Paint jobs, decals, hats and trails to make your ride your own.
 
 Hay is free in-game play money. It can't be bought, sold or withdrawn and has no cash value.
-The mini games are simulated and involve no real money. Optional in-app purchases buy Gold, which
+Optional in-app purchases buy Gold, which
 is spent in the garage on cosmetics and optional shortcuts, and Remove ads.
 
 **Keywords** (100 max):
@@ -58,9 +57,8 @@ tractor,racing,farm,quad,motorbike,offroad,mud,drift,arcade,top down,kart,animal
 
 ## Age rating questionnaire (honest answers)
 
-- Simulated gambling: **Frequent/Intense** (three casino-style mini games are core features,
-  play money only)
-- Cartoon or fantasy violence: **Infrequent/Mild** (bumping rivals; animals "pop" like balloons)
+- Simulated gambling: **None** (the casino-style mini games are left out of the iPhone app; web only)
+- Cartoon or fantasy violence: **Frequent** (bumping rivals every race; animals "pop" like balloons in Farmyard Frenzy)
 - Everything else (realistic violence, horror, mature themes, profanity, alcohol/drugs, sexual
   content, medical): **None**
 - Unrestricted web access: No · User-generated content: No · Messaging/chat: No

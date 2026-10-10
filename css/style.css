@@ -1537,6 +1537,9 @@ kbd {
 
 /* The App Store ships updates, not the in-page update check. */
 html.native-app .web-only { display: none; }
+/* The iPhone app leaves out the casino-style mini games (App Store age rating). */
+.native-only { display: none; }
+html.native-app .native-only { display: inline; }
 
 /* Cosmetics (Gold): a row each for decals, hats and trails. */
 .looks { display: grid; gap: 14px; margin: 4px 0 16px; }
