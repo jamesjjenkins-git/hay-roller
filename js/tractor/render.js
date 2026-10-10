@@ -607,7 +607,20 @@
       }
       const cs = getComputedStyle(probe);
       const k = canvas.width / canvas.clientWidth;
-      return { t: parseFloat(cs.paddingTop) * k, r: parseFloat(cs.paddingRight) * k, b: parseFloat(cs.paddingBottom) * k, l: parseFloat(cs.paddingLeft) * k };
+      // The insets are measured from the screen's edges, but the canvas may
+      // not reach them (in the whole-track view it's centred with margins,
+      // usually already clear of the notch): only the part of each inset
+      // that overlaps the canvas counts.
+      const r = canvas.getBoundingClientRect();
+      const vw = document.documentElement.clientWidth;
+      const vh = document.documentElement.clientHeight;
+      const over = (inset, gap) => Math.max(0, inset - Math.max(0, gap)) * k;
+      return {
+        t: over(parseFloat(cs.paddingTop), r.top),
+        r: over(parseFloat(cs.paddingRight), vw - r.right),
+        b: over(parseFloat(cs.paddingBottom), vh - r.bottom),
+        l: over(parseFloat(cs.paddingLeft), r.left),
+      };
     }
 
     // Small whole-track map, bottom centre, with every tractor as a dot.
