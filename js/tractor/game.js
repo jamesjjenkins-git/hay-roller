@@ -327,14 +327,20 @@
       layout();
     }
 
+    // The race fills the race screen (a full-screen fixed element), so it's
+    // sized from that element, not window.innerWidth/innerHeight: after a
+    // rotation iOS can leave innerHeight short of the real screen.
+    function screenSize() {
+      const w = raceEl.clientWidth || root.innerWidth;
+      const h = raceEl.clientHeight || root.innerHeight;
+      return [w, h];
+    }
     // The size the race was last laid out for; the frame loop re-lays out
-    // whenever the window differs (iOS can report a rotation's new size
-    // well after the resize and orientationchange events).
+    // whenever the race screen differs.
     let laidOut = '';
     function layout() {
       if (phase === 'garage') return;
-      const vw = root.innerWidth;
-      const vh = root.innerHeight;
+      const [vw, vh] = screenSize();
       laidOut = `${vw}x${vh}`;
       if (viewMode === 'chase') {
         renderer.resize(vw, vh);
@@ -351,6 +357,7 @@
     root.addEventListener('resize', () => mounted && layout());
     root.addEventListener('orientationchange', () => setTimeout(() => mounted && layout(), 200));
     if (root.visualViewport) root.visualViewport.addEventListener('resize', () => mounted && layout());
+    if (root.ResizeObserver) new ResizeObserver(() => mounted && layout()).observe(raceEl);
 
     // ---------- Garage ----------
 
@@ -1102,7 +1109,7 @@
       const dt = lastNow ? Math.min(0.1, (now - lastNow) / 1000) : 0;
       lastNow = now;
       if (!sim || phase === 'garage') return;
-      if (laidOut !== `${root.innerWidth}x${root.innerHeight}`) layout();
+      if (laidOut !== screenSize().join('x')) layout();
 
       // Phones must be sideways to race: hold the countdown until rotated,
       // and pause if the phone is turned upright mid-race.
