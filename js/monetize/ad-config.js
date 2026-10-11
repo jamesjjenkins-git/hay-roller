@@ -18,11 +18,16 @@
       rewarded: 'ca-app-pub-3653000407024097/7017998123', // Free Hay
     },
     // James's iPhone: always test ads, so tapping them can't flag the account.
-    // The id changes when the app is deleted and reinstalled (it's the MD5 of
-    // the app's vendor id). To find the new one, run a debug build on the
-    // phone: the consent SDK logs "UMPDebugSettings.testDeviceIdentifiers =
+    // The id is the MD5 of the app's vendor id, which is different for a
+    // TestFlight install and a debug install, and changes when the app is
+    // deleted and reinstalled. To find it, launch the installed app with
+    //   xcrun devicectl device process launch --console --device <udid> com.jamesjenkins.farmyardrally
+    // The consent SDK logs "UMPDebugSettings.testDeviceIdentifiers =
     // @[ @"<VENDOR-ID>" ]", and the ad id is `printf <VENDOR-ID> | md5`.
-    testDevices: ['97e6a4a63984c351f78d5b2adf3ff0ac'],
+    testDevices: [
+      'b8eed77a5107926819aafcc0377f4761', // TestFlight install
+      '97e6a4a63984c351f78d5b2adf3ff0ac', // debug install from Xcode
+    ],
     // A cartoon farm game: keep ads suitable for a family audience.
     maxAdContentRating: 'ParentalGuidance',
   };
