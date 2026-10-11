@@ -106,6 +106,8 @@ prompt.
   launch; declining still shows non-personalised ads.
 
 - **Release:** Manually release this version.
+- **Guideline 2.1 information request** (first submission): the reply and the screen-recording
+  checklist are in [app-review-reply.md](app-review-reply.md); paste the reply into the Notes too.
 
 ## Screenshots
 
