@@ -27,12 +27,66 @@
   const $ = (sel) => document.querySelector(sel);
   const fmt = (n) => n.toLocaleString('en-GB');
 
+  // ---------- Gold coins ----------
+
+  // Apple draws the 🪙 emoji as a silver coin; wrapping each one lets CSS
+  // (.gc) tint it gold. An observer catches coins rendered later.
+  const COIN = '🪙';
+  function goldCoins(node) {
+    const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+    const hits = [];
+    for (let n = walker.currentNode; n; n = walker.nextNode()) {
+      if (n.nodeType === 3 && n.data.includes(COIN) && !(n.parentNode && n.parentNode.classList && n.parentNode.classList.contains('gc'))) hits.push(n);
+    }
+    for (const n of hits) {
+      const parts = n.data.split(COIN);
+      const frag = document.createDocumentFragment();
+      parts.forEach((p, i) => {
+        if (i) {
+          const c = document.createElement('i');
+          c.className = 'gc';
+          c.textContent = COIN;
+          frag.appendChild(c);
+        }
+        if (p) frag.appendChild(document.createTextNode(p));
+      });
+      n.parentNode.replaceChild(frag, n);
+    }
+  }
+  goldCoins(document.body);
+  new MutationObserver((records) => {
+    for (const r of records) {
+      if (r.type === 'characterData') {
+        if (r.target.parentNode) goldCoins(r.target.parentNode);
+      } else {
+        r.addedNodes.forEach((n) => (n.nodeType === 1 || n.nodeType === 3) && n.parentNode && goldCoins(n.nodeType === 1 ? n : n.parentNode));
+      }
+    }
+  }).observe(document.body, { childList: true, characterData: true, subtree: true });
+
   // ---------- Toasts ----------
+
+  // An open <dialog> sits in the top layer, above everything else on the
+  // page, so toasts would be hidden behind it. Re-showing the toasts as a
+  // popover puts them back on top; without popovers (iOS before 17) they
+  // move into the open dialog instead.
+  function hostToasts() {
+    const box = $('#toasts');
+    if (box.showPopover) {
+      if (box.matches(':popover-open')) box.hidePopover();
+      box.showPopover();
+      return;
+    }
+    const host = document.querySelector('dialog[open]') || document.body;
+    if (box.parentNode !== host) host.appendChild(box);
+  }
 
   function toast(message, kind = 'info', ms = 3200) {
     const t = document.createElement('div');
     t.className = `toast ${kind}`;
     t.textContent = message;
+    goldCoins(t);
+    hostToasts();
     $('#toasts').appendChild(t);
     requestAnimationFrame(() => t.classList.add('show'));
     setTimeout(() => {
@@ -44,6 +98,7 @@
   // ---------- Wallet & store ----------
 
   const modal = $('#wallet-modal');
+  modal.addEventListener('close', hostToasts);
 
   function bump(el) {
     el.classList.remove('bump');
@@ -121,6 +176,7 @@
     $('#dev-topup').classList.toggle('hidden', !DEV);
     if (typeof modal.showModal === 'function') modal.showModal();
     else modal.setAttribute('open', '');
+    hostToasts();
     // No banner over the wallet (in the app it's a native view on top of the page).
     updateBanner(false);
     if (section === 'gold') $('#w-gold').scrollIntoView({ block: 'start' });

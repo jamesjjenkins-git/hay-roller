@@ -304,7 +304,7 @@
 
       <section class="w-section" id="w-gold">
         <div class="wallet-balance gold"><span class="coin">🪙</span><span id="wallet-gold">0</span> Gold</div>
-        <p class="muted">Gold buys paint jobs, decals, hats and trails in the garage, plus optional shortcuts (upgrade levels, spare nitros). It can't be used for bets or swapped for Hay.</p>
+        <p class="muted">Gold buys paint jobs, decals, hats and trails in the garage, plus optional shortcuts (upgrade levels, spare nitros). It can't be<span class="web-only"> used for bets or</span> swapped for Hay.</p>
         <p class="test-mode hidden" id="test-mode-note">🧪 <b>Test mode:</b> purchases are free and no money is taken. Prices show what they'll cost once the app is in the App Store.</p>
         <p class="test-mode hidden" id="store-unavailable">The App Store isn't reachable right now, so purchases are off. Check your connection and try again.</p>
         <div class="packs" id="store-packs"></div>
@@ -318,7 +318,7 @@
     </form>
   </dialog>
 
-  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <div class="toasts" id="toasts" popover="manual" aria-live="polite"></div>
 
   <script src="js/rng.js"></script>
   <script src="js/wallet.js"></script>
