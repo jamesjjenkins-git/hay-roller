@@ -34,7 +34,7 @@
 
     const PACKS = [
       { id: 'farm', name: '🚜 Farm tracks' },
-      { id: 'ironman', name: '🏜️ Back Forty pack' },
+      { id: 'ironman', name: '⛰️ Hilly Fields pack' },
     ];
     let selected = TRACKS.find((t) => t.id === localStorage.getItem(SELECTED_KEY)) || TRACKS[0];
     if (!garage.isUnlocked(selected)) selected = TRACKS[0];
@@ -426,7 +426,7 @@
           ${spare ? `<label class="arm-nitro"><input type="checkbox" data-arm-nitro ${garage.armNitro ? 'checked' : ''}> Take one into the next race</label>` : ''}</div>
         <button class="btn btn-buy-gold" data-spare-nitro>${SPARE_NITROS.count} for 🪙 ${SPARE_NITROS.gold}</button>`;
 
-      // Track packs: the farm tracks, then the Back Forty pack.
+      // Track packs: the farm tracks, then the Hilly Fields pack.
       const pack = selected.pack || 'farm';
       $('#pack-tabs').innerHTML = PACKS.map((pk) => {
         const first = TRACKS.find((t) => (t.pack || 'farm') === pk.id);

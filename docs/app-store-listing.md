@@ -19,7 +19,7 @@ Farmyard Rally is a top-down racing game set on a muddy farm. Four racers, one s
 lot of mud.
 
 RACE
-• 19 tracks, from Muddy Meadow and Haystack Hill to the hilly Back Forty pack, with jumps, mud,
+• 19 tracks, from Muddy Meadow and Haystack Hill to the hilly Hilly Fields pack, with jumps, mud,
   water splashes, rumble strips and a real figure-of-eight crossroads.
 • Hills you can feel: climbing costs speed, the way down gives it back, and cresting a hill at
   speed throws you into the air.

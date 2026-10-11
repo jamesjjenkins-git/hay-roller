@@ -353,7 +353,7 @@
         { kind: 'hay', x: 1100, y: 130 },
       ],
     },
-    // ---------- Back Forty pack (ids keep the old 'iron-' prefix) ----------
+    // ---------- Hilly Fields pack (ids keep the old 'iron-' prefix) ----------
     // Eight late-game tracks with raised and sunken ground. Finish top 3 at
     // the Harvest Grand Prix to open the pack.
     {

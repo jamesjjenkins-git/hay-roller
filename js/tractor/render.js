@@ -752,7 +752,7 @@
 
     c.fillStyle = '#6fbf4f';
     c.fillRect(0, 0, W, H);
-    // Mown stripes, then raised and sunken ground (Back Forty pack) drawn
+    // Mown stripes, then raised and sunken ground (Hilly Fields pack) drawn
     // before anything sits on it; it carries the stripes on over raised
     // grass, and lets them fade out down into a dip.
     for (let x = 0; x < W; x += 80) {
