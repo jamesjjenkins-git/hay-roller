@@ -22,7 +22,7 @@
     // the app's vendor id). To find the new one, run a debug build on the
     // phone: the consent SDK logs "UMPDebugSettings.testDeviceIdentifiers =
     // @[ @"<VENDOR-ID>" ]", and the ad id is `printf <VENDOR-ID> | md5`.
-    testDevices: ['6e88f91ff7752612cfab1afeb68ee49c'],
+    testDevices: ['97e6a4a63984c351f78d5b2adf3ff0ac'],
     // A cartoon farm game: keep ads suitable for a family audience.
     maxAdContentRating: 'ParentalGuidance',
   };
