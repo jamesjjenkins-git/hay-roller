@@ -38,11 +38,12 @@ Hello, and thank you for reviewing Farmyard Rally. The screen recording is attac
 on an iPhone running the latest iOS, starting from launching the app.
 
 **1. Screen recording**
-Attached. It shows: first launch with the ad consent and App Tracking Transparency prompts, the
-home screen, the garage, a full race, the results screen, the Farmyard Frenzy bonus round, the
-trophy and badge cabinet, and an In-App Purchase made with a Sandbox account (buying Gold and
-spending it on a cosmetic), plus Restore purchases. The app has no accounts, no login and no
-user-generated content.
+Attached. It starts on the iPhone home screen and shows launching the app, the home screen and
+privacy policy, the garage, a full race, the results screen, the Farmyard Frenzy bonus round,
+the trophy and badge cabinet, the wallet, and an In-App Purchase made with a Sandbox account
+(buying a Pocket of Gold), plus Restore purchases. The ad consent form (UK/EEA) and Apple's App
+Tracking Transparency prompt appear once, on the first launch after installing, so they are not
+in this recording. The app has no accounts, no login and no user-generated content.
 
 **2. Purpose and audience**
 Farmyard Rally is a casual top-down arcade racing game for a general audience who enjoy short,
