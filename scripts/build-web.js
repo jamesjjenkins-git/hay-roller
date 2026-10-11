@@ -11,7 +11,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const OUT = path.join(ROOT, 'www');
-const COPY = ['index.html', 'privacy.html', 'manifest.webmanifest', 'css', 'js', 'icons'];
+const COPY = ['index.html', 'privacy.html', 'manifest.webmanifest', 'css', 'js', 'icons', 'fonts'];
 
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT);

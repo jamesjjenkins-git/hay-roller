@@ -65,7 +65,6 @@ cabinet.
   with Google's User Messaging Platform for ad consent where the law requires it.
 - Apple In-App Purchase (StoreKit) for Gold packs and Remove ads.
 - Apple App Tracking Transparency, to ask permission before personalised ads.
-- Google Fonts, for the game's two typefaces.
 There is no server or backend of our own, no accounts and no AI services. All game progress is
 stored only on the device.
 
