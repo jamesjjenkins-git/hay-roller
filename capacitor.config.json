@@ -5,6 +5,7 @@
   "backgroundColor": "#5aa83f",
   "ios": {
     "contentInset": "never",
-    "backgroundColor": "#5aa83f"
+    "backgroundColor": "#5aa83f",
+    "scheme": "Farmyard Rally"
   }
 }

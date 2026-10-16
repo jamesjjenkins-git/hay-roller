@@ -53,7 +53,7 @@ fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
 const archive = path.join(OUT, 'FarmyardRally.xcarchive');
 run(
-  `xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release ` +
+  `xcodebuild -project ios/App/App.xcodeproj -scheme "Farmyard Rally" -configuration Release ` +
     `-destination generic/platform=iOS -archivePath "${archive}" ` +
     `-allowProvisioningUpdates DEVELOPMENT_TEAM=${team} CURRENT_PROJECT_VERSION=${build} archive`,
 );
